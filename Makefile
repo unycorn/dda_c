@@ -18,7 +18,9 @@ else
     # Linux: Use default gcc
     CC = gcc
     CFLAGS = -std=c11 -O2 -fopenmp
-    LDFLAGS = -fopenmp -llapack -lblas
+    LDFLAGS = -L$(HOME)/openblas/lib -Wl,-rpath,$(HOME)/openblas/lib -lopenblas
+	CFLAGS += -I$(HOME)/openblas/include
+
 endif
 
 # Default build rule
