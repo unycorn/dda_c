@@ -31,8 +31,8 @@ void pair_interaction_matrix(double complex out[3][3], vec3 r_j, vec3 r_k, doubl
 
 void get_full_interaction_matrix(
     double complex *A,       // Output matrix of size 3N x 3N
-    const vec3 *positions,   // Array of N positions
-    const double complex (*alpha_inv)[3][3],  // Same for all for now
+    vec3 *positions,   // Array of N positions
+    double complex (*alpha_inv)[3][3],  // Same for all for now
     int N,
     double k
 ) {
