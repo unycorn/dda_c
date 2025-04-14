@@ -79,9 +79,7 @@ int main() {
             double phase = k * positions[j].z;             // Wave is normally incident (along z-axis)
             double complex val = cexp(I * phase);          // Complex exponential phase
 
-            // Assign same complex value to x, y, z components (uniform polarization)
-            for (int d = 0; d < 3; ++d)
-                E_inc[3 * j + d] = val;
+            E_inc[3 * j] = val;                            // Polarized along x-axis
         }
 
         // Allocate pivot index array for LAPACK solver
@@ -115,15 +113,16 @@ int main() {
             for (int j = 0; j < N; ++j) {
                 int idx = 3 * j;
                 fprintf(f, "%g %g  %g %g  %g %g\n",
-                    creal(E_inc[idx + 0]), cimag(E_inc[idx + 0]),  // x
-                    creal(E_inc[idx + 1]), cimag(E_inc[idx + 1]),  // y
-                    creal(E_inc[idx + 2]), cimag(E_inc[idx + 2])); // z
+                    creal(polarizations[idx + 0]), cimag(polarizations[idx + 0]),  // x
+                    creal(polarizations[idx + 1]), cimag(polarizations[idx + 1]),  // y
+                    creal(polarizations[idx + 2]), cimag(polarizations[idx + 2])); // z
             }
             fclose(f);
         }
 
         free(alpha_inv);
         free(E_inc);
+        free(polarizations);
         free(ipiv);
         free(A);
 
