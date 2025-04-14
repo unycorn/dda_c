@@ -33,8 +33,8 @@ double complex lorentz_alpha(double f) {
 }
 
 int main() {
-    const int N_width = 50;
-    const int N_height = 50;
+    const int N_width = 58;
+    const int N_height = 58;
     const int N = N_width * N_width;
 
     const double spacing = 0.1;
