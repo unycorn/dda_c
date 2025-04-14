@@ -67,9 +67,9 @@ int main() {
 
 
         double complex *A = calloc(3 * N * 3 * N, sizeof(double complex));
-        // printf("freq %.2f: Computing Interaction Matrix...\n", freq);
+        printf("freq %.2f: Computing Interaction Matrix...\n", freq);
         get_full_interaction_matrix(A, positions, alpha_inv, N, k);
-        // printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
+        printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
 
         // Allocate incident field vector E_inc of size 3N (x,y,z for each dipole)
         double complex *E_inc = malloc(3 * N * sizeof(double complex));
@@ -100,9 +100,9 @@ int main() {
         // polarizations = right-hand side (begins as incident field E_inc and is overwritten with solution vector p)
         // info  = status flag (0 = success)
         int info, nrhs = 1;
-        // printf("freq %.2f: Solving Matrix Equation...\n", freq);
+        printf("freq %.2f: Solving Matrix Equation...\n", freq);
         zgesv_(&(int){3 * N}, &nrhs, A, &(int){3 * N}, ipiv, polarizations, &(int){3 * N}, &info);
-        // printf("freq %.2f: Finished Solving Matrix Equation!\n", freq);
+        printf("freq %.2f: Finished Solving Matrix Equation!\n", freq);
 
         if (info != 0) {
             printf("freq %.2f: solve failed (info = %d)\n", freq, info);
