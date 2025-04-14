@@ -38,7 +38,7 @@ int main() {
     const int N = N_width * N_width;
 
     const double spacing = 0.1;
-    const int num_freqs = 20;
+    const int num_freqs = 2;
     const double f_start = 100e12;
     const double f_end = 500e12;
 
