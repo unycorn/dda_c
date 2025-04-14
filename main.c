@@ -56,6 +56,7 @@ int main() {
 
         double complex (*alpha_inv)[3][3] = malloc(N * sizeof(*alpha_inv));
         // Update polarizabilities for this frequency
+        memset(alpha_inv, 0, N * sizeof(*alpha_inv));  // not setting all values to zero will result in SEGFAULT
         for (int j = 0; j < N; ++j) {
             double complex alpha = lorentz_alpha(freq); // same for all dipoles for now
             double complex alpha_inv_scalar = 1.0 / alpha;
