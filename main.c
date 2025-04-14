@@ -8,6 +8,25 @@
 #include "interaction.h"
 #include "constants.h"
 
+// Save a complex matrix (column-major) to file
+void save_matrix(const char *filename, double complex *A, int N) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) { perror("fopen"); exit(1); }
+    fwrite(&N, sizeof(int), 1, f);
+    fwrite(A, sizeof(double complex), N * N, f);
+    fclose(f);
+}
+
+// Save a complex vector to file
+void save_vector(const char *filename, double complex *b, int N) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) { perror("fopen"); exit(1); }
+    fwrite(&N, sizeof(int), 1, f);
+    fwrite(b, sizeof(double complex), N, f);
+    fclose(f);
+}
+
+
 // LAPACK prototype for complex linear solver
 extern void zgesv_(int *n, int *nrhs, double _Complex *a, int *lda,
                    int *ipiv, double _Complex *b, int *ldb, int *info);
@@ -33,8 +52,8 @@ double complex lorentz_alpha(double f) {
 }
 
 int main() {
-    const int N_width = 30;
-    const int N_height = 30;
+    const int N_width = 100;
+    const int N_height = 100;
     const int N = N_width * N_width;
 
     const double spacing = 300e-9;
@@ -73,8 +92,6 @@ int main() {
         get_full_interaction_matrix(A, positions, alpha_inv, N, k);
         printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
 
-        printf("freq %.6e A[3,0] %.6e %.6e \n", freq, creal(A[3,0]), cimag(A[3,0]));
-
         // Allocate incident field vector E_inc of size 3N (x,y,z for each dipole)
         double complex *E_inc = calloc(3 * N, sizeof(double complex));
         
@@ -94,6 +111,12 @@ int main() {
         double complex *polarizations = malloc(3 * N * sizeof(double complex));
         memcpy(polarizations, E_inc, 3 * N * sizeof(double complex));
 
+        double write_start = omp_get_wtime();
+        save_matrix("../dda_c_GPU/A.bin", A, 3*N);
+        save_vector("../dda_c_GPU/b.bin", E_inc, 3*N);
+        double write_end = omp_get_wtime();
+        printf("A b file write time = %.6f s\n", write_end - write_start);
+
         // LAPACK expects:
         // n     = dimension of square matrix (3N)
         // nrhs  = number of right-hand sides (1, since E_inc is a single vector)
@@ -106,6 +129,7 @@ int main() {
         zgesv_(&(int){3 * N}, &nrhs, A, &(int){3 * N}, ipiv, polarizations, &(int){3 * N}, &info);
         printf("freq %.2f: Finished Solving Matrix Equation!\n", freq);
 
+        // Output Section
         if (info != 0) {
             printf("freq %.2f: solve failed (info = %d)\n", freq, info);
         } else {
