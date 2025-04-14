@@ -73,8 +73,8 @@ int main() {
         printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
 
         // Allocate incident field vector E_inc of size 3N (x,y,z for each dipole)
-        double complex *E_inc = malloc(3 * N * sizeof(double complex));
-
+        double complex *E_inc = calloc(3 * N, sizeof(double complex));
+        
         // Fill E_inc with a plane wave: E = e^(i k x)
         for (int j = 0; j < N; ++j) {
             double phase = k * positions[j].z;             // Wave is normally incident (along z-axis)
@@ -110,14 +110,22 @@ int main() {
             char fname[64];
             snprintf(fname, sizeof(fname), "output/output_freq_%.0f.txt", freq);
             FILE *f = fopen(fname, "w");
-            fprintf(f, "Re[p_x] Im[p_x] Re[p_y] Im[p_y] Re[p_z] Im[p_z]\n");
+            if (!f) {
+                fprintf(stderr, "Error: could not open %s for writing\n", fname);
+                exit(1);
+            }
+
+            // CSV header
+            fprintf(f, "Re_px,Im_px,Re_py,Im_py,Re_pz,Im_pz\n");
+
             for (int j = 0; j < N; ++j) {
                 int idx = 3 * j;
-                fprintf(f, "%g %g  %g %g  %g %g\n",
-                    creal(polarizations[idx + 0]), cimag(polarizations[idx + 0]),  // x
-                    creal(polarizations[idx + 1]), cimag(polarizations[idx + 1]),  // y
-                    creal(polarizations[idx + 2]), cimag(polarizations[idx + 2])); // z
+                fprintf(f, "%.6e,%.6e,%.6e,%.6e,%.6e,%.6e\n",
+                        creal(polarizations[idx + 0]), cimag(polarizations[idx + 0]),  // x
+                        creal(polarizations[idx + 1]), cimag(polarizations[idx + 1]),  // y
+                        creal(polarizations[idx + 2]), cimag(polarizations[idx + 2])); // z
             }
+
             fclose(f);
         }
 
