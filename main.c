@@ -33,12 +33,12 @@ double complex lorentz_alpha(double f) {
 }
 
 int main() {
-    const int N_width = 58;
-    const int N_height = 58;
+    const int N_width = 30;
+    const int N_height = 30;
     const int N = N_width * N_width;
 
-    const double spacing = 0.1;
-    const int num_freqs = 2;
+    const double spacing = 300e-9;
+    const int num_freqs = 1;
     const double f_start = 100e12;
     const double f_end = 500e12;
 
@@ -49,7 +49,7 @@ int main() {
     for (int i = 0; i < num_freqs; ++i) {
         double start = omp_get_wtime();
 
-        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
+        double freq = f_start; //+ i * (f_end - f_start) / (num_freqs - 1);
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
@@ -60,17 +60,20 @@ int main() {
         for (int j = 0; j < N; ++j) {
             double complex alpha = lorentz_alpha(freq); // same for all dipoles for now
             double complex alpha_inv_scalar = 1.0 / alpha;
-
+            
             // Fill diagonal inverse polarizability tensor
             for (int i = 0; i < 3; ++i)
                 alpha_inv[j][i][i] = alpha_inv_scalar;
         }
+        printf("alpha %.6e %.6e \n", creal(lorentz_alpha(freq)), cimag(lorentz_alpha(freq)));
 
 
         double complex *A = calloc(3 * N * 3 * N, sizeof(double complex));
         printf("freq %.2f: Computing Interaction Matrix...\n", freq);
         get_full_interaction_matrix(A, positions, alpha_inv, N, k);
         printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
+
+        printf("freq %.6e A[3,0] %.6e %.6e \n", freq, creal(A[3,0]), cimag(A[3,0]));
 
         // Allocate incident field vector E_inc of size 3N (x,y,z for each dipole)
         double complex *E_inc = calloc(3 * N, sizeof(double complex));
@@ -80,7 +83,7 @@ int main() {
             double phase = k * positions[j].z;             // Wave is normally incident (along z-axis)
             double complex val = cexp(I * phase);          // Complex exponential phase
 
-            E_inc[3 * j] = val;                            // Polarized along x-axis
+            E_inc[3 * j] = val;                        // Polarized along y-axis
         }
 
         // Allocate pivot index array for LAPACK solver

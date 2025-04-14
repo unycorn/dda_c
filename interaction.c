@@ -24,9 +24,13 @@ void pair_interaction_matrix(double complex out[3][3], vec3 r_j, vec3 r_k, doubl
     double complex dyad[3][3];
     outer_product(dyad, r_hat, r_hat);
 
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
             out[i][j] = prefac * (term1 * (dyad[i][j] - (i == j)) + term2 * (3 * dyad[i][j] - (i == j)));
+            // printf("r: %.6e k: %.6e \n", r_len, k);
+            // printf("%.6e %.6e \n", creal(out[i][j]),cimag(out[i][j]));
+        }
+    }
 }
 
 void get_full_interaction_matrix(
@@ -44,10 +48,10 @@ void get_full_interaction_matrix(
             double complex block[3][3];
 
             if (j == k_idx) {
-                double complex (*alpha)[3] = alpha_inv[j];
+                double complex (*alpha_inv_local)[3] = alpha_inv[j];
                 for (int i = 0; i < 3; ++i)
                     for (int m = 0; m < 3; ++m)
-                        A[(row_offset + i) * 3*N + (col_offset + m)] = alpha[i][m];
+                        A[(row_offset + i) * 3*N + (col_offset + m)] = alpha_inv_local[i][m];
             } else {
                 pair_interaction_matrix(block, positions[j], positions[k_idx], k);
                 for (int i = 0; i < 3; ++i)
