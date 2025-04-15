@@ -1,8 +1,8 @@
-#include "vector3.h"
 #include <complex.h>
 #include <math.h>
 #include <stdio.h>
 #include "constants.hpp"
+#include "vector3.hpp"
 
 // Fills a 3x3 complex matrix with interaction from dipole j to k
 void pair_interaction_matrix(double complex out[3][3], vec3 r_j, vec3 r_k, double k) {
