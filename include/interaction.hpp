@@ -1,14 +1,19 @@
-// interaction.h
-#pragma once
-#include <complex.h>
-#include "vector3.h"
+#ifndef INTERACTION_HPP
+#define INTERACTION_HPP
 
-void pair_interaction_matrix(double complex out[3][3], vec3 r_j, vec3 r_k, double k);
+#include <complex>
+#include "vector3.hpp"
 
+// Computes the dyadic Green's function block from dipole j to dipole k
+void pair_interaction_matrix(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double k);
+
+// Builds the full 3N x 3N interaction matrix for N dipoles
 void get_full_interaction_matrix(
-    double complex *A,       // Output matrix of size 3N x 3N
-    vec3 *positions,   // Array of N dipole positions
-    double complex (*alpha_inv)[3][3],  // Inverse polarizability tensors
-    int N,
-    double k
+    std::complex<double>* A,                            // Output matrix of size (3N x 3N), row-major
+    vec3* positions,                                    // Positions of N dipoles
+    std::complex<double> (*alpha_inv)[3][3],            // Inverse polarizabilities for each dipole
+    int N,                                              // Number of dipoles
+    double k                                            // Wavenumber
 );
+
+#endif // INTERACTION_HPP

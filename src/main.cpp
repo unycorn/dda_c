@@ -11,8 +11,9 @@
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
 
-int main() {
+constexpr std::complex<double> I(0.0, 1.0);
 
+int main() {
     const int N_width = 100;
     const int N_height = 100;
     const int N = N_width * N_height;
@@ -22,8 +23,9 @@ int main() {
     const double f_start = 100e12;
     const double f_end = 500e12;
 
-    vec3 *positions = malloc(N * sizeof(vec3));
-    generate_positions(positions, N_width, N_height, spacing);
+    // Position array
+    std::vector<vec3> positions(N);
+    generate_positions(positions.data(), N_width, N_height, spacing);
 
     for (int i = 0; i < num_freqs; ++i) {
         auto start_time = std::chrono::high_resolution_clock::now();
@@ -32,51 +34,51 @@ int main() {
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
-        double complex (*alpha_inv)[3][3] = malloc(N * sizeof(*alpha_inv));
-        // Update polarizabilities for this frequency
-        memset(alpha_inv, 0, N * sizeof(*alpha_inv));  // not setting all values to zero will result in SEGFAULT
+        // 3x3 inverse polarizability tensors per dipole
+        using mat3x3 = std::complex<double>[3][3];
+        std::vector<mat3x3> alpha_inv(N);
         for (int j = 0; j < N; ++j) {
-            double complex alpha = lorentz_alpha(freq); // same for all dipoles for now
-            double complex alpha_inv_scalar = 1.0 / alpha;
-            
-            // Fill diagonal inverse polarizability tensor
+            auto alpha = lorentz_alpha(freq);
+            auto alpha_inv_scalar = 1.0 / alpha;
             for (int i = 0; i < 3; ++i)
                 alpha_inv[j][i][i] = alpha_inv_scalar;
         }
 
-        double complex *A = calloc(3 * N * 3 * N, sizeof(double complex));
-        printf("freq %.2f: Computing Interaction Matrix...\n", freq);
-        get_full_interaction_matrix(A, positions, alpha_inv, N, k);
-        printf("freq %.2f: Finished Computing Interaction Matrix!\n", freq);
+        // Full interaction matrix A: size (3N x 3N)
+        std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
+        std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
+        get_full_interaction_matrix(A.data(), positions.data(), alpha_inv.data(), N, k);
+        std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
-        // Allocate incident field vector E_inc of size 3N (x,y,z for each dipole)
-        double complex *E_inc = calloc(3 * N, sizeof(double complex));
-        
-        // Fill E_inc with a plane wave: E = e^(i k x)
+        // Incident field vector
+        std::vector<std::complex<double>> E_inc(3 * N, std::complex<double>(0.0, 0.0));
         for (int j = 0; j < N; ++j) {
-            double phase = k * positions[j].z;             // Wave is normally incident (along z-axis)
-            double complex val = cexp(I * phase);          // Complex exponential phase
-
-            E_inc[3 * j] = val;                        // Polarized along y-axis
+            double phase = k * positions[j].z;
+            auto val = std::exp(I * phase);
+            E_inc[3 * j] = val;
         }
 
-        solve_gpu(A, b, dimension);
+        // Copy to polarizations (in-place LAPACK overwrite)
+        std::vector<std::complex<double>> polarizations = E_inc;
 
-        // Write solution out to a file.
-        // Assume b is overwritten with solution
+        // You may need to declare and size ipiv, b, and dimension
+        std::vector<int> ipiv(3 * N); // If needed by LAPACK
+        std::complex<double>* b = polarizations.data(); // In-place solve
+        int dimension = 3 * N;
+
+        solve_gpu(
+            reinterpret_cast<cuDoubleComplex*>(A.data()),
+            reinterpret_cast<cuDoubleComplex*>(b),
+            dimension
+        ); // Solve modifies b in-place
+
+        // Output
         write_polarizations("output/output.txt", b, N);
-    
+
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
         std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
-
-        free(alpha_inv);
-        free(E_inc);
-        free(polarizations);
-        free(ipiv);
-        free(A);
     }
 
-    free(positions);
     return 0;
 }

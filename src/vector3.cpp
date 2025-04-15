@@ -1,37 +1,31 @@
-// vector3.c
+// vector3.cpp
+
 #include "vector3.hpp"
-#include <math.h>
+#include <cmath>
+#include <complex>
 
 // Subtract two vectors: a - b
 vec3 vec3_sub(vec3 a, vec3 b) {
-    vec3 r;
-    r.x = a.x - b.x;
-    r.y = a.y - b.y;
-    r.z = a.z - b.z;
-    return r;
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
 }
 
 // Norm (magnitude)
-double vec3_norm(vec3 v) {
-    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+double vec3_norm(const vec3& v) {
+    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 // Scale a vector
-vec3 vec3_scale(vec3 v, double s) {
-    vec3 r;
-    r.x = v.x * s;
-    r.y = v.y * s;
-    r.z = v.z * s;
-    return r;
+vec3 vec3_scale(const vec3& v, double s) {
+    return { v.x * s, v.y * s, v.z * s };
 }
 
 // Normalize
-vec3 vec3_unit(vec3 v) {
+vec3 vec3_unit(const vec3& v) {
     return vec3_scale(v, 1.0 / vec3_norm(v));
 }
 
 // Outer product of two vectors (returns 3x3 matrix)
-void outer_product(double complex out[3][3], vec3 a, vec3 b) {
+void outer_product(std::complex<double> out[3][3], const vec3& a, const vec3& b) {
     out[0][0] = a.x * b.x;
     out[0][1] = a.x * b.y;
     out[0][2] = a.x * b.z;

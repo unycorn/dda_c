@@ -4,6 +4,8 @@
         "cmath": "cpp",
         "iomanip": "cpp",
         "iostream": "cpp",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "__locale": "cpp",
+        "ios": "cpp"
     }
 }
