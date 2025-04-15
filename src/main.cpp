@@ -38,8 +38,8 @@ std::complex<double> lorentz_alpha(double f) {
 
 
 int main() {
-    const int N_width = 50;
-    const int N_height = 50;
+    const int N_width = 200;
+    const int N_height = 200;
     const int N = N_width * N_height;
 
     const double spacing = 300e-9;
