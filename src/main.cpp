@@ -43,7 +43,7 @@ int main() {
     const int N_height = 2;
     const int N = N_width * N_height;
 
-    const double spacing = 300e-9;
+    const double spacing = 100e-9;
     const int num_freqs = 1;
     const double f_start = 100e12;
     const double f_end = 500e12;
