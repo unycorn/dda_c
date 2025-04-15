@@ -4,7 +4,7 @@ CXXFLAGS := -std=c++11 -O3 -Wall -Iinclude
 
 # CUDA paths (update if different)
 CUDA_PATH := /usr/local/cuda
-LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart
+LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart -lcusolver
 CXXFLAGS += -I$(CUDA_PATH)/include
 
 # Directories
