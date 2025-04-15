@@ -1,3 +1,6 @@
+#include <iostream>   // for std::cerr
+#include <cstdlib>    // for std::exit and EXIT_FAILURE
+
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 #include <cuComplex.h>
