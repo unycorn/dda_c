@@ -6,6 +6,7 @@
 #include <cmath>
 #include <chrono>
 #include <complex>
+#include <sstream>
 
 #include "constants.hpp"
 #include "vector3.hpp"
@@ -38,8 +39,8 @@ std::complex<double> lorentz_alpha(double f) {
 
 
 int main() {
-    const int N_width = 200;
-    const int N_height = 200;
+    const int N_width = 2;
+    const int N_height = 2;
     const int N = N_width * N_height;
 
     const double spacing = 300e-9;
@@ -97,7 +98,10 @@ int main() {
         ); // Solve modifies b in-place
 
         // Output
-        write_polarizations("output/output.txt", reinterpret_cast<const cuDoubleComplex*>(b), N);
+        std::ostringstream filename;
+        filename << "output/output_" << std::scientific << std::setprecision(2) << freq << ".csv";
+
+        write_polarizations(filename.str().c_str(), reinterpret_cast<const cuDoubleComplex*>(b), N);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
