@@ -44,7 +44,7 @@ void write_polarizations(const char* filename, const cuDoubleComplex* p, int N) 
     }
 
     out << "Re_px,Im_px,Re_py,Im_py,Re_pz,Im_pz\n";
-    out << std::scientific << std::setprecision(6);
+    out << std::scientific << std::setprecision(9);
 
     for (int j = 0; j < N; ++j) {
         int idx = 3 * j;
