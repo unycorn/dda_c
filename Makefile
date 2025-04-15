@@ -1,6 +1,11 @@
-# Compiler and flags
+# Compiler settings
 CXX := g++
 CXXFLAGS := -std=c++11 -O3 -Wall -Iinclude
+
+# CUDA paths (update if different)
+CUDA_PATH := /usr/local/cuda
+LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart
+CXXFLAGS += -I$(CUDA_PATH)/include
 
 # Directories
 SRC_DIR := src
@@ -16,7 +21,7 @@ all: $(BIN)
 
 # Link
 $(BIN): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS)
 
 # Compile
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
