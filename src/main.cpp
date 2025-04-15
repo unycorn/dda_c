@@ -9,6 +9,7 @@
 
 #include "constants.hpp"
 #include "vector3.hpp"
+#include "interaction.hpp"
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
 
