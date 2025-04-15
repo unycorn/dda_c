@@ -14,6 +14,28 @@
 
 constexpr std::complex<double> I(0.0, 1.0);
 
+// Fills a 2D grid of dipoles in the xy-plane (z = 0)
+void generate_positions(vec3* positions, int N_width, int N_height, double spacing) {
+    int i = 0;
+    for (int i_x = 0; i_x < N_width; ++i_x) {
+        for (int i_y = 0; i_y < N_height; ++i_y) {
+            positions[i++] = vec3{
+                i_x * spacing,
+                i_y * spacing,
+                0.0
+            };
+        }
+    }
+}
+
+// Lorentzian polarizability function in Hz
+std::complex<double> lorentz_alpha(double f) {
+    std::complex<double> denom = (F0 * F0 - f * f) - I * f * GAMMA_PARAM;
+    std::complex<double> norm_alpha = A_PARAM / denom + B_PARAM + C_PARAM * f;
+    return norm_alpha * EPSILON_0;
+}
+
+
 int main() {
     const int N_width = 100;
     const int N_height = 100;
