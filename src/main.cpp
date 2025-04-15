@@ -7,7 +7,7 @@
 #include <chrono>
 #include <complex>
 #include <sstream>
-
+#include <random>
 #include "constants.hpp"
 #include "vector3.hpp"
 #include "interaction.hpp"
@@ -30,6 +30,24 @@ void generate_positions(vec3* positions, int N_width, int N_height, double spaci
     }
 }
 
+// Generates a disordered dipole grid in the xy-plane with optional RNG seed
+void generate_disordered_positions(vec3* positions, int N_width, int N_height, const double spacing, const double rms_displacement, unsigned int seed = 0) {
+    std::default_random_engine rng(seed);  // seed controls reproducibility
+    std::normal_distribution<double> normal(0.0, rms_displacement);  // standard deviation = RMS displacement
+
+    int i = 0;
+    for (int i_x = 0; i_x < N_width; ++i_x) {
+        for (int i_y = 0; i_y < N_height; ++i_y) {
+            positions[i] = vec3{
+                i_x * spacing + normal(rng),
+                i_y * spacing + normal(rng),
+                0.0
+            };
+            i += 1;
+        }
+    }
+}
+
 // Lorentzian polarizability function in Hz
 std::complex<double> lorentz_alpha(double f) {
     std::complex<double> denom = (F0 * F0 - f * f) - I * f * GAMMA_PARAM;
@@ -39,18 +57,22 @@ std::complex<double> lorentz_alpha(double f) {
 
 
 int main() {
-    const int N_width = 100;
-    const int N_height = 100;
+    const int N_width = 10;
+    const int N_height = 10;
     const int N = N_width * N_height;
 
-    const double spacing = 100e-9;
+    const double spacing = 300e-9;
     const int num_freqs = 30;
     const double f_start = 100e12;
     const double f_end = 500e12;
 
+    // Translational disorder parameters
+    const double disorder = 0e-9;
+    const unsigned int seed = 1;
+
     // Position array
     std::vector<vec3> positions(N);
-    generate_positions(positions.data(), N_width, N_height, spacing);
+    generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
     for (int i = 0; i < num_freqs; ++i) {
         auto start_time = std::chrono::high_resolution_clock::now();
@@ -101,7 +123,7 @@ int main() {
         std::ostringstream filename;
         filename << "output/output_" << std::scientific << std::setprecision(2) << freq << ".csv";
 
-        write_polarizations(filename.str().c_str(), reinterpret_cast<const cuDoubleComplex*>(b), N);
+        write_polarizations(filename.str().c_str(), b, positions, 1.0/alpha_inv[0][0][0], E_inc, N);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
