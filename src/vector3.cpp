@@ -1,5 +1,5 @@
 // vector3.c
-#include "vector3.h"
+#include "vector3.hpp"
 #include <math.h>
 
 // Subtract two vectors: a - b

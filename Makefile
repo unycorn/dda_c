@@ -1,39 +1,33 @@
-# Detect OS
-UNAME_S := $(shell uname -s)
+# Compiler and flags
+CXX := g++
+CXXFLAGS := -std=c++17 -O3 -Wall -Iinclude
+
+# Directories
+SRC_DIR := src
+OBJ_DIR := obj
+BIN := solver
 
 # Source and object files
-SRC = main.c interaction.c vector3.c
-OBJ = $(SRC:.c=.o)
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
-# Output binary name
-TARGET = dda_solver
+# Default target
+all: $(BIN)
 
-# Compiler and flags
-ifeq ($(UNAME_S), Darwin)
-    # macOS (Apple Clang has no OpenMP support)
-    CC = /opt/homebrew/bin/gcc-14   # or whatever version is installed
-    CFLAGS = -std=c11 -O2 -fopenmp
-    LDFLAGS = -L/opt/homebrew/opt/libomp/lib -Wl,-rpath,/opt/homebrew/opt/libomp/lib -lomp -framework Accelerate
-else
-    # Linux: Use default gcc
-    CC = gcc
-    CFLAGS = -std=c11 -O2 -fopenmp
-    LDFLAGS = -L$(HOME)/openblas/lib -Wl,-rpath,$(HOME)/openblas/lib -lopenblas -lm
-	CFLAGS += -I$(HOME)/openblas/include
+# Link
+$(BIN): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-endif
+# Compile
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Default build rule
-all: $(TARGET)
+# Create object directory
+$(OBJ_DIR):
+	mkdir -p $@
 
-# Link final binary
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) $(LDFLAGS) -o $@
-
-# Compile each .c file into .o
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Clean rule
+# Clean
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf $(OBJ_DIR) $(BIN)
+
+.PHONY: all clean

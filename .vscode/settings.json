@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "cmath": "cpp",
+        "iomanip": "cpp",
+        "iostream": "cpp",
+        "stdlib.h": "c"
     }
 }
