@@ -28,7 +28,7 @@ int main() {
     for (int i = 0; i < num_freqs; ++i) {
         auto start_time = std::chrono::high_resolution_clock::now();
 
-        double freq = f_start; //+ i * (f_end - f_start) / (num_freqs - 1);
+        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
