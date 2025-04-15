@@ -29,8 +29,8 @@ void pair_interaction_matrix(std::complex<double> out[3][3], vec3 r_j, vec3 r_k,
 
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            out[i][j] = prefac * (term1 * (dyad[i][j] - (i == j)) +
-                                  term2 * (3.0 * dyad[i][j] - (i == j)));
+            double delta_ij = (i == j) ? 1.0 : 0.0;
+            out[i][j] = prefac * (term1 * (dyad[i][j] - delta_ij) + term2 * (3.0 * dyad[i][j] - delta_ij));
         }
     }
 }
