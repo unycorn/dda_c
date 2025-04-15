@@ -7,6 +7,7 @@
 #include <chrono>
 #include <complex>
 
+#include "constants.hpp"
 #include "vector3.hpp"
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
@@ -19,7 +20,7 @@ int main() {
     const int N = N_width * N_height;
 
     const double spacing = 300e-9;
-    const int num_freqs = 1;
+    const int num_freqs = 2;
     const double f_start = 100e12;
     const double f_end = 500e12;
 
@@ -73,7 +74,7 @@ int main() {
         ); // Solve modifies b in-place
 
         // Output
-        write_polarizations("output/output.txt", b, N);
+        write_polarizations("output/output.txt", reinterpret_cast<const cuDoubleComplex*>(b), N);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
