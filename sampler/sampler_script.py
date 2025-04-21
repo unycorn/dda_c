@@ -3,24 +3,37 @@ import re
 import subprocess
 import sys
 
-def extract_frequency_from_filename(filename):
-    # Match formats like: output_1.00e+14.csv or output_1.55e14.csv
-    match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)\\.csv", filename)
-    if not match:
-        # Also try without the escape on the dot (some systems are picky)
-        match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)\.csv", filename)
-    return float(match.group(1)) if match else None
+def extract_params_from_filename(filename):
+    # Match formats like: output_2.07e+14_3.00e+01nm_seed4.csv
+    match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)_([0-9.]+e[+-]?[0-9]+)nm_seed([0-9]+)\.csv", filename)
+    if match:
+        return {
+            'frequency': float(match.group(1)),
+            'disorder': float(match.group(2)),
+            'seed': int(match.group(3))
+        }
+    return None
 
-folder_path = "/home/dharper/dda_c/output/"
-for fname in sorted(os.listdir(folder_path)):
+script_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = os.path.join(script_dir, "..", "output")
+
+for fname in sorted(os.listdir(output_dir)):
     if not fname.endswith(".csv"):
         continue
-    freq = extract_frequency_from_filename(fname)
-    if freq is None:
+    
+    params = extract_params_from_filename(fname)
+    if params is None:
         print(f"Skipping unrecognized filename: {fname}")
         continue
 
-    fullpath = os.path.join(folder_path, fname)
-    # print(f"Running ./sample_fields on {fname} with freq={freq:.2e} Hz")
-    out = subprocess.run(["/home/dharper/dda_c/output/sampler/sample_fields", fullpath, str(freq)])
-    # print(out)
+    fullpath = os.path.join(output_dir, fname)
+    # Run sample_fields and capture its output
+    sample_fields_path = os.path.join(script_dir, "sample_fields")
+    proc = subprocess.run([sample_fields_path, fullpath, str(params['frequency'])], 
+                         capture_output=True, text=True)
+    
+    # Get the flux value from the output (which is in format "(frequency,flux),")
+    match = re.search(r"\((.*?),(.*?)\)", proc.stdout)
+    if match:
+        flux = float(match.group(2))
+        print(f"{{\"frequency\": {params['frequency']}, \"disorder\": {params['disorder']}, \"seed\": {params['seed']}, \"flux\": {flux}}}")
