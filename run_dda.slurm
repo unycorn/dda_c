@@ -3,6 +3,7 @@
 #SBATCH --output=dda_%A_%a.out      # Output file name (%A = job ID, %a = array index)
 #SBATCH --error=dda_%A_%a.err       # Error file name
 #SBATCH --array=0-9                 # Array jobs for 10 GPUs (0-9)
+#SBATCH --partition=volta          # Specify the partition
 #SBATCH --gres=gpu:1               # Request one GPU per task
 #SBATCH --time=24:00:00           # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                  # Memory per node
