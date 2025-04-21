@@ -43,19 +43,23 @@ int main(int argc, char** argv) {
 
     int N_dip = host_positions.size();
 
-    // Define sampling grid (example: 100x100 grid at z = -100nm)
-    const int Nx = 300, Ny = 300;
-    const double z_sample = 6000e-9;
-    const double grid_size = 30e-6; // 30 micron patch
+    // Define sampling grid (example: 300x300 grid at z = 1000nm)
+    const int Nx = 100, Ny = 100;
+    const double z_sample = 5000e-9;
+    const double center_x = 15e-6;
+    const double center_y = 15e-6;
+    const double grid_size = 20e-6; // 10 micron patch
     const double dx = grid_size / (Nx - 1);
     const double dy = grid_size / (Ny - 1);
 
     std::vector<vec3> host_obs(Nx * Ny);
     for (int ix = 0; ix < Nx; ++ix) {
         for (int iy = 0; iy < Ny; ++iy) {
-            double x = -grid_size/2 + dx * ix;
-            double y = -grid_size/2 + dy * iy;
+            double x = center_x + dx * (ix - Nx/2);
+            double y = center_y + dy * (iy - Ny/2);
             host_obs[iy * Nx + ix] = {x, y, z_sample};
+
+            // std::cout << x << " " << y << " " << z_sample << std::endl;
         }
     }
 
@@ -109,51 +113,53 @@ int main(int argc, char** argv) {
     double total_flux = 0.0;
     for (int i = 0; i < N_obs; ++i) {
         total_flux += host_S[i];
+        // std::cout << host_S[i] << std::endl;
     }
+    double avg_flux = total_flux / N_obs;
     total_flux *= dx * dy;
 
-    std::cout << "(" << frequency << "," << total_flux << ")," << std::endl;
+    std::cout << "(" << frequency << "," << avg_flux << ")," << std::endl;
 
     // Add single point calculation
-    vec3 single_point = {0.0, 0.0, 1e-6};  // Point of interest
-    std::vector<vec3> single_obs(1, single_point);
-    std::vector<cvec3> single_E(1);
-    std::vector<cvec3> single_B(1);
+    // vec3 single_point = {0.0, 0.0, 1e-6};  // Point of interest
+    // std::vector<vec3> single_obs(1, single_point);
+    // std::vector<cvec3> single_E(1);
+    // std::vector<cvec3> single_B(1);
 
-    // Allocate device memory for single point
-    vec3* d_single_obs;
-    cvec3* d_single_E;
-    cvec3* d_single_B;
-    cudaMalloc(&d_single_obs, sizeof(vec3));
-    cudaMalloc(&d_single_E, sizeof(cvec3));
-    cudaMalloc(&d_single_B, sizeof(cvec3));
+    // // Allocate device memory for single point
+    // vec3* d_single_obs;
+    // cvec3* d_single_E;
+    // cvec3* d_single_B;
+    // cudaMalloc(&d_single_obs, sizeof(vec3));
+    // cudaMalloc(&d_single_E, sizeof(cvec3));
+    // cudaMalloc(&d_single_B, sizeof(cvec3));
 
-    // Copy single observation point to device
-    cudaMemcpy(d_single_obs, single_obs.data(), sizeof(vec3), cudaMemcpyHostToDevice);
+    // // Copy single observation point to device
+    // cudaMemcpy(d_single_obs, single_obs.data(), sizeof(vec3), cudaMemcpyHostToDevice);
 
-    // Compute fields at single point
-    compute_field<<<1, 1>>>(d_positions, d_dipoles, N_dip, d_single_obs, d_single_E, d_single_B, 1, k, prefac);
-    cudaDeviceSynchronize();
+    // // Compute fields at single point
+    // compute_field<<<1, 1>>>(d_positions, d_dipoles, N_dip, d_single_obs, d_single_E, d_single_B, 1, k, prefac);
+    // cudaDeviceSynchronize();
 
-    // Copy results back
-    cudaMemcpy(single_E.data(), d_single_E, sizeof(cvec3), cudaMemcpyDeviceToHost);
-    cudaMemcpy(single_B.data(), d_single_B, sizeof(cvec3), cudaMemcpyDeviceToHost);
+    // // Copy results back
+    // cudaMemcpy(single_E.data(), d_single_E, sizeof(cvec3), cudaMemcpyDeviceToHost);
+    // cudaMemcpy(single_B.data(), d_single_B, sizeof(cvec3), cudaMemcpyDeviceToHost);
 
-    // Print single point results
-    std::cout << "\nFields at point (0, 0, 1e-6):" << std::endl;
-    std::cout << "E-field (V/m): (" 
-              << cuCreal(single_E[0].x) << " + " << cuCimag(single_E[0].x) << "i, "
-              << cuCreal(single_E[0].y) << " + " << cuCimag(single_E[0].y) << "i, "
-              << cuCreal(single_E[0].z) << " + " << cuCimag(single_E[0].z) << "i)" << std::endl;
-    std::cout << "B-field (T): (" 
-              << cuCreal(single_B[0].x) << " + " << cuCimag(single_B[0].x) << "i, "
-              << cuCreal(single_B[0].y) << " + " << cuCimag(single_B[0].y) << "i, "
-              << cuCreal(single_B[0].z) << " + " << cuCimag(single_B[0].z) << "i)" << std::endl;
+    // // Print single point results
+    // std::cout << "\nFields at point (0, 0, 1e-6):" << std::endl;
+    // std::cout << "E-field (V/m): (" 
+    //           << cuCreal(single_E[0].x) << " + " << cuCimag(single_E[0].x) << "i, "
+    //           << cuCreal(single_E[0].y) << " + " << cuCimag(single_E[0].y) << "i, "
+    //           << cuCreal(single_E[0].z) << " + " << cuCimag(single_E[0].z) << "i)" << std::endl;
+    // std::cout << "B-field (T): (" 
+    //           << cuCreal(single_B[0].x) << " + " << cuCimag(single_B[0].x) << "i, "
+    //           << cuCreal(single_B[0].y) << " + " << cuCimag(single_B[0].y) << "i, "
+    //           << cuCreal(single_B[0].z) << " + " << cuCimag(single_B[0].z) << "i)" << std::endl;
 
-    // Free additional device memory
-    cudaFree(d_single_obs);
-    cudaFree(d_single_E);
-    cudaFree(d_single_B);
+    // // Free additional device memory
+    // cudaFree(d_single_obs);
+    // cudaFree(d_single_E);
+    // cudaFree(d_single_B);
 
     // Free device memory
     cudaFree(d_positions);

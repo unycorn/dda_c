@@ -124,7 +124,7 @@ __global__ void compute_field(
         if (is_debug_point) print_cvec3("n × p", n_cross_p);
         
         cvec3 term1 = cross_vec3_cvec3(n, n_cross_p);
-        term1 = scale_cvec3(term1, make_cuDoubleComplex(k * k / R, 0.0));
+        term1 = scale_cvec3(term1, make_cuDoubleComplex(-k * k / R, 0.0));
         if (is_debug_point) print_cvec3("Far-field term (k²(n × p) × n)/R", term1);
 
         cuDoubleComplex n_dot_p = dot_cvec3(n, p);
@@ -163,7 +163,7 @@ __global__ void compute_field(
         // Magnetic field computation
         double mu0 = 1.25663706212e-6;
         cuDoubleComplex factor = cuCmul(
-            make_cuDoubleComplex(0.0, -mu0 * omega),
+            make_cuDoubleComplex(0.0, mu0 * omega),
             cuCsub(make_cuDoubleComplex(1.0 / R, 0.0), make_cuDoubleComplex(0.0, k))
         );
         if (is_debug_point) print_complex("B-field factor -iμ₀ω(1/R - ik)", factor);

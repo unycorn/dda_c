@@ -64,11 +64,11 @@ int main() {
 
     const double spacing = 300e-9;
     const int num_freqs = 30;
-    const double f_start = 100e12;
-    const double f_end = 500e12;
+    const double f_start = 200e12;
+    const double f_end = 250e12;
 
     // Translational disorder parameters
-    double disorder = 100e-9;
+    double disorder = 0e-9;
     const unsigned int seed = 1;
 
     // Position array

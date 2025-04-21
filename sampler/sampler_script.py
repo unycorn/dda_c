@@ -11,7 +11,7 @@ def extract_frequency_from_filename(filename):
         match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)\.csv", filename)
     return float(match.group(1)) if match else None
 
-folder_path = "/home/dharper/dda_c/dda_c/output/(300nm spacing)(Lorentzian)(disorder 0)/"
+folder_path = "/home/dharper/dda_c/dda_c/output/(300nm spacing)(Lorentzian)(disorder 0nm)/"
 for fname in sorted(os.listdir(folder_path)):
     if not fname.endswith(".csv"):
         continue
@@ -22,5 +22,5 @@ for fname in sorted(os.listdir(folder_path)):
 
     fullpath = os.path.join(folder_path, fname)
     # print(f"Running ./sample_fields on {fname} with freq={freq:.2e} Hz")
-    out = subprocess.run(["/home/dharper/dda_c/sampler/sample_fields", fullpath, str(freq)])
+    out = subprocess.run(["/home/dharper/dda_c/dda_c/sampler/sample_fields", fullpath, str(freq)])
     # print(out)
