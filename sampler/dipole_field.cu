@@ -1,5 +1,6 @@
 // dipole_field.cu
 
+#include <stdio.h>
 #include <cuda_runtime.h>
 #include <cuComplex.h>
 #include <math.h>
@@ -88,68 +89,76 @@ __global__ void compute_field(
     double c = 299792458.0;
     double omega = k * c;
     
-    printf("\n=== Computing fields at observation point ===\n");
-    print_vec3("Observation point r_obs", r_obs);
-    printf("Wave number k: %e\n", k);
-    printf("Prefactor: %e\n", prefac);
+    // Only print debug info if this is our special point at (0,0,1e-6)
+    bool is_debug_point = (fabs(r_obs.x) < 1e-10 && fabs(r_obs.y) < 1e-10 && fabs(r_obs.z - 1e-6) < 1e-10);
+    
+    if (is_debug_point) {
+        printf("\n=== Computing fields at observation point ===\n");
+        print_vec3("Observation point r_obs", r_obs);
+        printf("Wave number k: %e\n", k);
+        printf("Prefactor: %e\n", prefac);
+    }
 
     for (int j = 0; j < N_dip; ++j) {
-        printf("\n--- Dipole %d contribution ---\n", j);
-        
         vec3 r_dip = dipole_pos[j];
         cvec3 p = dipole_mom[j];
         
-        print_vec3("Dipole position r_dip", r_dip);
-        print_cvec3("Dipole moment p", p);
+        if (is_debug_point) {
+            printf("\n--- Dipole %d contribution ---\n", j);
+            print_vec3("Dipole position r_dip", r_dip);
+            print_cvec3("Dipole moment p", p);
+        }
 
         vec3 r = vec3_sub(r_obs, r_dip);
         double R = vec3_norm(r);
         vec3 n = vec3_normalize(r);
         
-        print_vec3("Distance vector r", r);
-        printf("Distance magnitude R: %e\n", R);
-        print_vec3("Unit vector n", n);
+        if (is_debug_point) {
+            print_vec3("Distance vector r", r);
+            printf("Distance magnitude R: %e\n", R);
+            print_vec3("Unit vector n", n);
+        }
 
         // Electric field computation
         cvec3 n_cross_p = cross_vec3_cvec3(n, p);
-        print_cvec3("n × p", n_cross_p);
+        if (is_debug_point) print_cvec3("n × p", n_cross_p);
         
         cvec3 term1 = cross_vec3_cvec3(n, n_cross_p);
         term1 = scale_cvec3(term1, make_cuDoubleComplex(k * k / R, 0.0));
-        print_cvec3("Far-field term (k²(n × p) × n)/R", term1);
+        if (is_debug_point) print_cvec3("Far-field term (k²(n × p) × n)/R", term1);
 
         cuDoubleComplex n_dot_p = dot_cvec3(n, p);
-        print_complex("n · p", n_dot_p);
+        if (is_debug_point) print_complex("n · p", n_dot_p);
         
         cvec3 three_n_n_dot_p = {
             cuCmul(make_cuDoubleComplex(3 * n.x, 0.0), n_dot_p),
             cuCmul(make_cuDoubleComplex(3 * n.y, 0.0), n_dot_p),
             cuCmul(make_cuDoubleComplex(3 * n.z, 0.0), n_dot_p),
         };
-        print_cvec3("3n(n · p)", three_n_n_dot_p);
+        if (is_debug_point) print_cvec3("3n(n · p)", three_n_n_dot_p);
         
         cvec3 term2_vec = {
             cuCsub(three_n_n_dot_p.x, p.x),
             cuCsub(three_n_n_dot_p.y, p.y),
             cuCsub(three_n_n_dot_p.z, p.z),
         };
-        print_cvec3("3n(n · p) - p", term2_vec);
+        if (is_debug_point) print_cvec3("3n(n · p) - p", term2_vec);
 
         cuDoubleComplex scalar = cuCdiv(
             cuCsub(make_cuDoubleComplex(1.0, 0.0), make_cuDoubleComplex(0.0, k * R)),
             make_cuDoubleComplex(R * R * R, 0.0)
         );
-        print_complex("Near-field scalar (1-ikR)/R³", scalar);
+        if (is_debug_point) print_complex("Near-field scalar (1-ikR)/R³", scalar);
         
         cvec3 term2 = scale_cvec3(term2_vec, scalar);
-        print_cvec3("Near-field term [(3n(n · p) - p)(1-ikR)/R³]", term2);
+        if (is_debug_point) print_cvec3("Near-field term [(3n(n · p) - p)(1-ikR)/R³]", term2);
 
         cuDoubleComplex phase = make_cuDoubleComplex(cos(k * R), sin(k * R));
-        print_complex("Phase factor e^(ikR)", phase);
+        if (is_debug_point) print_complex("Phase factor e^(ikR)", phase);
         
         cvec3 total_E = add_cvec3(term1, term2);
         total_E = scale_cvec3(total_E, cuCmul(phase, make_cuDoubleComplex(prefac, 0.0)));
-        print_cvec3("Total E field contribution from this dipole", total_E);
+        if (is_debug_point) print_cvec3("Total E field contribution from this dipole", total_E);
 
         // Magnetic field computation
         double mu0 = 1.25663706212e-6;
@@ -157,22 +166,24 @@ __global__ void compute_field(
             make_cuDoubleComplex(0.0, -mu0 * omega),
             cuCsub(make_cuDoubleComplex(1.0 / R, 0.0), make_cuDoubleComplex(0.0, k))
         );
-        print_complex("B-field factor -iμ₀ω(1/R - ik)", factor);
+        if (is_debug_point) print_complex("B-field factor -iμ₀ω(1/R - ik)", factor);
 
         cuDoubleComplex scale = cuCdiv(factor, make_cuDoubleComplex(4 * M_PI * R, 0.0));
         scale = cuCmul(scale, phase);
-        print_complex("B-field scaling factor", scale);
+        if (is_debug_point) print_complex("B-field scaling factor", scale);
 
         cvec3 B_contrib = scale_cvec3(cross_vec3_cvec3(n, p), scale);
-        print_cvec3("B field contribution from this dipole", B_contrib);
+        if (is_debug_point) print_cvec3("B field contribution from this dipole", B_contrib);
 
         E = add_cvec3(E, total_E);
         B = add_cvec3(B, B_contrib);
     }
 
-    printf("\n=== Final Results ===\n");
-    print_cvec3("Total E field", E);
-    print_cvec3("Total B field", B);
+    if (is_debug_point) {
+        printf("\n=== Final Results ===\n");
+        print_cvec3("Total E field", E);
+        print_cvec3("Total B field", B);
+    }
     
     E_out[i] = E;
     B_out[i] = B;
