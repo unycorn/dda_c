@@ -31,7 +31,7 @@ void generate_positions(vec3* positions, int N_width, int N_height, double spaci
 }
 
 // Generates a disordered dipole grid in the xy-plane with optional RNG seed
-void generate_disordered_positions(vec3* positions, int N_width, int N_height, const double spacing, const double rms_displacement, unsigned int seed = 0) {
+void generate_disordered_positions(vec3* positions, int N_width, int N_height, double spacing, double rms_displacement, unsigned int seed = 0) {
     std::default_random_engine rng(seed);  // seed controls reproducibility
     std::normal_distribution<double> normal(0.0, rms_displacement);  // standard deviation = RMS displacement
 
@@ -57,8 +57,8 @@ std::complex<double> lorentz_alpha(double f) {
 
 
 int main() {
-    const int N_width = 10;
-    const int N_height = 10;
+    const int N_width = 100;
+    const int N_height = 100;
     const int N = N_width * N_height;
 
     const double spacing = 300e-9;
@@ -67,7 +67,7 @@ int main() {
     const double f_end = 500e12;
 
     // Translational disorder parameters
-    const double disorder = 0e-9;
+    double disorder = 100e-9;
     const unsigned int seed = 1;
 
     // Position array
