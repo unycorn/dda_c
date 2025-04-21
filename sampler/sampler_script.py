@@ -36,4 +36,5 @@ for fname in sorted(os.listdir(output_dir)):
     match = re.search(r"\((.*?),(.*?)\)", proc.stdout)
     if match:
         flux = float(match.group(2))
-        print(f"{{\"frequency\": {params['frequency']}, \"disorder\": {params['disorder']}, \"seed\": {params['seed']}, \"flux\": {flux}}}")
+        # print(f"{{\"frequency\": {params['frequency']}, \"disorder\": {params['disorder']}, \"seed\": {params['seed']}, \"flux\": {flux}}}")
+        print(f"({params['frequency']}, {params['disorder']}, {params['seed']}, {flux}),")
