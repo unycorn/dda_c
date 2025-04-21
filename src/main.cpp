@@ -14,6 +14,7 @@
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
 
+using mat3x3 = std::complex<double>[3][3];
 constexpr std::complex<double> I(0.0, 1.0);
 
 // Fills a 2D grid of dipoles in the xy-plane (z = 0)
@@ -82,7 +83,6 @@ int main() {
         double k = 2.0 * M_PI / wavelength;
 
         // 3x3 inverse polarizability tensors per dipole
-        using mat3x3 = std::complex<double>[3][3];
         std::vector<mat3x3> alpha_inv(N);
         for (int j = 0; j < N; ++j) {
             auto alpha = lorentz_alpha(freq);
@@ -105,7 +105,7 @@ int main() {
             E_inc[3 * j] = val;
         }
 
-        // Copy to polarizations (in-place LAPACK overwrite)
+        // Copy to polarizations (for in-place LAPACK overwrite)
         std::vector<std::complex<double>> polarizations = E_inc;
 
         // You may need to declare and size ipiv, b, and dimension
