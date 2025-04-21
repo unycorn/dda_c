@@ -24,9 +24,8 @@ end_idx=$(( start_idx + files_per_task - 1 ))
 for (( i=start_idx; i<=end_idx && i<num_files; i++ )); do
     file="${files[$i]}"
     if [[ $file =~ output_([0-9]+\.[0-9]+e\+[0-9]+)_ ]]; then
+        # Extract the frequency and pass it directly without modification
         freq="${BASH_REMATCH[1]}"
-        # Remove decimal point and e+ to match the format sample_fields expects
-        freq=$(echo $freq | tr -d '.' | sed 's/e+//')
         
         # Run sample_fields and save to a partial results file
         ./sampler/sample_fields "$file" "$freq" > "partial_results/result_${SLURM_ARRAY_TASK_ID}_$(basename "$file")"
