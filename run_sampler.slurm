@@ -1,32 +1,48 @@
 #!/bin/bash
 #SBATCH --job-name=process_fields    # Job name
-#SBATCH --output=sampler_%j.out      # Output file name (%j = job ID)
-#SBATCH --error=sampler_%j.err       # Error file name
+#SBATCH --output=sampler_%A_%a.out   # Output file name (%A = job ID, %a = array index)
+#SBATCH --error=sampler_%A_%a.err    # Error file name
 #SBATCH --partition=volta            # Specify the partition
+#SBATCH --array=0-7                  # Array jobs for 8 GPUs (volta has 8 nodes)
 #SBATCH --time=01:00:00             # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                    # Memory per node
 
-# Create a temporary directory for individual results
-TEMP_DIR="temp_results_${SLURM_JOB_ID}"
-mkdir -p $TEMP_DIR
+# Set which GPU this job will use (based on array task ID)
+export CUDA_VISIBLE_DEVICES=$SLURM_ARRAY_TASK_ID
 
-# Initialize the combined results file
-touch combined_results.txt
+# Create a directory for partial results
+mkdir -p partial_results
 
-# Process each output file
-for file in output/output_*.csv; do
-    # Extract frequency from filename (e.g., 2.07e+14 from output_2.07e+14_3.00e+01nm_seed4.csv)
+# Get list of files to process and calculate which ones this task should handle
+files=(output/output_*.csv)
+num_files=${#files[@]}
+files_per_task=$(( (num_files + SLURM_ARRAY_TASK_COUNT - 1) / SLURM_ARRAY_TASK_COUNT ))
+start_idx=$(( SLURM_ARRAY_TASK_ID * files_per_task ))
+end_idx=$(( start_idx + files_per_task - 1 ))
+
+# Process this task's subset of files
+for (( i=start_idx; i<=end_idx && i<num_files; i++ )); do
+    file="${files[$i]}"
     if [[ $file =~ output_([0-9]+\.[0-9]+e\+[0-9]+)_ ]]; then
         freq="${BASH_REMATCH[1]}"
         # Remove decimal point and e+ to match the format sample_fields expects
         freq=$(echo $freq | tr -d '.' | sed 's/e+//')
         
-        # Run sample_fields and append output directly to combined results
-        ./sampler/sample_fields "$file" "$freq" >> combined_results.txt
+        # Run sample_fields and save to a partial results file
+        ./sampler/sample_fields "$file" "$freq" > "partial_results/result_${SLURM_ARRAY_TASK_ID}_$(basename "$file")"
     else
         echo "Warning: Couldn't extract frequency from filename: $file" >&2
     fi
 done
 
-# Clean up temporary directory
-rm -rf $TEMP_DIR
+# If this is the last array task, combine all partial results
+if [ $SLURM_ARRAY_TASK_ID -eq $((SLURM_ARRAY_TASK_COUNT-1)) ]; then
+    # Wait for all other tasks to finish
+    sleep 10
+    
+    # Combine all partial results into final output
+    cat partial_results/result_* > combined_results.txt
+    
+    # Clean up partial results
+    rm -rf partial_results
+fi
