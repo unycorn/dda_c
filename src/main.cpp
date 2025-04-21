@@ -57,7 +57,18 @@ std::complex<double> lorentz_alpha(double f) {
 }
 
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <disorder_nm> <seed>\n";
+        std::cerr << "  disorder_nm: RMS displacement in nanometers\n";
+        std::cerr << "  seed: Random number generator seed\n";
+        return 1;
+    }
+
+    // Parse command line arguments
+    double disorder = std::stod(argv[1]) * 1e-9; // Convert nm to meters
+    unsigned int seed = static_cast<unsigned int>(std::stoul(argv[2]));
+
     const int N_width = 100;
     const int N_height = 100;
     const int N = N_width * N_height;
@@ -66,10 +77,6 @@ int main() {
     const int num_freqs = 30;
     const double f_start = 200e12;
     const double f_end = 250e12;
-
-    // Translational disorder parameters
-    double disorder = 0e-9;
-    const unsigned int seed = 1;
 
     // Position array
     std::vector<vec3> positions(N);
@@ -121,7 +128,8 @@ int main() {
 
         // Output
         std::ostringstream filename;
-        filename << "output/output_" << std::scientific << std::setprecision(2) << freq << ".csv";
+        filename << "output/output_" << std::scientific << std::setprecision(2) 
+                << freq << "_" << disorder*1e9 << "nm_seed" << seed << ".csv";
 
         write_polarizations(filename.str().c_str(), b, positions, 1.0/alpha_inv[0][0][0], E_inc, N);
 
