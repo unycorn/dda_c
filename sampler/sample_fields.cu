@@ -113,8 +113,47 @@ int main(int argc, char** argv) {
     total_flux *= dx * dy;
 
     std::cout << "(" << frequency << "," << total_flux << ")," << std::endl;
-    // std::cout << "Total power transmitted through plane: " << total_flux << " W" << std::endl;
-    // std::cout << "Total radiated power estimate: " << total_flux*2 << " W" << std::endl;
+
+    // Add single point calculation
+    vec3 single_point = {0.0, 0.0, 1e-6};  // Point of interest
+    std::vector<vec3> single_obs(1, single_point);
+    std::vector<cvec3> single_E(1);
+    std::vector<cvec3> single_B(1);
+
+    // Allocate device memory for single point
+    vec3* d_single_obs;
+    cvec3* d_single_E;
+    cvec3* d_single_B;
+    cudaMalloc(&d_single_obs, sizeof(vec3));
+    cudaMalloc(&d_single_E, sizeof(cvec3));
+    cudaMalloc(&d_single_B, sizeof(cvec3));
+
+    // Copy single observation point to device
+    cudaMemcpy(d_single_obs, single_obs.data(), sizeof(vec3), cudaMemcpyHostToDevice);
+
+    // Compute fields at single point
+    compute_field<<<1, 1>>>(d_positions, d_dipoles, N_dip, d_single_obs, d_single_E, d_single_B, 1, k, prefac);
+    cudaDeviceSynchronize();
+
+    // Copy results back
+    cudaMemcpy(single_E.data(), d_single_E, sizeof(cvec3), cudaMemcpyDeviceToHost);
+    cudaMemcpy(single_B.data(), d_single_B, sizeof(cvec3), cudaMemcpyDeviceToHost);
+
+    // Print single point results
+    std::cout << "\nFields at point (0, 0, 1e-6):" << std::endl;
+    std::cout << "E-field (V/m): (" 
+              << cuCreal(single_E[0].x) << " + " << cuCimag(single_E[0].x) << "i, "
+              << cuCreal(single_E[0].y) << " + " << cuCimag(single_E[0].y) << "i, "
+              << cuCreal(single_E[0].z) << " + " << cuCimag(single_E[0].z) << "i)" << std::endl;
+    std::cout << "B-field (T): (" 
+              << cuCreal(single_B[0].x) << " + " << cuCimag(single_B[0].x) << "i, "
+              << cuCreal(single_B[0].y) << " + " << cuCimag(single_B[0].y) << "i, "
+              << cuCreal(single_B[0].z) << " + " << cuCimag(single_B[0].z) << "i)" << std::endl;
+
+    // Free additional device memory
+    cudaFree(d_single_obs);
+    cudaFree(d_single_E);
+    cudaFree(d_single_B);
 
     // Free device memory
     cudaFree(d_positions);
