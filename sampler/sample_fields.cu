@@ -46,9 +46,9 @@ int main(int argc, char** argv) {
     // Define sampling grid (example: 300x300 grid at z = 1000nm)
     const int Nx = 100, Ny = 100;
     const double z_sample = 5000e-9;
-    const double center_x = 5e-6;
-    const double center_y = 5e-6;
-    const double grid_size = 9e-6; // 10 micron patch
+    const double center_x = 15e-6;
+    const double center_y = 15e-6;
+    const double grid_size = 25e-6; // 10 micron patch
     const double dx = grid_size / (Nx - 1);
     const double dy = grid_size / (Ny - 1);
 
