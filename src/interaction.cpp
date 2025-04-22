@@ -36,9 +36,9 @@ void pair_interaction_matrix(std::complex<double> out[3][3], vec3 r_j, vec3 r_k,
 }
 
 void get_full_interaction_matrix(
-    std::complex<double>* A,                       // Output matrix of size 3N x 3N
-    vec3* positions,                               // Array of N positions
-    std::complex<double> (*alpha_inv)[3][3],       // Inverse polarizability tensors
+    std::complex<double>* A,
+    const vec3* positions,
+    const std::complex<double> (*alpha_inv)[3][3],
     int N,
     double k
 ) {
