@@ -92,10 +92,14 @@ int main(int argc, char* argv[]) {
         // 3x3 inverse polarizability tensors per dipole
         std::vector<mat3x3> alpha_inv(N);
         for (int j = 0; j < N; ++j) {
-            auto alpha = lorentz_alpha(freq);
-            auto alpha_inv_scalar = 1.0 / alpha;
-            for (int i = 0; i < 3; ++i)
-                alpha_inv[j][i][i] = alpha_inv_scalar;
+            auto alpha_x = lorentz_alpha(freq);
+            auto alpha_x_inv_scalar = 1.0 / alpha_x;
+            alpha_inv[j][0][0] = alpha_x_inv_scalar;
+
+            auto alpha_yz = lorentz_alpha(200e12);
+            auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
+            alpha_inv[j][1][1] = alpha_yz_inv_scalar;
+            alpha_inv[j][2][2] = alpha_yz_inv_scalar;
         }
 
         // Full interaction matrix A: size (3N x 3N)
