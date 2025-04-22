@@ -50,7 +50,7 @@ void get_full_interaction_matrix(
             std::complex<double> block[3][3];
 
             if (j == k_idx) {
-                std::complex<double> (*alpha_inv_local)[3] = alpha_inv[j];
+                const std::complex<double> (*alpha_inv_local)[3] = alpha_inv[j];
                 for (int i = 0; i < 3; ++i)
                     for (int m = 0; m < 3; ++m)
                         A[(row_offset + i) * 3 * N + (col_offset + m)] = alpha_inv_local[i][m];
