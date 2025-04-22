@@ -133,13 +133,13 @@ int main(int argc, char* argv[]) {
     const int N_width = 100;
     const int N_height = 100;
     const int N = N_width * N_height;
-    const double spacing = 100e-9;
+    const double spacing = 300e-9;
 
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    run_simulation(500e12, 250e12, 20, positions, N, spacing, disorder, seed);
-    run_simulation(201e12, 299e12, 30, positions, N, spacing, disorder, seed);
+    run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, seed);
+    run_simulation(201e12, 299e12, 20, positions, N, spacing, disorder, seed);
 
     return 0;
 }
