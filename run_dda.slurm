@@ -2,7 +2,7 @@
 #SBATCH --job-name=dda_multi_gpu    # Job name
 #SBATCH --output=dda_%A_%a.out      # Output file name (%A = job ID, %a = array index)
 #SBATCH --error=dda_%A_%a.err       # Error file name
-#SBATCH --array=0-19                # Array jobs for 20 seed values
+#SBATCH --array=0-10                # Array jobs for 20 seed values
 #SBATCH --partition=volta           # Specify the partition
 #SBATCH --time=24:00:00             # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                   # Memory per node
@@ -15,6 +15,9 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # Run the program with the calculated seed
 
 DISORDER=0
+./solver $DISORDER $SEED
+
+DISORDER=15
 ./solver $DISORDER $SEED
 
 DISORDER=30
@@ -30,4 +33,16 @@ DISORDER=75
 ./solver $DISORDER $SEED
 
 DISORDER=90
+./solver $DISORDER $SEED
+
+DISORDER=105
+./solver $DISORDER $SEED
+
+DISORDER=130
+./solver $DISORDER $SEED
+
+DISORDER=145
+./solver $DISORDER $SEED
+
+DISORDER=160
 ./solver $DISORDER $SEED
