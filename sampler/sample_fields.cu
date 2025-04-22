@@ -46,9 +46,9 @@ int main(int argc, char** argv) {
     // Define sampling grid (example: 300x300 grid at z = 1000nm)
     const int Nx = 100, Ny = 100;
     const double z_sample = 5000e-9;
-    const double center_x = 15e-6;
-    const double center_y = 15e-6;
-    const double grid_size = 20e-6; // 10 micron patch
+    const double center_x = 5e-6;
+    const double center_y = 5e-6;
+    const double grid_size = 9e-6; // 10 micron patch
     const double dx = grid_size / (Nx - 1);
     const double dy = grid_size / (Ny - 1);
 
@@ -93,6 +93,7 @@ int main(int argc, char** argv) {
     double lambda = c / frequency;
     double k = 2 * M_PI / lambda;
     double prefac = 1.0 / (4 * M_PI * 8.854187817e-12); // 1/(4pi*epsilon0)
+    double Z0 = 376.73; // Impedance of free space
 
     // Launch field kernel
     dim3 blockSize(256);
@@ -118,7 +119,7 @@ int main(int argc, char** argv) {
     double avg_flux = total_flux / N_obs;
     total_flux *= dx * dy;
 
-    std::cout << "(" << frequency << "," << avg_flux << ")," << std::endl;
+    std::cout << "(" << frequency << "," << avg_flux*2.0*Z0 << ")," << std::endl;
 
     // Add single point calculation
     // vec3 single_point = {0.0, 0.0, 1e-6};  // Point of interest

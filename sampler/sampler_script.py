@@ -5,7 +5,8 @@ import sys
 
 def extract_params_from_filename(filename):
     # Match formats like: output_2.07e+14_3.00e+01nm_seed4.csv
-    match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)_([0-9.]+e[+-]?[0-9]+)nm_seed([0-9]+)\.csv", filename)
+    # match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)_([0-9.]+e[+-]?[0-9]+)nm_seed([0-9]+)\.csv", filename)
+    match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)_0nm_seed1.csv", filename)
     if match:
         return {
             'frequency': float(match.group(1)),
