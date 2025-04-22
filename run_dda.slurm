@@ -14,9 +14,6 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # Set disorder value (in nanometers)
 # Run the program with the calculated seed
 
-DISORDER=0
-./solver $DISORDER $SEED
-
 DISORDER=15
 ./solver $DISORDER $SEED
 
