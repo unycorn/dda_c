@@ -2,7 +2,7 @@
 #SBATCH --job-name=dda_multi_gpu    # Job name
 #SBATCH --output=dda_%A_%a.out      # Output file name (%A = job ID, %a = array index)
 #SBATCH --error=dda_%A_%a.err       # Error file name
-#SBATCH --array=0-1                 # Array jobs for 20 seed values
+#SBATCH --array=0-0                 # Array jobs for 20 seed values
 #SBATCH --partition=volta           # Specify the partition
 #SBATCH --time=24:00:00             # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                   # Memory per node
