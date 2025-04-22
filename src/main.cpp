@@ -56,6 +56,68 @@ std::complex<double> lorentz_alpha(double f) {
     return norm_alpha * EPSILON_0;
 }
 
+void run_simulation(
+    double f_start,
+    double f_end,
+    int num_freqs,
+    const std::vector<vec3>& positions,
+    int N,
+    double spacing,
+    double disorder,
+    unsigned int seed
+) {
+    for (int i = 0; i < num_freqs; ++i) {
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
+        double wavelength = C_LIGHT / freq;
+        double k = 2.0 * M_PI / wavelength;
+
+        std::vector<mat3x3> alpha_inv(N);
+        for (int j = 0; j < N; ++j) {
+            auto alpha_x = lorentz_alpha(freq);
+            auto alpha_x_inv_scalar = 1.0 / alpha_x;
+            alpha_inv[j][0][0] = alpha_x_inv_scalar;
+
+            auto alpha_yz = lorentz_alpha(200e12);
+            auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
+            alpha_inv[j][1][1] = alpha_yz_inv_scalar;
+            alpha_inv[j][2][2] = alpha_yz_inv_scalar;
+        }
+
+        std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
+        std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
+        get_full_interaction_matrix(A.data(), positions.data(), alpha_inv.data(), N, k);
+        std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
+
+        std::vector<std::complex<double>> E_inc(3 * N, std::complex<double>(0.0, 0.0));
+        for (int j = 0; j < N; ++j) {
+            double phase = k * positions[j].z;
+            auto val = std::exp(I * phase);
+            E_inc[3 * j] = val;
+        }
+
+        std::vector<std::complex<double>> polarizations = E_inc;
+        std::complex<double>* b = polarizations.data();
+        int dimension = 3 * N;
+
+        solve_gpu(
+            reinterpret_cast<cuDoubleComplex*>(A.data()),
+            reinterpret_cast<cuDoubleComplex*>(b),
+            dimension
+        );
+
+        std::ostringstream filename;
+        filename << "output/output_" << std::scientific << std::setprecision(2)
+                 << freq << "_" << disorder * 1e9 << "nm_seed" << seed << ".csv";
+
+        write_polarizations(filename.str().c_str(), b, positions, 1.0 / alpha_inv[0][0][0], E_inc, N);
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
+    }
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {
@@ -65,150 +127,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Parse command line arguments
-    double disorder = std::stod(argv[1]) * 1e-9; // Convert nm to meters
+    double disorder = std::stod(argv[1]) * 1e-9;
     unsigned int seed = static_cast<unsigned int>(std::stoul(argv[2]));
 
     const int N_width = 100;
     const int N_height = 100;
     const int N = N_width * N_height;
-
     const double spacing = 100e-9;
-    int num_freqs = 20;
-    double f_start = 500e12;
-    double f_end = 250e12;
 
-    // Position array
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    for (int i = 0; i < num_freqs; ++i) {
-        auto start_time = std::chrono::high_resolution_clock::now();
-
-        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
-        double wavelength = C_LIGHT / freq;
-        double k = 2.0 * M_PI / wavelength;
-
-        // 3x3 inverse polarizability tensors per dipole
-        std::vector<mat3x3> alpha_inv(N);
-        for (int j = 0; j < N; ++j) {
-            auto alpha_x = lorentz_alpha(freq);
-            auto alpha_x_inv_scalar = 1.0 / alpha_x;
-            alpha_inv[j][0][0] = alpha_x_inv_scalar;
-
-            auto alpha_yz = lorentz_alpha(200e12);
-            auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
-            alpha_inv[j][1][1] = alpha_yz_inv_scalar;
-            alpha_inv[j][2][2] = alpha_yz_inv_scalar;
-        }
-
-        // Full interaction matrix A: size (3N x 3N)
-        std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
-        std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
-        get_full_interaction_matrix(A.data(), positions.data(), alpha_inv.data(), N, k);
-        std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
-
-        // Incident field vector
-        std::vector<std::complex<double>> E_inc(3 * N, std::complex<double>(0.0, 0.0));
-        for (int j = 0; j < N; ++j) {
-            double phase = k * positions[j].z;
-            auto val = std::exp(I * phase);
-            E_inc[3 * j] = val;
-        }
-
-        // Copy to polarizations (for in-place LAPACK overwrite)
-        std::vector<std::complex<double>> polarizations = E_inc;
-
-        // You may need to declare and size ipiv, b, and dimension
-        std::vector<int> ipiv(3 * N); // If needed by LAPACK
-        std::complex<double>* b = polarizations.data(); // In-place solve
-        int dimension = 3 * N;
-
-        solve_gpu(
-            reinterpret_cast<cuDoubleComplex*>(A.data()),
-            reinterpret_cast<cuDoubleComplex*>(b),
-            dimension
-        ); // Solve modifies b in-place
-
-        // Output
-        std::ostringstream filename;
-        filename << "output/output_" << std::scientific << std::setprecision(2) 
-                << freq << "_" << disorder*1e9 << "nm_seed" << seed << ".csv";
-
-        write_polarizations(filename.str().c_str(), b, positions, 1.0/alpha_inv[0][0][0], E_inc, N);
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
-    }
-
-    num_freqs = 30;
-    f_start = 201e12;
-    f_end = 299e12;
-
-    // Position array
-    std::vector<vec3> positions(N);
-    generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
-
-    for (int i = 0; i < num_freqs; ++i) {
-        auto start_time = std::chrono::high_resolution_clock::now();
-
-        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
-        double wavelength = C_LIGHT / freq;
-        double k = 2.0 * M_PI / wavelength;
-
-        // 3x3 inverse polarizability tensors per dipole
-        std::vector<mat3x3> alpha_inv(N);
-        for (int j = 0; j < N; ++j) {
-            auto alpha_x = lorentz_alpha(freq);
-            auto alpha_x_inv_scalar = 1.0 / alpha_x;
-            alpha_inv[j][0][0] = alpha_x_inv_scalar;
-
-            auto alpha_yz = lorentz_alpha(200e12);
-            auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
-            alpha_inv[j][1][1] = alpha_yz_inv_scalar;
-            alpha_inv[j][2][2] = alpha_yz_inv_scalar;
-        }
-
-        // Full interaction matrix A: size (3N x 3N)
-        std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
-        std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
-        get_full_interaction_matrix(A.data(), positions.data(), alpha_inv.data(), N, k);
-        std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
-
-        // Incident field vector
-        std::vector<std::complex<double>> E_inc(3 * N, std::complex<double>(0.0, 0.0));
-        for (int j = 0; j < N; ++j) {
-            double phase = k * positions[j].z;
-            auto val = std::exp(I * phase);
-            E_inc[3 * j] = val;
-        }
-
-        // Copy to polarizations (for in-place LAPACK overwrite)
-        std::vector<std::complex<double>> polarizations = E_inc;
-
-        // You may need to declare and size ipiv, b, and dimension
-        std::vector<int> ipiv(3 * N); // If needed by LAPACK
-        std::complex<double>* b = polarizations.data(); // In-place solve
-        int dimension = 3 * N;
-
-        solve_gpu(
-            reinterpret_cast<cuDoubleComplex*>(A.data()),
-            reinterpret_cast<cuDoubleComplex*>(b),
-            dimension
-        ); // Solve modifies b in-place
-
-        // Output
-        std::ostringstream filename;
-        filename << "output/output_" << std::scientific << std::setprecision(2) 
-                << freq << "_" << disorder*1e9 << "nm_seed" << seed << ".csv";
-
-        write_polarizations(filename.str().c_str(), b, positions, 1.0/alpha_inv[0][0][0], E_inc, N);
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
-    }
+    run_simulation(500e12, 250e12, 20, positions, N, spacing, disorder, seed);
+    run_simulation(201e12, 299e12, 30, positions, N, spacing, disorder, seed);
 
     return 0;
 }
