@@ -138,8 +138,9 @@ int main(int argc, char* argv[]) {
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, seed);
-    run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, seed);
+    run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, seed);
+    // run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, seed);
+    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, seed);
 
     return 0;
 }
