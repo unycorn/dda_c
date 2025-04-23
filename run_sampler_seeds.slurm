@@ -11,7 +11,7 @@
 SEED=$SLURM_ARRAY_TASK_ID
 
 # Set which GPU this job will use (mod 8 to wrap around since we only have 8 GPUs)
-export CUDA_VISIBLE_DEVICES=$((($SLURM_ARRAY_TASK_ID-1) % 8))
+# export CUDA_VISIBLE_DEVICES=$((($SLURM_ARRAY_TASK_ID-1) % 8))
 
 # Run the sampler script with this seed
 /shared/Anaconda3-2020.02/bin/python3 sampler/sampler_script.py $SEED
