@@ -25,8 +25,8 @@ for fname in sorted(os.listdir(output_dir)):
     if params is None:
         print(f"Skipping unrecognized filename: {fname}")
         continue
-    if params['disorder'] != 0 or params['seed'] != 1:
-        continue
+    # if params['disorder'] != 0 or params['seed'] != 1:
+    #     continue
 
     fullpath = os.path.join(output_dir, fname)
     # Run sample_fields and capture its output
