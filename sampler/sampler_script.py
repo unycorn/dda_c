@@ -34,7 +34,7 @@ with open(output_filename, 'w') as outfile:
         if params is None:
             print(f"Skipping unrecognized filename: {fname}", file=sys.stderr)
             continue
-        if params['disorder'] != 0 or params['seed'] != command_line_arg_seed:
+        if params['seed'] != command_line_arg_seed:
             continue
 
         fullpath = os.path.join(output_dir, fname)

@@ -14,4 +14,4 @@ SEED=$SLURM_ARRAY_TASK_ID
 export CUDA_VISIBLE_DEVICES=$((($SLURM_ARRAY_TASK_ID-1) % 8))
 
 # Run the sampler script with this seed
-python sampler_script.py $SEED
+/shared/Anaconda3-2020.02/bin/python3 sampler/sampler_script.py $SEED
