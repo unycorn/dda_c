@@ -14,5 +14,7 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # Set disorder value (in nanometers)
 # Run the program with the calculated seed
 
-DISORDER=0
-./solver $DISORDER $SEED
+# solver usage: ./solver <disorder_nm> <f0_disorder_Hz> <angle_disorder_rad> <seed>
+# disorder types:        positional    morphological    orientational
+
+./solver 0 0 0 $SEED
