@@ -56,14 +56,8 @@ std::complex<double> lorentz_alpha(double f) {
     return norm_alpha * EPSILON_0;
 }
 
-// Disordered Lorentzian polarizability function with random F0
-std::complex<double> disordered_lorentz_alpha(double f, double f0_rms_disorder, unsigned int& seed, std::default_random_engine& rng) {
-    // Use the provided RNG to maintain consistency with position disorder
-    std::normal_distribution<double> normal(0.0, f0_rms_disorder);
-    
-    // Add disorder to F0
-    double disordered_f0 = F0 + normal(rng);
-    
+// Disordered Lorentzian polarizability function with pre-generated F0 value
+std::complex<double> disordered_lorentz_alpha(double f, double disordered_f0) {
     std::complex<double> denom = (disordered_f0 * disordered_f0 - f * f) - I * f * GAMMA_PARAM;
     std::complex<double> norm_alpha = A_PARAM / denom + B_PARAM + C_PARAM * f;
     return norm_alpha * EPSILON_0;
@@ -82,6 +76,13 @@ void run_simulation(
 ) {
     // Create RNG once for the whole simulation to maintain consistent disorder
     std::default_random_engine rng(seed);
+    
+    // Generate disordered F0 values for each dipole once
+    std::vector<double> disordered_f0s(N);
+    std::normal_distribution<double> normal(0.0, f0_disorder);
+    for (int j = 0; j < N; ++j) {
+        disordered_f0s[j] = F0 + normal(rng);
+    }
 
     for (int i = 0; i < num_freqs; ++i) {
         auto start_time = std::chrono::high_resolution_clock::now();
@@ -92,7 +93,8 @@ void run_simulation(
 
         std::vector<mat3x3> alpha_inv(N);
         for (int j = 0; j < N; ++j) {
-            auto alpha_x = disordered_lorentz_alpha(freq, f0_disorder, seed, rng);
+            // Use the pre-generated disordered F0 value with the function
+            auto alpha_x = disordered_lorentz_alpha(freq, disordered_f0s[j]);
             auto alpha_x_inv_scalar = 1.0 / alpha_x;
             alpha_inv[j][0][0] = alpha_x_inv_scalar;
 
