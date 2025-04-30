@@ -17,6 +17,19 @@
 using mat3x3 = std::complex<double>[3][3];
 constexpr std::complex<double> I(0.0, 1.0);
 
+// Function to print a 3x3 complex matrix
+void print_matrix(const std::complex<double> matrix[3][3], const std::string& label) {
+    std::cout << "\n" << label << ":\n";
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            std::cout << std::setw(15) << std::real(matrix[i][j]) 
+                     << " + " << std::setw(15) << std::imag(matrix[i][j]) << "i  ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
+
 // Function to create a 2D rotation matrix in the xy-plane
 void create_rotation_matrix(std::complex<double> out[3][3], double theta) {
     // Clear the matrix
@@ -120,7 +133,7 @@ void run_simulation(
     std::normal_distribution<double> normal_f0(0.0, f0_disorder);
     for (int j = 0; j < N; ++j) {
         disordered_f0s[j] = F0 + normal_f0(rng);
-        std::cout << "f0 shift " << disordered_f0s[j]-F0 << "\n";
+        // std::cout << "f0 shift " << disordered_f0s[j]-F0 << "\n";
     }
     
     // Generate random rotation angles for each dipole once
@@ -128,7 +141,7 @@ void run_simulation(
     std::normal_distribution<double> normal_angle(0.0, angle_disorder);
     for (int j = 0; j < N; ++j) {
         rotation_angles[j] = normal_angle(rng);
-        std::cout << "angle shift " << rotation_angles[j] << "\n";
+        // std::cout << "angle shift " << rotation_angles[j] << "\n";
     }
 
     for (int i = 0; i < num_freqs; ++i) {
@@ -157,6 +170,10 @@ void run_simulation(
             alpha_inv[j][1][1] = alpha_yz_inv_scalar;
             alpha_inv[j][2][2] = alpha_yz_inv_scalar;
             
+            if (j == 0) { // Print for first dipole only to avoid cluttering output
+                print_matrix(alpha_inv[j], "Alpha inverse before rotation");
+            }
+            
             // Create rotation matrix and its transpose
             std::complex<double> rotation[3][3];
             std::complex<double> rotation_T[3][3];
@@ -167,6 +184,10 @@ void run_simulation(
             std::complex<double> temp[3][3];
             matrix_multiply(temp, rotation, alpha_inv[j]);
             matrix_multiply(alpha_inv[j], temp, rotation_T);
+            
+            if (j == 0) { // Print for first dipole only to avoid cluttering output
+                print_matrix(alpha_inv[j], "Alpha inverse after rotation");
+            }
         }
 
         std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
