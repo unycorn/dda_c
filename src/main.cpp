@@ -56,6 +56,19 @@ std::complex<double> lorentz_alpha(double f) {
     return norm_alpha * EPSILON_0;
 }
 
+// Disordered Lorentzian polarizability function with random F0
+std::complex<double> disordered_lorentz_alpha(double f, double f0_rms_disorder, unsigned int& seed, std::default_random_engine& rng) {
+    // Use the provided RNG to maintain consistency with position disorder
+    std::normal_distribution<double> normal(0.0, f0_rms_disorder);
+    
+    // Add disorder to F0
+    double disordered_f0 = F0 + normal(rng);
+    
+    std::complex<double> denom = (disordered_f0 * disordered_f0 - f * f) - I * f * GAMMA_PARAM;
+    std::complex<double> norm_alpha = A_PARAM / denom + B_PARAM + C_PARAM * f;
+    return norm_alpha * EPSILON_0;
+}
+
 void run_simulation(
     double f_start,
     double f_end,
@@ -64,8 +77,12 @@ void run_simulation(
     int N,
     double spacing,
     double disorder,
+    double f0_disorder,
     unsigned int seed
 ) {
+    // Create RNG once for the whole simulation to maintain consistent disorder
+    std::default_random_engine rng(seed);
+
     for (int i = 0; i < num_freqs; ++i) {
         auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -75,10 +92,11 @@ void run_simulation(
 
         std::vector<mat3x3> alpha_inv(N);
         for (int j = 0; j < N; ++j) {
-            auto alpha_x = lorentz_alpha(freq);
+            auto alpha_x = disordered_lorentz_alpha(freq, f0_disorder, seed, rng);
             auto alpha_x_inv_scalar = 1.0 / alpha_x;
             alpha_inv[j][0][0] = alpha_x_inv_scalar;
 
+            // Keep y and z polarizabilities ordered
             auto alpha_yz = lorentz_alpha(200e12);
             auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
             alpha_inv[j][1][1] = alpha_yz_inv_scalar;
@@ -109,7 +127,7 @@ void run_simulation(
 
         std::ostringstream filename;
         filename << "output/output_" << std::scientific << std::setprecision(2)
-                 << freq << "_" << disorder * 1e9 << "nm_seed" << seed << ".csv";
+                 << freq << "_" << disorder * 1e9 << "nm_f0d" << f0_disorder << "_seed" << seed << ".csv";
 
         write_polarizations(filename.str().c_str(), b, positions, 1.0 / alpha_inv[0][0][0], E_inc, N);
 
@@ -120,15 +138,17 @@ void run_simulation(
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <disorder_nm> <seed>\n";
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <disorder_nm> <f0_disorder_Hz> <seed>\n";
         std::cerr << "  disorder_nm: RMS displacement in nanometers\n";
+        std::cerr << "  f0_disorder_Hz: RMS disorder in F0 frequency (Hz)\n";
         std::cerr << "  seed: Random number generator seed\n";
         return 1;
     }
 
     double disorder = std::stod(argv[1]) * 1e-9;
-    unsigned int seed = static_cast<unsigned int>(std::stoul(argv[2]));
+    double f0_disorder = std::stod(argv[2]);
+    unsigned int seed = static_cast<unsigned int>(std::stoul(argv[3]));
 
     const int N_width = 100;
     const int N_height = 100;
@@ -138,9 +158,9 @@ int main(int argc, char* argv[]) {
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, seed);
-    // run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, seed);
-    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, seed);
+    run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, f0_disorder, seed);
+    // run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, f0_disorder, seed);
+    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, f0_disorder, seed);
 
     return 0;
 }
