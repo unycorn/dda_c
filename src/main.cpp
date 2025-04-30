@@ -120,6 +120,7 @@ void run_simulation(
     std::normal_distribution<double> normal_f0(0.0, f0_disorder);
     for (int j = 0; j < N; ++j) {
         disordered_f0s[j] = F0 + normal_f0(rng);
+        std::cout << "f0 shift " << disordered_f0s[j]-F0 << "\n";
     }
     
     // Generate random rotation angles for each dipole once
@@ -127,6 +128,7 @@ void run_simulation(
     std::normal_distribution<double> normal_angle(0.0, angle_disorder);
     for (int j = 0; j < N; ++j) {
         rotation_angles[j] = normal_angle(rng);
+        std::cout << "angle shift " << rotation_angles[j] << "\n";
     }
 
     for (int i = 0; i < num_freqs; ++i) {
