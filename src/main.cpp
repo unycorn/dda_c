@@ -17,6 +17,43 @@
 using mat3x3 = std::complex<double>[3][3];
 constexpr std::complex<double> I(0.0, 1.0);
 
+// Function to create a 2D rotation matrix in the xy-plane
+void create_rotation_matrix(std::complex<double> out[3][3], double theta) {
+    // Clear the matrix
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            out[i][j] = 0.0;
+        }
+    }
+    
+    // Fill in rotation matrix elements
+    out[0][0] = std::cos(theta);
+    out[0][1] = -std::sin(theta);
+    out[1][0] = std::sin(theta);
+    out[1][1] = std::cos(theta);
+    out[2][2] = 1.0;  // z-component unchanged
+}
+
+// Function to multiply 3x3 complex matrices: result = a * b
+void matrix_multiply(std::complex<double> result[3][3], 
+                    const std::complex<double> a[3][3], 
+                    const std::complex<double> b[3][3]) {
+    std::complex<double> temp[3][3];
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            temp[i][j] = 0;
+            for (int k = 0; k < 3; ++k) {
+                temp[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            result[i][j] = temp[i][j];
+        }
+    }
+}
+
 // Fills a 2D grid of dipoles in the xy-plane (z = 0)
 void generate_positions(vec3* positions, int N_width, int N_height, double spacing) {
     int i = 0;
@@ -72,16 +109,24 @@ void run_simulation(
     double spacing,
     double disorder,
     double f0_disorder,
+    double angle_disorder,
     unsigned int seed
 ) {
-    // Create RNG once for the whole simulation to maintain consistent disorder
+    // Create RNG once for the whole simulation
     std::default_random_engine rng(seed);
     
     // Generate disordered F0 values for each dipole once
     std::vector<double> disordered_f0s(N);
-    std::normal_distribution<double> normal(0.0, f0_disorder);
+    std::normal_distribution<double> normal_f0(0.0, f0_disorder);
     for (int j = 0; j < N; ++j) {
-        disordered_f0s[j] = F0 + normal(rng);
+        disordered_f0s[j] = F0 + normal_f0(rng);
+    }
+    
+    // Generate random rotation angles for each dipole once
+    std::vector<double> rotation_angles(N);
+    std::normal_distribution<double> normal_angle(0.0, angle_disorder);
+    for (int j = 0; j < N; ++j) {
+        rotation_angles[j] = normal_angle(rng);
     }
 
     for (int i = 0; i < num_freqs; ++i) {
@@ -92,17 +137,34 @@ void run_simulation(
         double k = 2.0 * M_PI / wavelength;
 
         std::vector<mat3x3> alpha_inv(N);
+        
         for (int j = 0; j < N; ++j) {
-            // Use the pre-generated disordered F0 value with the function
+            // Calculate inverted polarizabilities
             auto alpha_x = disordered_lorentz_alpha(freq, disordered_f0s[j]);
             auto alpha_x_inv_scalar = 1.0 / alpha_x;
-            alpha_inv[j][0][0] = alpha_x_inv_scalar;
-
-            // Keep y and z polarizabilities ordered
             auto alpha_yz = lorentz_alpha(200e12);
             auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
+            
+            // Create diagonal inverted polarizability matrix
+            for (int ii = 0; ii < 3; ++ii) {
+                for (int jj = 0; jj < 3; ++jj) {
+                    alpha_inv[j][ii][jj] = 0.0;
+                }
+            }
+            alpha_inv[j][0][0] = alpha_x_inv_scalar;
             alpha_inv[j][1][1] = alpha_yz_inv_scalar;
             alpha_inv[j][2][2] = alpha_yz_inv_scalar;
+            
+            // Create rotation matrix and its transpose
+            std::complex<double> rotation[3][3];
+            std::complex<double> rotation_T[3][3];
+            create_rotation_matrix(rotation, rotation_angles[j]);
+            create_rotation_matrix(rotation_T, -rotation_angles[j]);  // Transpose = inverse for rotation matrices
+            
+            // Rotate the inverted polarizability matrix: R * alpha_inv * R^T
+            std::complex<double> temp[3][3];
+            matrix_multiply(temp, rotation, alpha_inv[j]);
+            matrix_multiply(alpha_inv[j], temp, rotation_T);
         }
 
         std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
@@ -140,17 +202,19 @@ void run_simulation(
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <disorder_nm> <f0_disorder_Hz> <seed>\n";
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <disorder_nm> <f0_disorder_Hz> <angle_disorder_rad> <seed>\n";
         std::cerr << "  disorder_nm: RMS displacement in nanometers\n";
         std::cerr << "  f0_disorder_Hz: RMS disorder in F0 frequency (Hz)\n";
+        std::cerr << "  angle_disorder_rad: RMS disorder in rotation angle (radians)\n";
         std::cerr << "  seed: Random number generator seed\n";
         return 1;
     }
 
     double disorder = std::stod(argv[1]) * 1e-9;
     double f0_disorder = std::stod(argv[2]);
-    unsigned int seed = static_cast<unsigned int>(std::stoul(argv[3]));
+    double angle_disorder = std::stod(argv[3]);
+    unsigned int seed = static_cast<unsigned int>(std::stoul(argv[4]));
 
     const int N_width = 100;
     const int N_height = 100;
@@ -160,9 +224,9 @@ int main(int argc, char* argv[]) {
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, f0_disorder, seed);
-    // run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, f0_disorder, seed);
-    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, f0_disorder, seed);
+    run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
+    // run_simulation(100e12, 500e12, 30, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
+    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
 
     return 0;
 }
