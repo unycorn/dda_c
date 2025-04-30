@@ -170,11 +170,11 @@ void run_simulation(
             alpha_inv[j][1][1] = alpha_yz_inv_scalar;
             alpha_inv[j][2][2] = alpha_yz_inv_scalar;
             
-            if (j == 0) { // Print for first dipole only to avoid cluttering output
-                std::cout << "Rotation angle: " << rotation_angles[j] << " radians (" 
-                         << rotation_angles[j] * 180.0 / M_PI << " degrees)\n";
-                print_matrix(alpha_inv[j], "Alpha inverse before rotation");
-            }
+            // if (j == 0) { // Print for first dipole only to avoid cluttering output
+            //     std::cout << "Rotation angle: " << rotation_angles[j] << " radians (" 
+            //              << rotation_angles[j] * 180.0 / M_PI << " degrees)\n";
+            //     print_matrix(alpha_inv[j], "Alpha inverse before rotation");
+            // }
             
             // Create rotation matrix and its transpose
             std::complex<double> rotation[3][3];
@@ -187,9 +187,9 @@ void run_simulation(
             matrix_multiply(temp, rotation, alpha_inv[j]);
             matrix_multiply(alpha_inv[j], temp, rotation_T);
             
-            if (j == 0) { // Print for first dipole only to avoid cluttering output
-                print_matrix(alpha_inv[j], "Alpha inverse after rotation");
-            }
+            // if (j == 0) { // Print for first dipole only to avoid cluttering output
+            //     print_matrix(alpha_inv[j], "Alpha inverse after rotation");
+            // }
         }
 
         std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));

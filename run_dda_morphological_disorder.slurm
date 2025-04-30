@@ -18,9 +18,9 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # disorder types:        positional    morphological    orientational
 
 # Define array of disorder values
-DISORDERS=(15 30 45 60 75 90)
+DISORDERS=(5e12 15e12 25e12 35e12 45e12)
 
 # Loop through disorder values
 for DISORDER in "${DISORDERS[@]}"; do
-    ./solver $DISORDER 0 0 $SEED
+    ./solver 0 $DISORDER 0 $SEED
 done
