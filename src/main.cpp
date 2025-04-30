@@ -171,6 +171,8 @@ void run_simulation(
             alpha_inv[j][2][2] = alpha_yz_inv_scalar;
             
             if (j == 0) { // Print for first dipole only to avoid cluttering output
+                std::cout << "Rotation angle: " << rotation_angles[j] << " radians (" 
+                         << rotation_angles[j] * 180.0 / M_PI << " degrees)\n";
                 print_matrix(alpha_inv[j], "Alpha inverse before rotation");
             }
             
