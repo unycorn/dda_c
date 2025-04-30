@@ -190,8 +190,9 @@ void run_simulation(
         );
 
         std::ostringstream filename;
-        filename << "output/output_" << std::scientific << std::setprecision(2)
-                 << freq << "_" << disorder * 1e9 << "nm_f0d" << f0_disorder << "_seed" << seed << ".csv";
+        filename << "output/output_(" << std::scientific << std::setprecision(2)
+                 << freq << ")_(" << disorder * 1e9 << "nm)_(" << f0_disorder << "Hz)_(" 
+                 << angle_disorder << "rad)_seed" << seed << ".csv";
 
         write_polarizations(filename.str().c_str(), b, positions, 1.0 / alpha_inv[0][0][0], E_inc, N);
 

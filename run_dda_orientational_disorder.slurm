@@ -17,10 +17,10 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # solver usage: ./solver <disorder_nm> <f0_disorder_Hz> <angle_disorder_rad> <seed>
 # disorder types:        positional    morphological    orientational
 
-# Define array of disorder values
-DISORDERS=(15 30 45 60 75 90 105 130 145 160)
+# Define array of orentiational disorder values
+DISORDERS=(0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9)
 
 # Loop through disorder values
 for DISORDER in "${DISORDERS[@]}"; do
-    ./solver $DISORDER 0 0 $SEED
+    ./solver 0 0 $DISORDER $SEED
 done

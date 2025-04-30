@@ -10,13 +10,15 @@ if len(sys.argv) != 2:
 command_line_arg_seed = int(sys.argv[1])
 
 def extract_params_from_filename(filename):
-    # Match formats like: output_2.07e+14_3.00e+01nm_seed4.csv
-    match = re.search(r"output_([0-9.]+e[+-]?[0-9]+)_([0-9.]+e[+-]?[0-9]+)nm_seed([0-9]+)\.csv", filename)
+    # Match formats like: output_(2.07e+14)_(3.00e+01nm)_(0.00e+00Hz)_(0.00e+00rad)_seed4.csv
+    match = re.search(r"output_\(([0-9.]+e[+-]?[0-9]+)\)_\(([0-9.]+e[+-]?[0-9]+)nm\)_\(([0-9.]+e[+-]?[0-9]+)Hz\)_\(([0-9.]+e[+-]?[0-9]+)rad\)_seed([0-9]+)\.csv", filename)
     if match:
         return {
             'frequency': float(match.group(1)),
             'disorder': float(match.group(2)),
-            'seed': int(match.group(3))
+            'f0_disorder': float(match.group(3)),
+            'angle_disorder': float(match.group(4)),
+            'seed': int(match.group(5))
         }
     return None
 
@@ -47,4 +49,4 @@ with open(output_filename, 'w') as outfile:
         match = re.search(r"\((.*?),(.*?)\)", proc.stdout)
         if match:
             flux = float(match.group(2))
-            outfile.write(f"({params['frequency']}, {params['disorder']}, {params['seed']}, {flux}),\n")
+            outfile.write(f"({params['frequency']}, {params['disorder']}, {params['f0_disorder']}, {params['angle_disorder']}, {params['seed']}, {flux}),\n")
