@@ -145,9 +145,20 @@ void run_simulation(
     }
 
     for (int i = 0; i < num_freqs; ++i) {
-        auto start_time = std::chrono::high_resolution_clock::now();
-
         double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
+        
+        // Check if output file already exists
+        std::ostringstream filename;
+        filename << "output/output_(" << std::scientific << std::setprecision(2)
+                 << freq << ")_(" << disorder * 1e9 << "nm)_(" << f0_disorder << "Hz)_(" 
+                 << angle_disorder << "rad)_seed" << seed << ".csv";
+        
+        if (std::ifstream(filename.str()).good()) {
+            std::cout << "Skipping frequency " << freq << " Hz - output file already exists\n";
+            continue;
+        }
+        
+        auto start_time = std::chrono::high_resolution_clock::now();
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
@@ -213,11 +224,6 @@ void run_simulation(
             reinterpret_cast<cuDoubleComplex*>(b),
             dimension
         );
-
-        std::ostringstream filename;
-        filename << "output/output_(" << std::scientific << std::setprecision(2)
-                 << freq << ")_(" << disorder * 1e9 << "nm)_(" << f0_disorder << "Hz)_(" 
-                 << angle_disorder << "rad)_seed" << seed << ".csv";
 
         write_polarizations(filename.str().c_str(), b, positions, 1.0 / alpha_inv[0][0][0], E_inc, N);
 
