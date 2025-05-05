@@ -110,57 +110,48 @@ int main(int argc, char** argv) {
     cudaMemcpy(host_B.data(), d_B, N_obs * sizeof(cvec3), cudaMemcpyDeviceToHost);
     cudaMemcpy(host_S.data(), d_S, N_obs * sizeof(double), cudaMemcpyDeviceToHost);
 
-    // Integrate Poynting flux
-    double total_flux = 0.0;
+    // Calculate reflection coefficient first (using just scattered fields)
+    double total_flux_reflection = 0.0;
     for (int i = 0; i < N_obs; ++i) {
-        total_flux += host_S[i];
-        // std::cout << host_S[i] << std::endl;
+        total_flux_reflection += host_S[i];
     }
-    double avg_flux = total_flux / N_obs;
-    total_flux *= dx * dy;
+    double avg_flux_reflection = total_flux_reflection / N_obs;
+    double total_flux_reflection_normalized = avg_flux_reflection * 2.0 * Z0;
 
-    std::cout << "(" << frequency << "," << avg_flux*2.0*Z0 << ")," << std::endl;
+    // Add incident plane wave fields for transmission calculation
+    // E = x̂E₀exp(ikz), B = ŷ(E₀/c)exp(ikz)
+    for (int i = 0; i < N_obs; ++i) {
+        double phase = k * z_sample;
+        cuDoubleComplex exp_ikz = make_cuDoubleComplex(cos(phase), sin(phase));
+        
+        // Add E field (x-polarized)
+        host_E[i].x = cuCadd(host_E[i].x, exp_ikz);
+        
+        // Add B field (y-polarized, E₀/c amplitude for plane wave)
+        host_B[i].y = cuCadd(host_B[i].y, make_cuDoubleComplex(
+            cuCreal(exp_ikz) / c,
+            cuCimag(exp_ikz) / c
+        ));
+    }
 
-    // Add single point calculation
-    // vec3 single_point = {0.0, 0.0, 1e-6};  // Point of interest
-    // std::vector<vec3> single_obs(1, single_point);
-    // std::vector<cvec3> single_E(1);
-    // std::vector<cvec3> single_B(1);
+    // Recompute Poynting vector with total fields
+    cudaMemcpy(d_E, host_E.data(), N_obs * sizeof(cvec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, host_B.data(), N_obs * sizeof(cvec3), cudaMemcpyHostToDevice);
+    compute_poynting_flux<<<gridSize, blockSize>>>(d_E, d_B, d_S, N_obs);
+    cudaDeviceSynchronize();
+    cudaMemcpy(host_S.data(), d_S, N_obs * sizeof(double), cudaMemcpyDeviceToHost);
 
-    // // Allocate device memory for single point
-    // vec3* d_single_obs;
-    // cvec3* d_single_E;
-    // cvec3* d_single_B;
-    // cudaMalloc(&d_single_obs, sizeof(vec3));
-    // cudaMalloc(&d_single_E, sizeof(cvec3));
-    // cudaMalloc(&d_single_B, sizeof(cvec3));
+    // Calculate transmission coefficient
+    double total_flux_transmission = 0.0;
+    for (int i = 0; i < N_obs; ++i) {
+        total_flux_transmission += host_S[i];
+    }
+    double avg_flux_transmission = total_flux_transmission / N_obs;
+    double total_flux_transmission_normalized = avg_flux_transmission * 2.0 * Z0;
 
-    // // Copy single observation point to device
-    // cudaMemcpy(d_single_obs, single_obs.data(), sizeof(vec3), cudaMemcpyHostToDevice);
-
-    // // Compute fields at single point
-    // compute_field<<<1, 1>>>(d_positions, d_dipoles, N_dip, d_single_obs, d_single_E, d_single_B, 1, k, prefac);
-    // cudaDeviceSynchronize();
-
-    // // Copy results back
-    // cudaMemcpy(single_E.data(), d_single_E, sizeof(cvec3), cudaMemcpyDeviceToHost);
-    // cudaMemcpy(single_B.data(), d_single_B, sizeof(cvec3), cudaMemcpyDeviceToHost);
-
-    // // Print single point results
-    // std::cout << "\nFields at point (0, 0, 1e-6):" << std::endl;
-    // std::cout << "E-field (V/m): (" 
-    //           << cuCreal(single_E[0].x) << " + " << cuCimag(single_E[0].x) << "i, "
-    //           << cuCreal(single_E[0].y) << " + " << cuCimag(single_E[0].y) << "i, "
-    //           << cuCreal(single_E[0].z) << " + " << cuCimag(single_E[0].z) << "i)" << std::endl;
-    // std::cout << "B-field (T): (" 
-    //           << cuCreal(single_B[0].x) << " + " << cuCimag(single_B[0].x) << "i, "
-    //           << cuCreal(single_B[0].y) << " + " << cuCimag(single_B[0].y) << "i, "
-    //           << cuCreal(single_B[0].z) << " + " << cuCimag(single_B[0].z) << "i)" << std::endl;
-
-    // // Free additional device memory
-    // cudaFree(d_single_obs);
-    // cudaFree(d_single_E);
-    // cudaFree(d_single_B);
+    // Print both reflection and transmission coefficients
+    std::cout << "(" << frequency << "," << total_flux_reflection_normalized << "," 
+              << total_flux_transmission_normalized << ")," << std::endl;
 
     // Free device memory
     cudaFree(d_positions);

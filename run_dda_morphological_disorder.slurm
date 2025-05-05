@@ -15,7 +15,7 @@ SEED=$((SLURM_ARRAY_TASK_ID + 1))
 # Run the program with the calculated seed
 
 # solver usage: ./solver <disorder_nm> <f0_disorder_Hz> <angle_disorder_rad> <seed>
-# disorder types:        positional    morphological    orientational
+# disorder types:    .    positional     morphological      orientational       .
 
 # Define array of disorder values
 DISORDERS=(5e12 15e12 25e12 35e12 45e12)

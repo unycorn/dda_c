@@ -45,8 +45,11 @@ with open(output_filename, 'w') as outfile:
         proc = subprocess.run([sample_fields_path, fullpath, str(params['frequency'])], 
                             capture_output=True, text=True)
         
-        # Get the flux value from the output (which is in format "(frequency,flux),")
-        match = re.search(r"\((.*?),(.*?)\)", proc.stdout)
+        # Get both reflection and transmission coefficients from the output
+        # Format is now (frequency,reflection,transmission)
+        match = re.search(r"\((.*?),(.*?),(.*?)\)", proc.stdout)
         if match:
-            flux = float(match.group(2))
-            outfile.write(f"({params['frequency']}, {params['disorder']}, {params['f0_disorder']}, {params['angle_disorder']}, {params['seed']}, {flux}),\n")
+            reflection = float(match.group(2))
+            transmission = float(match.group(3))
+            outfile.write(f"({params['frequency']}, {params['disorder']}, {params['f0_disorder']}, "
+                         f"{params['angle_disorder']}, {params['seed']}, {reflection}, {transmission}),\n")
