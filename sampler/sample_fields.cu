@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     // Add incident plane wave fields for transmission calculation
     // E = x̂E₀exp(ikz), B = ŷ(E₀/c)exp(ikz)
     for (int i = 0; i < N_obs; ++i) {
-        double phase = -k * z_sample;
+        double phase = k * z_sample;
         cuDoubleComplex exp_ikz = make_cuDoubleComplex(cos(phase), sin(phase));
         
         // Add E field (x-polarized)
