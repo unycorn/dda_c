@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     int N_dip = host_positions.size();
 
     // Define sampling grid (example: 300x300 grid at z = 1000nm)
-    const int Nx = 100, Ny = 100;
+    const int Nx = 300, Ny = 300;
     const double z_sample = 5000e-9;
     const double center_x = 15e-6;
     const double center_y = 15e-6;
