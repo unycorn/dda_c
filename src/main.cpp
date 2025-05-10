@@ -30,8 +30,14 @@ void print_matrix(const std::complex<double> matrix[6][6], const std::string& la
     std::cout << "\n";
 }
 
-// Function to create a 2D rotation matrix in the xy-plane
+// Function to create a rotation matrix for the 6x6 polarizability tensor
 void create_rotation_matrix(std::complex<double> out[6][6], double theta) {
+    // Typically, rotation matrices are 3x3, but here we need a 6x6 matrix
+    // which rotates all four tensors in the 6x6 "supertensor"
+    // this matrix is like a tensor product of the 3x3 rotation matrix with the identity matrix
+    //         R6x6 = R(3x3) ⊗ I_2 =  | R(3x3)  0      |
+    //                                | 0       R(3x3) |
+
     // Clear the matrix
     for (int i = 0; i < 6; ++i) {
         for (int j = 0; j < 6; ++j) {
@@ -54,7 +60,7 @@ void create_rotation_matrix(std::complex<double> out[6][6], double theta) {
     out[5][5] = 1.0;
 }
 
-// Function to multiply 6x6 complex matrices: result = a * b
+// Function to multiply 6x6 complex matrices: result = a * b (or a @ b in Python notation)
 void matrix_multiply(std::complex<double> result[6][6], 
                     const std::complex<double> a[6][6], 
                     const std::complex<double> b[6][6]) {

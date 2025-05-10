@@ -2,10 +2,9 @@
 #SBATCH --job-name=dda_tests    # Job name
 #SBATCH --output=tests_%j.out   # Output file name (%j expands to jobID)
 #SBATCH --error=tests_%j.err    # Error file name
-#SBATCH --partition=volta       # Specify the partition (adjust as needed)
+#SBATCH --partition=volta       # Specify the partition
 #SBATCH --time=00:30:00        # Maximum runtime in HH:MM:SS
 #SBATCH --mem=8G               # Memory per node
-#SBATCH --gres=gpu:1          # Request 1 GPU
 
 # Load necessary modules (adjust these based on your cluster setup)
 # module load cuda
