@@ -14,14 +14,14 @@
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
 
-using mat3x3 = std::complex<double>[3][3];
+using mat6x6 = std::complex<double>[6][6];
 constexpr std::complex<double> I(0.0, 1.0);
 
-// Function to print a 3x3 complex matrix
-void print_matrix(const std::complex<double> matrix[3][3], const std::string& label) {
+// Function to print a 6x6 complex matrix
+void print_matrix(const std::complex<double> matrix[6][6], const std::string& label) {
     std::cout << "\n" << label << ":\n";
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 6; ++j) {
             std::cout << std::setw(15) << std::real(matrix[i][j]) 
                      << " + " << std::setw(15) << std::imag(matrix[i][j]) << "i  ";
         }
@@ -31,37 +31,44 @@ void print_matrix(const std::complex<double> matrix[3][3], const std::string& la
 }
 
 // Function to create a 2D rotation matrix in the xy-plane
-void create_rotation_matrix(std::complex<double> out[3][3], double theta) {
+void create_rotation_matrix(std::complex<double> out[6][6], double theta) {
     // Clear the matrix
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 6; ++j) {
             out[i][j] = 0.0;
         }
     }
     
-    // Fill in rotation matrix elements
+    // Fill in rotation matrix elements for electric part (top-left 3x3)
     out[0][0] = std::cos(theta);
     out[0][1] = -std::sin(theta);
     out[1][0] = std::sin(theta);
     out[1][1] = std::cos(theta);
     out[2][2] = 1.0;  // z-component unchanged
+
+    // Fill in rotation matrix elements for magnetic part (bottom-right 3x3)
+    out[3][3] = std::cos(theta);
+    out[3][4] = -std::sin(theta);
+    out[4][3] = std::sin(theta);
+    out[4][4] = std::cos(theta);
+    out[5][5] = 1.0;
 }
 
-// Function to multiply 3x3 complex matrices: result = a * b
-void matrix_multiply(std::complex<double> result[3][3], 
-                    const std::complex<double> a[3][3], 
-                    const std::complex<double> b[3][3]) {
-    std::complex<double> temp[3][3];
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+// Function to multiply 6x6 complex matrices: result = a * b
+void matrix_multiply(std::complex<double> result[6][6], 
+                    const std::complex<double> a[6][6], 
+                    const std::complex<double> b[6][6]) {
+    std::complex<double> temp[6][6];
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 6; ++j) {
             temp[i][j] = 0;
-            for (int k = 0; k < 3; ++k) {
+            for (int k = 0; k < 6; ++k) {
                 temp[i][j] += a[i][k] * b[k][j];
             }
         }
     }
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 6; ++j) {
             result[i][j] = temp[i][j];
         }
     }
@@ -133,7 +140,6 @@ void run_simulation(
     std::normal_distribution<double> normal_f0(0.0, f0_disorder);
     for (int j = 0; j < N; ++j) {
         disordered_f0s[j] = F0 + normal_f0(rng);
-        // std::cout << "f0 shift " << disordered_f0s[j]-F0 << "\n";
     }
     
     // Generate random rotation angles for each dipole once
@@ -141,7 +147,6 @@ void run_simulation(
     std::normal_distribution<double> normal_angle(0.0, angle_disorder);
     for (int j = 0; j < N; ++j) {
         rotation_angles[j] = normal_angle(rng);
-        // std::cout << "angle shift " << rotation_angles[j] << "\n";
     }
 
     for (int i = 0; i < num_freqs; ++i) {
@@ -162,62 +167,52 @@ void run_simulation(
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
-        std::vector<mat3x3> alpha_inv(N);
+        std::vector<mat6x6> alpha(N);
         
         for (int j = 0; j < N; ++j) {
-            // Calculate inverted polarizabilities
+            // Calculate polarizabilities (not inverted)
             auto alpha_x = disordered_lorentz_alpha(freq, disordered_f0s[j]);
-            auto alpha_x_inv_scalar = 1.0 / alpha_x;
             auto alpha_yz = lorentz_alpha(200e12);
-            auto alpha_yz_inv_scalar = 1.0 / alpha_yz;
             
-            // Create diagonal inverted polarizability matrix
-            for (int ii = 0; ii < 3; ++ii) {
-                for (int jj = 0; jj < 3; ++jj) {
-                    alpha_inv[j][ii][jj] = 0.0;
+            // Create diagonal polarizability matrix (6x6)
+            for (int ii = 0; ii < 6; ++ii) {
+                for (int jj = 0; jj < 6; ++jj) {
+                    alpha[j][ii][jj] = 0.0;
                 }
             }
-            alpha_inv[j][0][0] = alpha_x_inv_scalar;
-            alpha_inv[j][1][1] = alpha_yz_inv_scalar;
-            alpha_inv[j][2][2] = alpha_yz_inv_scalar;
+            // Set only the electric-electric components (top-left 3x3)
+            alpha[j][0][0] = alpha_x;
+            alpha[j][1][1] = alpha_yz;
+            alpha[j][2][2] = alpha_yz;
             
-            // if (j == 0) { // Print for first dipole only to avoid cluttering output
-            //     std::cout << "Rotation angle: " << rotation_angles[j] << " radians (" 
-            //              << rotation_angles[j] * 180.0 / M_PI << " degrees)\n";
-            //     print_matrix(alpha_inv[j], "Alpha inverse before rotation");
-            // }
-            
-            // Create rotation matrix and its transpose
-            std::complex<double> rotation[3][3];
-            std::complex<double> rotation_T[3][3];
+            // Create rotation matrix and its transpose for 6x6
+            std::complex<double> rotation[6][6];
+            std::complex<double> rotation_T[6][6];
             create_rotation_matrix(rotation, rotation_angles[j]);
-            create_rotation_matrix(rotation_T, -rotation_angles[j]);  // Transpose = inverse for rotation matrices
+            create_rotation_matrix(rotation_T, -rotation_angles[j]);
             
-            // Rotate the inverted polarizability matrix: R * alpha_inv * R^T
-            std::complex<double> temp[3][3];
-            matrix_multiply(temp, rotation, alpha_inv[j]);
-            matrix_multiply(alpha_inv[j], temp, rotation_T);
-            
-            // if (j == 0) { // Print for first dipole only to avoid cluttering output
-            //     print_matrix(alpha_inv[j], "Alpha inverse after rotation");
-            // }
+            // Rotate the polarizability matrix: R * alpha * R^T
+            std::complex<double> temp[6][6];
+            matrix_multiply(temp, rotation, alpha[j]);
+            matrix_multiply(alpha[j], temp, rotation_T);
         }
 
-        std::vector<std::complex<double>> A(3 * N * 3 * N, std::complex<double>(0.0, 0.0));
+        std::vector<std::complex<double>> A(6 * N * 6 * N, std::complex<double>(0.0, 0.0));
         std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
-        get_full_interaction_matrix(A.data(), positions.data(), alpha_inv.data(), N, k);
+        get_full_interaction_matrix(A.data(), positions.data(), alpha.data(), N, k);
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
-        std::vector<std::complex<double>> E_inc(3 * N, std::complex<double>(0.0, 0.0));
+        // Initialize incident field (now 6N components, but only E-field is non-zero)
+        std::vector<std::complex<double>> inc_field(6 * N, std::complex<double>(0.0, 0.0));
         for (int j = 0; j < N; ++j) {
             double phase = k * positions[j].z;
             auto val = std::exp(I * phase);
-            E_inc[3 * j] = val;
+            inc_field[6 * j] = val;  // Only x-component of E-field is non-zero
         }
 
-        std::vector<std::complex<double>> polarizations = E_inc;
-        std::complex<double>* b = polarizations.data();
-        int dimension = 3 * N;
+        std::vector<std::complex<double>> response = inc_field;
+        std::complex<double>* b = response.data();
+        int dimension = 6 * N;
 
         solve_gpu(
             reinterpret_cast<cuDoubleComplex*>(A.data()),
@@ -225,7 +220,8 @@ void run_simulation(
             dimension
         );
 
-        write_polarizations(filename.str().c_str(), b, positions, 1.0 / alpha_inv[0][0][0], E_inc, N);
+        // For output, we only use the electric part of the response
+        write_polarizations(filename.str().c_str(), b, positions, alpha[0][0][0], inc_field, N);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
