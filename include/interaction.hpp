@@ -18,7 +18,7 @@ void biani_green_matrix(
     double k                      // Wavenumber
 );
 
-// Now returns the device pointer to the matrix for use in solve_gpu
+// Returns a pointer to the matrix on the GPU device for use in solve_gpu
 cuDoubleComplex* get_full_interaction_matrix(
     std::complex<double>* A_host,                      // Host matrix of size (6N x 6N), row-major
     const vec3* positions,                             // Positions of N dipoles

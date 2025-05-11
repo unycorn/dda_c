@@ -7,6 +7,17 @@
 #include "constants.hpp"
 #include "vector3.hpp"
 
+// Helper function to check CUDA errors
+#define CHECK_CUDA(call) \
+    do { \
+        cudaError_t err = call; \
+        if (err != cudaSuccess) { \
+            std::cerr << "CUDA error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << cudaGetErrorString(err) << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
 constexpr std::complex<double> I(0.0, 1.0);
 
 // Helper function for cross product matrix
@@ -143,7 +154,7 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
 }
 
 // Builds the full 6N x 6N interaction matrix
-void get_full_interaction_matrix(
+cuDoubleComplex* get_full_interaction_matrix(
     std::complex<double>* A_host,
     const vec3* positions,
     const std::complex<double> (*polarizability)[6][6],
