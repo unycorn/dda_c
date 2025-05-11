@@ -58,6 +58,7 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
     cusolverDnHandle_t handle;
     cublasHandle_t cublas_handle;
     cuDoubleComplex *A_dev = nullptr, *work_dev = nullptr;
+    cuDoubleComplex *identity_dev = nullptr;
     int *pivot_dev = nullptr, *info_dev = nullptr;
     int work_size = 0, info_host = 0;
 
@@ -73,17 +74,27 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
 
     // Allocate device memory
     cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N);
+    cudaMalloc(&identity_dev, sizeof(cuDoubleComplex) * N * N);
     cudaMalloc(&pivot_dev, sizeof(int) * N);
     cudaMalloc(&info_dev, sizeof(int));
 
     // Copy matrix to device
     cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice);
 
-    // Get workspace size and allocate
+    // Create identity matrix on device
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            int idx = i * N + j;
+            cuDoubleComplex value = (i == j) ? make_cuDoubleComplex(1.0, 0.0) : make_cuDoubleComplex(0.0, 0.0);
+            cudaMemcpy(&identity_dev[idx], &value, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice);
+        }
+    }
+
+    // Get workspace size for LU factorization
     cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size);
     cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size);
 
-    // Compute LU factorization
+    // Perform LU factorization
     cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev);
     cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost);
     if (info_host != 0) {
@@ -91,8 +102,8 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
         std::exit(EXIT_FAILURE);
     }
 
-    // Compute inverse using LU factorization
-    cusolverDnZgetri(handle, N, A_dev, N, pivot_dev, work_dev, work_size, info_dev);
+    // Solve N systems of equations to get inverse (A * X = I)
+    cusolverDnZgetrs(handle, CUBLAS_OP_N, N, N, A_dev, N, pivot_dev, identity_dev, N, info_dev);
     cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost);
     if (info_host != 0) {
         std::cerr << "invert_matrix_gpu: Matrix inversion failed with error " << info_host << "\n";
@@ -100,10 +111,11 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
     }
 
     // Copy result back to host
-    cudaMemcpy(A_host, A_dev, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice);
+    cudaMemcpy(A_host, identity_dev, sizeof(cuDoubleComplex) * N * N, cudaMemcpyDeviceToHost);
 
     // Free resources
     cudaFree(A_dev);
+    cudaFree(identity_dev);
     cudaFree(pivot_dev);
     cudaFree(info_dev);
     cudaFree(work_dev);
