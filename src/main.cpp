@@ -8,6 +8,7 @@
 #include <complex>
 #include <sstream>
 #include <random>
+#include <cuda_runtime.h>
 #include "constants.hpp"
 #include "vector3.hpp"
 #include "interaction.hpp"
