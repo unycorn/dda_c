@@ -1,6 +1,7 @@
 #include <complex>
 #include <cmath>
 #include <iostream>
+#include <vector>  // Add missing include
 #include <cuda_runtime.h>
 #include <cuComplex.h>
 #include "solve_gpu.hpp"
