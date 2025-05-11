@@ -186,10 +186,16 @@ void run_simulation(
                     alpha[j][ii][jj] = 0.0;
                 }
             }
-            // Set only the electric-electric components (top-left 3x3)
+            // Set electric-electric components (top-left 3x3)
             alpha[j][0][0] = alpha_x;
             alpha[j][1][1] = alpha_yz;
             alpha[j][2][2] = alpha_yz;
+
+            // Set magnetic-magnetic components (bottom-right 3x3) to small non-zero values
+            // These values are small enough to not affect the physics significantly
+            alpha[j][3][3] = alpha_x * 1e-6;
+            alpha[j][4][4] = alpha_yz * 1e-6;
+            alpha[j][5][5] = alpha_yz * 1e-6;
             
             // Create rotation matrix and its transpose for 6x6
             std::complex<double> rotation[6][6];
