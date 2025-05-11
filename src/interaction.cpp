@@ -162,44 +162,29 @@ cuDoubleComplex* get_full_interaction_matrix(
     int N,
     double k
 ) {
-    // Calculate total memory requirements
+    // Calculate total memory needed
     size_t matrix_size = (size_t)(6 * N) * (size_t)(6 * N) * sizeof(cuDoubleComplex);
     
-    // Get GPU memory info
-    size_t free_bytes, total_bytes;
-    cudaMemGetInfo(&free_bytes, &total_bytes);
-    
-    std::cout << "Interaction Matrix Construction Required Memory: " << (matrix_size / (1024.0*1024.0*1024.0)) << " GB\n";
-    std::cout << "Available GPU Memory: " << (free_bytes / (1024.0*1024.0*1024.0)) << " GB\n";
-    
-    if (free_bytes < matrix_size) {
-        std::cerr << "Error: Not enough GPU memory to construct interaction matrix.\n";
-        std::cerr << "Required: " << (matrix_size / (1024.0*1024.0*1024.0)) << " GB, ";
-        std::cerr << "Available: " << (free_bytes / (1024.0*1024.0*1024.0)) << " GB\n";
-        std::exit(EXIT_FAILURE);
-    }
+    // Calculate total elements and initialize progress tracking
+    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
+    size_t elements_processed = 0;
+    int last_percent = -1;
 
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(6 * N * 6 * N);
-    int total_elements = N * N;
-    int elements_processed = 0;
-    int last_percent = -1;
 
-    #pragma omp parallel for collapse(2) schedule(dynamic)
+    // Main construction loop
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
-            #pragma omp atomic
+            // Update progress
             elements_processed++;
+            double progress = (static_cast<double>(elements_processed) * 100.0) / 
+                            static_cast<double>(total_elements);
+            int percent_complete = static_cast<int>(progress);
             
-            int percent_complete = (elements_processed * 100) / total_elements;
             if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                #pragma omp critical
-                {
-                    if (percent_complete != last_percent) {
-                        std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                        last_percent = percent_complete;
-                    }
-                }
+                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                last_percent = percent_complete;
             }
 
             int row_offset = j * 6;
