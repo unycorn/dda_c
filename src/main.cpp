@@ -250,8 +250,8 @@ int main(int argc, char* argv[]) {
     double angle_disorder = std::stod(argv[3]);
     unsigned int seed = static_cast<unsigned int>(std::stoul(argv[4]));
 
-    const int N_width = 100;
-    const int N_height = 100;
+    const int N_width = 80;
+    const int N_height = 80;
     const int N = N_width * N_height;
     const double spacing = 300e-9;
 
