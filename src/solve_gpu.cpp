@@ -232,7 +232,7 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
         }
 
         // Copy result back to host
-        CHECK_CUDA(cudaMemcpy(A_host, identity_dev, matrix_size, cudaMemcpyHostToDevice));
+        CHECK_CUDA(cudaMemcpy(A_host, identity_dev, matrix_size, cudaMemcpyDeviceToHost));
 
         // Clean up
         cleanup_gpu_resources(&handle, &cublas_handle, A_dev, nullptr, work_dev, pivot_dev, info_dev);
