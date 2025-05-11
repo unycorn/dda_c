@@ -4,7 +4,6 @@
 #SBATCH --error=dda_%A_%a.err      # Error file name
 #SBATCH --array=0-10               # Array jobs for 11 seed values
 #SBATCH --partition=volta          # Specify the partition
-#SBATCH --gres=gpu:1              # Request 1 GPU using GRES syntax
 #SBATCH --time=24:00:00           # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                 # Memory per node
 #SBATCH --qos=normal             # Quality of Service
