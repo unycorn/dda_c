@@ -161,8 +161,8 @@ cuDoubleComplex* get_full_interaction_matrix(
     int N,
     double k
 ) {
-    // Calculate total memory requirements upfront
-    size_t matrix_size = (size_t)(6 * N) * (size_t)(6 * N) * sizeof(std::complex<double>);
+    // Calculate total memory requirements
+    size_t matrix_size = (size_t)(6 * N) * (size_t)(6 * N) * sizeof(cuDoubleComplex);
     
     // Get GPU memory info
     size_t free_bytes, total_bytes;
@@ -178,58 +178,52 @@ cuDoubleComplex* get_full_interaction_matrix(
         std::exit(EXIT_FAILURE);
     }
 
-    // Allocate matrix on GPU
-    cuDoubleComplex* A_dev = nullptr;
-    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
-    std::cout << "GPU memory allocated successfully\n";
-
-    // Build matrix directly on GPU
+    // Allocate CPU buffer for matrix construction
+    std::vector<cuDoubleComplex> A_cpu(6 * N * 6 * N);
     int total_elements = N * N;
     int elements_processed = 0;
     int last_percent = -1;
 
+    #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
+            #pragma omp atomic
             elements_processed++;
-            int percent_complete = (elements_processed * 100) / total_elements;
             
+            int percent_complete = (elements_processed * 100) / total_elements;
             if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                last_percent = percent_complete;
+                #pragma omp critical
+                {
+                    if (percent_complete != last_percent) {
+                        std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                        last_percent = percent_complete;
+                    }
+                }
             }
 
             int row_offset = j * 6;
             int col_offset = k_idx * 6;
 
             if (j == k_idx) {
-                // Diagonal blocks store inverted polarizability tensors
-                // Convert polarizability to cuDoubleComplex for inversion
-                cuDoubleComplex polarizability_gpu[36];  // 6x6 matrix
+                // Convert and invert polarizability on CPU
+                std::vector<cuDoubleComplex> polarizability_block(36);
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
-                        polarizability_gpu[i*6 + m] = make_cuDoubleComplex(
+                        polarizability_block[i*6 + m] = make_cuDoubleComplex(
                             std::real(polarizability[j][i][m]),
                             std::imag(polarizability[j][i][m])
                         );
                     }
                 }
 
-                std::cout << "Inverting polarizability matrix for dipole " << j + 1 << "/" << N << "\r";
-                std::cout.flush();
-                
-                // Invert the 6x6 polarizability matrix using LAPACK
-                invert_6x6_matrix_lapack(polarizability_gpu);
+                // Invert the 6x6 polarizability matrix
+                invert_6x6_matrix_lapack(polarizability_block.data());
 
-                // Copy inverted matrix to interaction matrix on GPU
+                // Copy inverted matrix to the big interaction matrix
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
-                        cuDoubleComplex value = polarizability_gpu[i*6 + m];
-                        CHECK_CUDA(cudaMemcpy(
-                            &A_dev[(row_offset + i) * 6 * N + (col_offset + m)],
-                            &value,
-                            sizeof(cuDoubleComplex),
-                            cudaMemcpyHostToDevice
-                        ));
+                        A_cpu[(row_offset + i) * 6 * N + (col_offset + m)] = 
+                            polarizability_block[i*6 + m];
                     }
                 }
             } else {
@@ -237,30 +231,33 @@ cuDoubleComplex* get_full_interaction_matrix(
                 std::complex<double> block[36];  // 6x6 block
                 biani_green_matrix(block, positions[j], positions[k_idx], k);
                 
-                // Copy block to GPU
+                // Copy block to interaction matrix
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
-                        cuDoubleComplex value = make_cuDoubleComplex(
+                        A_cpu[(row_offset + i) * 6 * N + (col_offset + m)] = make_cuDoubleComplex(
                             std::real(block[i*6 + m]),
                             std::imag(block[i*6 + m])
                         );
-                        CHECK_CUDA(cudaMemcpy(
-                            &A_dev[(row_offset + i) * 6 * N + (col_offset + m)],
-                            &value,
-                            sizeof(cuDoubleComplex),
-                            cudaMemcpyHostToDevice
-                        ));
                     }
                 }
             }
         }
     }
-    std::cout << "\nMatrix construction complete, copying to host...\n";
 
-    // Copy final matrix back to host
-    CHECK_CUDA(cudaMemcpy(A_host, A_dev, matrix_size, cudaMemcpyDeviceToHost));
-    std::cout << "Matrix copied to host successfully\n";
+    std::cout << "\nMatrix construction complete, transferring to GPU...\n";
 
-    // Keep the matrix on GPU for solving - this will be freed by the solve_gpu function
+    // Allocate and transfer matrix to GPU in one operation
+    cuDoubleComplex* A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUDA(cudaMemcpy(A_dev, A_cpu.data(), matrix_size, cudaMemcpyHostToDevice));
+    
+    // Copy to host buffer if provided
+    if (A_host != nullptr) {
+        for (size_t i = 0; i < 6 * N * 6 * N; ++i) {
+            A_host[i] = std::complex<double>(A_cpu[i].x, A_cpu[i].y);
+        }
+    }
+
+    std::cout << "Matrix transferred to GPU successfully\n";
     return A_dev;
 }
