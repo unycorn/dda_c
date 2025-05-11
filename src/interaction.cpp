@@ -254,7 +254,8 @@ cuDoubleComplex* get_full_interaction_matrix(
     
     // Copy to host buffer if provided
     if (A_host != nullptr) {
-        for (size_t i = 0; i < 6 * N * 6 * N; ++i) {
+        size_t total_elements = static_cast<size_t>(6 * N) * static_cast<size_t>(6 * N);
+        for (size_t i = 0; i < total_elements; ++i) {
             A_host[i] = std::complex<double>(A_cpu[i].x, A_cpu[i].y);
         }
     }
