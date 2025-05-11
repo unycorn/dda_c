@@ -69,9 +69,13 @@ void init_cuda_device() {
 bool check_gpu_memory(size_t required_bytes) {
     size_t free_bytes, total_bytes;
     CHECK_CUDA(cudaMemGetInfo(&free_bytes, &total_bytes));
-    std::cout << "GPU Memory - Free: " << free_bytes / (1024*1024*1024) 
-              << " GB, Required: " << required_bytes / (1024*1024*1024) 
-              << " GB\n";
+    
+    // Only print memory info if required memory is significant (>1MB)
+    if (required_bytes > 1024*1024) {
+        std::cout << "GPU Memory - Free: " << free_bytes / (1024*1024*1024.0) 
+                  << " GB, Required: " << required_bytes / (1024*1024*1024.0) 
+                  << " GB\n";
+    }
     return free_bytes >= required_bytes;
 }
 
@@ -99,36 +103,44 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
-    cusolverDnHandle_t handle = nullptr;
-    cuDoubleComplex *A_dev = nullptr, *b_dev = nullptr, *work_dev = nullptr;
-    int *pivot_dev = nullptr, *info_dev = nullptr;
-    int work_size = 0, info_host = 0;
-
-    // Calculate required memory
+    // Calculate required memory for the full problem up front
     size_t matrix_size = (size_t)N * (size_t)N * sizeof(cuDoubleComplex);
     size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
     size_t pivot_size = (size_t)N * sizeof(int);
     
+    cusolverDnHandle_t handle = nullptr;
+    cuDoubleComplex *A_dev = nullptr;
+    int work_size = 0;
+
+    // Create temporary handle just to get workspace size
+    CHECK_CUSOLVER(cusolverDnCreate(&handle));
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
+    CHECK_CUDA(cudaFree(A_dev));
+    cusolverDnDestroy(handle);
+
+    size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
+    size_t total_required = matrix_size + vector_size + pivot_size + sizeof(int) + workspace_size;
+    
+    if (!check_gpu_memory(total_required)) {
+        std::cerr << "Not enough GPU memory for " << N << "x" << N << " system\n";
+        std::cerr << "Matrix size: " << matrix_size/(1024.0*1024.0*1024.0) << " GB\n";
+        std::cerr << "Workspace size: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
+        std::cerr << "Total required: " << total_required/(1024.0*1024.0*1024.0) << " GB\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Reset pointers for actual solve
+    handle = nullptr;
+    A_dev = nullptr;
+    cuDoubleComplex *b_dev = nullptr, *work_dev = nullptr;
+    int *pivot_dev = nullptr, *info_dev = nullptr;
+    int info_host = 0;
+    
     try {
-        // Create handle and get workspace size
+        // Create handle and allocate memory
         CHECK_CUSOLVER(cusolverDnCreate(&handle));
         CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
-        CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
-        
-        size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
-        size_t total_required = matrix_size + vector_size + pivot_size + sizeof(int) + workspace_size;
-
-        if (!check_gpu_memory(total_required)) {
-            std::cerr << "Not enough GPU memory for solving " << N << "x" << N << " system\n";
-            std::cerr << "Matrix size: " << matrix_size/(1024.0*1024.0*1024.0) << " GB\n";
-            std::cerr << "Vector size: " << vector_size/(1024.0*1024.0*1024.0) << " GB\n";
-            std::cerr << "Workspace size: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
-            std::cerr << "Total required: " << total_required/(1024.0*1024.0*1024.0) << " GB\n";
-            cleanup_gpu_resources(&handle, nullptr, A_dev, nullptr, nullptr, nullptr, nullptr);
-            std::exit(EXIT_FAILURE);
-        }
-
-        // Allocate remaining resources
         CHECK_CUDA(cudaMalloc(&b_dev, vector_size));
         CHECK_CUDA(cudaMalloc(&pivot_dev, pivot_size));
         CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));

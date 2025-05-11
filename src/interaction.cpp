@@ -150,6 +150,25 @@ void get_full_interaction_matrix(
     int N,
     double k
 ) {
+    // Calculate total memory requirements upfront
+    size_t matrix_size = (size_t)(6 * N) * (size_t)(6 * N) * sizeof(std::complex<double>);
+    // We only need memory for the matrix itself, no extra workspace needed for construction
+    size_t total_required = matrix_size;
+    
+    // Get GPU memory info
+    size_t free_bytes, total_bytes;
+    cudaMemGetInfo(&free_bytes, &total_bytes);
+    
+    std::cout << "Interaction Matrix Size: " << (matrix_size / (1024.0*1024.0*1024.0)) << " GB\n";
+    std::cout << "Available GPU Memory: " << (free_bytes / (1024.0*1024.0*1024.0)) << " GB\n";
+    
+    if (free_bytes < total_required) {
+        std::cerr << "Error: Not enough GPU memory to construct interaction matrix.\n";
+        std::cerr << "Required: " << (total_required / (1024.0*1024.0*1024.0)) << " GB, ";
+        std::cerr << "Available: " << (free_bytes / (1024.0*1024.0*1024.0)) << " GB\n";
+        std::exit(EXIT_FAILURE);
+    }
+
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
             int row_offset = j * 6;
