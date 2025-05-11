@@ -76,29 +76,41 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
 
     std::cout << "Starting linear system solve for N = " << N << "\n";
 
-    // Calculate memory requirements
-    size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
-    size_t pivot_size = (size_t)N * sizeof(int);
-
-    // Get workspace size
+    // Create solver handle
     cusolverDnHandle_t handle = nullptr;
     CHECK_CUSOLVER(cusolverDnCreate(&handle));
+
+    // Try different algorithms to find one with minimal workspace
+    const cusolverDnParams_t params = nullptr;
+    int64_t workspace_bytes = 0;
     
-    int work_size = 0;
-    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_device, N, &work_size));
+    // Request workspace size for LU with better memory efficiency
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(
+        handle, params, N, N,
+        A_device, N, CUSOLVER_ALG_1,
+        &workspace_bytes
+    ));
+
+    size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
+    size_t pivot_size = (size_t)N * sizeof(int);
+    size_t workspace_size = workspace_bytes;
 
     // Print memory requirements
-    size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
     std::cout << "Memory requirements:\n";
     std::cout << "- Solution vector: " << vector_size/(1024.0*1024.0*1024.0) << " GB\n";
     std::cout << "- Pivot array: " << pivot_size/(1024.0*1024.0*1024.0) << " GB\n";
     std::cout << "- Solver workspace: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
 
+    // Get available GPU memory
+    size_t free_bytes, total_bytes;
+    cudaMemGetInfo(&free_bytes, &total_bytes);
+    std::cout << "Available GPU memory: " << free_bytes/(1024.0*1024.0*1024.0) << " GB\n";
+
     // Allocate minimum required memory
     cuDoubleComplex* b_dev = nullptr;
     int* pivot_dev = nullptr;
     int* info_dev = nullptr;
-    cuDoubleComplex* work_dev = nullptr;
+    void* work_dev = nullptr;
     int info_host = 0;
 
     try {
@@ -110,8 +122,15 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
         // Copy right-hand side to device
         CHECK_CUDA(cudaMemcpy(b_dev, b_host, vector_size, cudaMemcpyHostToDevice));
 
-        // LU factorization (modifies A_device in-place)
-        CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_device, N, work_dev, pivot_dev, info_dev));
+        // LU factorization with memory-efficient algorithm
+        CHECK_CUSOLVER(cusolverDnZgetrf(
+            handle, params, N, N,
+            A_device, N, 
+            CUSOLVER_ALG_1,
+            work_dev, workspace_bytes,
+            pivot_dev, info_dev
+        ));
+
         CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
         if (info_host != 0) {
             std::cerr << "LU factorization failed with error " << info_host << std::endl;
@@ -119,7 +138,12 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
         }
 
         // Solve system using factored matrix
-        CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, 1, A_device, N, pivot_dev, b_dev, N, info_dev));
+        CHECK_CUSOLVER(cusolverDnZgetrs(
+            handle, CUBLAS_OP_N, N, 1,
+            A_device, N, pivot_dev,
+            b_dev, N, info_dev
+        ));
+
         CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
         if (info_host != 0) {
             std::cerr << "Back substitution failed with error " << info_host << std::endl;
@@ -130,11 +154,13 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
         CHECK_CUDA(cudaMemcpy(b_host, b_dev, vector_size, cudaMemcpyDeviceToHost));
 
     } catch (...) {
-        cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
+        cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, 
+            reinterpret_cast<cuDoubleComplex*>(work_dev), pivot_dev, info_dev);
         throw;
     }
 
-    cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
+    cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, 
+        reinterpret_cast<cuDoubleComplex*>(work_dev), pivot_dev, info_dev);
 }
 
 void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
