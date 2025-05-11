@@ -66,13 +66,13 @@ void init_cuda_device() {
 }
 
 // Add this function to check if we have enough memory
-bool check_gpu_memory(size_t required_bytes) {
+bool check_gpu_memory(size_t required_bytes, const char* allocation_type = "") {
     size_t free_bytes, total_bytes;
     CHECK_CUDA(cudaMemGetInfo(&free_bytes, &total_bytes));
     
     // Only print memory info if required memory is significant (>1MB)
     if (required_bytes > 1024*1024) {
-        std::cout << "GPU Memory - Free: " << free_bytes / (1024*1024*1024.0) 
+        std::cout << allocation_type << " Memory - Free: " << free_bytes / (1024.0*1024*1024.0) 
                   << " GB, Required: " << required_bytes / (1024*1024*1024.0) 
                   << " GB\n";
     }
@@ -99,42 +99,36 @@ void cleanup_gpu_resources(cusolverDnHandle_t* handle, cublasHandle_t* cublas_ha
     cudaGetLastError();
 }
 
-void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
+// Update the function signature to clarify that A is on device
+void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
-    // Calculate required memory for the full problem up front
-    size_t matrix_size = (size_t)N * (size_t)N * sizeof(cuDoubleComplex);
+    // Calculate additional memory needed beyond the matrix (which is already on GPU)
     size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
     size_t pivot_size = (size_t)N * sizeof(int);
 
     // Create temporary handle just to get workspace size
     cusolverDnHandle_t temp_handle = nullptr;
-    cuDoubleComplex *temp_A_dev = nullptr;
     int work_size = 0;
 
+    // Get workspace size using the existing matrix on GPU
     CHECK_CUSOLVER(cusolverDnCreate(&temp_handle));
-    CHECK_CUDA(cudaMalloc(&temp_A_dev, matrix_size));
-    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(temp_handle, N, N, temp_A_dev, N, &work_size));
-    CHECK_CUDA(cudaFree(temp_A_dev));
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(temp_handle, N, N, A_device, N, &work_size));
     cusolverDnDestroy(temp_handle);
 
     size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
-    // We only need one copy of the matrix plus workspace
-    size_t total_required = matrix_size + vector_size + pivot_size + sizeof(int) + workspace_size;
+    // Only count additional memory needed beyond matrix
+    size_t additional_required = vector_size + pivot_size + sizeof(int) + workspace_size;
 
-    if (!check_gpu_memory(total_required)) {
-        std::cerr << "Not enough GPU memory for " << N << "x" << N << " system\n";
-        std::cerr << "Matrix size: " << matrix_size/(1024.0*1024.0*1024.0) << " GB\n";
-        std::cerr << "Vector size: " << vector_size/(1024.0*1024.0*1024.0) << " GB\n";
-        std::cerr << "Workspace size: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
-        std::cerr << "Total required: " << total_required/(1024.0*1024.0*1024.0) << " GB\n";
+    if (!check_gpu_memory(additional_required, "Additional Solver")) {
+        std::cerr << "Not enough GPU memory for solver workspace\n";
+        std::cerr << "Additional memory required: " << additional_required/(1024.0*1024.0*1024.0) << " GB\n";
         std::exit(EXIT_FAILURE);
     }
 
     // Reset pointers for actual solve
     cusolverDnHandle_t handle = nullptr;
-    cuDoubleComplex *A_dev = nullptr;
     cuDoubleComplex *b_dev = nullptr, *work_dev = nullptr;
     int *pivot_dev = nullptr, *info_dev = nullptr;
     int info_host = 0;
@@ -142,19 +136,17 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
     try {
         // Create handle and allocate memory
         CHECK_CUSOLVER(cusolverDnCreate(&handle));
-        CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
         CHECK_CUDA(cudaMalloc(&b_dev, vector_size));
         CHECK_CUDA(cudaMalloc(&pivot_dev, pivot_size));
         CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
         CHECK_CUDA(cudaMalloc(&work_dev, workspace_size));
 
-        // Copy data to device
-        CHECK_CUDA(cudaMemcpy(A_dev, A_host, matrix_size, cudaMemcpyHostToDevice));
+        // Copy b vector to device (matrix A is already on device)
         CHECK_CUDA(cudaMemcpy(b_dev, b_host, vector_size, cudaMemcpyHostToDevice));
 
-        // Perform LU factorization and solve
-        CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev));
-        CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, 1, A_dev, N, pivot_dev, b_dev, N, info_dev));
+        // Perform LU factorization and solve using the matrix already on GPU
+        CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_device, N, work_dev, pivot_dev, info_dev));
+        CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, 1, A_device, N, pivot_dev, b_dev, N, info_dev));
 
         // Copy solution back to host
         CHECK_CUDA(cudaMemcpy(b_host, b_dev, vector_size, cudaMemcpyDeviceToHost));
@@ -162,15 +154,15 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
 
         if (info_host != 0) {
             std::cerr << "solve_gpu: solver returned error code " << info_host << "\n";
-            cleanup_gpu_resources(&handle, nullptr, A_dev, b_dev, work_dev, pivot_dev, info_dev);
+            cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
             std::exit(EXIT_FAILURE);
         }
 
-        // Clean up
-        cleanup_gpu_resources(&handle, nullptr, A_dev, b_dev, work_dev, pivot_dev, info_dev);
+        // Clean up (but don't free A_device since it was passed in)
+        cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
         
     } catch (...) {
-        cleanup_gpu_resources(&handle, nullptr, A_dev, b_dev, work_dev, pivot_dev, info_dev);
+        cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
         throw;
     }
 }

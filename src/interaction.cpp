@@ -144,7 +144,7 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
 
 // Builds the full 6N x 6N interaction matrix
 void get_full_interaction_matrix(
-    std::complex<double>* A,
+    std::complex<double>* A_host,
     const vec3* positions,
     const std::complex<double> (*polarizability)[6][6],
     int N,
@@ -167,6 +167,11 @@ void get_full_interaction_matrix(
         std::exit(EXIT_FAILURE);
     }
 
+    // Allocate matrix on GPU
+    cuDoubleComplex* A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+
+    // Build matrix directly on GPU
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
             int row_offset = j * 6;
@@ -187,12 +192,16 @@ void get_full_interaction_matrix(
                 // Invert the 6x6 polarizability matrix using GPU
                 invert_matrix_gpu(polarizability_gpu, 6);
 
-                // Copy inverted matrix to interaction matrix
+                // Copy inverted matrix to interaction matrix on GPU
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
-                        A[(row_offset + i) * 6 * N + (col_offset + m)] = 
-                            std::complex<double>(cuCreal(polarizability_gpu[i*6 + m]), 
-                                              cuCimag(polarizability_gpu[i*6 + m]));
+                        cuDoubleComplex value = polarizability_gpu[i*6 + m];
+                        CHECK_CUDA(cudaMemcpy(
+                            &A_dev[(row_offset + i) * 6 * N + (col_offset + m)],
+                            &value,
+                            sizeof(cuDoubleComplex),
+                            cudaMemcpyHostToDevice
+                        ));
                     }
                 }
             } else {
@@ -200,12 +209,28 @@ void get_full_interaction_matrix(
                 std::complex<double> block[36];  // 6x6 block
                 biani_green_matrix(block, positions[j], positions[k_idx], k);
                 
+                // Copy block to GPU
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
-                        A[(row_offset + i) * 6 * N + (col_offset + m)] = block[i*6 + m];
+                        cuDoubleComplex value = make_cuDoubleComplex(
+                            std::real(block[i*6 + m]),
+                            std::imag(block[i*6 + m])
+                        );
+                        CHECK_CUDA(cudaMemcpy(
+                            &A_dev[(row_offset + i) * 6 * N + (col_offset + m)],
+                            &value,
+                            sizeof(cuDoubleComplex),
+                            cudaMemcpyHostToDevice
+                        ));
                     }
                 }
             }
         }
     }
+
+    // Copy final matrix back to host
+    CHECK_CUDA(cudaMemcpy(A_host, A_dev, matrix_size, cudaMemcpyDeviceToHost));
+
+    // Keep the matrix on GPU for solving - this will be freed by the solve_gpu function
+    return A_dev;
 }

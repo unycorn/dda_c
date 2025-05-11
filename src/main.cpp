@@ -209,9 +209,8 @@ void run_simulation(
             matrix_multiply(alpha[j], temp, rotation_T);
         }
 
-        std::vector<std::complex<double>> A(6 * N * 6 * N, std::complex<double>(0.0, 0.0));
-        std::cout << "freq " << freq << ": Computing Interaction Matrix...\n";
-        get_full_interaction_matrix(A.data(), positions.data(), alpha.data(), N, k);
+        std::vector<std::complex<double>> A_host(6 * N * 6 * N, std::complex<double>(0.0, 0.0));
+        cuDoubleComplex* A_device = get_full_interaction_matrix(A_host.data(), positions.data(), alpha.data(), N, k);
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
         // Initialize incident field (now 6N components, but only E-field is non-zero)
@@ -222,18 +221,28 @@ void run_simulation(
             inc_field[6 * j] = val;  // Only x-component of E-field is non-zero
         }
 
-        std::vector<std::complex<double>> response = inc_field;
-        std::complex<double>* b = response.data();
-        int dimension = 6 * N;
+        std::vector<std::complex<double>> b(6 * N);
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < 6; ++j) {
+                b[i * 6 + j] = inc_field[i * 6 + j];
+            }
+        }
 
-        solve_gpu(
-            reinterpret_cast<cuDoubleComplex*>(A.data()),
-            reinterpret_cast<cuDoubleComplex*>(b),
-            dimension
-        );
+        std::vector<cuDoubleComplex> b_cuda(6 * N);
+        for (int i = 0; i < 6 * N; ++i) {
+            b_cuda[i] = make_cuDoubleComplex(std::real(b[i]), std::imag(b[i]));
+        }
+
+        solve_gpu(A_device, b_cuda.data(), 6 * N);
+
+        for (int i = 0; i < 6 * N; ++i) {
+            b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
+        }
+
+        cudaFree(A_device);
 
         // For output, we only use the electric part of the response
-        write_polarizations(filename.str().c_str(), b, positions, alpha[0][0][0], inc_field, N);
+        write_polarizations(filename.str().c_str(), b.data(), positions, alpha[0][0][0], inc_field, N);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
