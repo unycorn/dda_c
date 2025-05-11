@@ -79,27 +79,47 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
+    // Calculate required memory
+    size_t matrix_size = (size_t)N * (size_t)N * sizeof(cuDoubleComplex);
+    size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
+    size_t pivot_size = (size_t)N * sizeof(int);
+    
+    // Get workspace size first
     cusolverDnHandle_t handle;
-    cuDoubleComplex *A_dev = nullptr, *b_dev = nullptr, *work_dev = nullptr;
-    int *pivot_dev = nullptr, *info_dev = nullptr;
-    int work_size = 0, info_host = 0;
-
-    // Create cuSolver handle with error checking
     CHECK_CUSOLVER(cusolverDnCreate(&handle));
+    cuDoubleComplex *A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));  // Temporary allocation for workspace query
+    int work_size = 0;
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
+    CHECK_CUDA(cudaFree(A_dev));
+    A_dev = nullptr;
+
+    size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
+    size_t total_required = matrix_size + vector_size + pivot_size + sizeof(int) + workspace_size;
+
+    if (!check_gpu_memory(total_required)) {
+        std::cerr << "Not enough GPU memory for solving " << N << "x" << N << " system\n";
+        std::cerr << "Matrix size: " << matrix_size/(1024*1024*1024.0) << " GB\n";
+        std::cerr << "Vector size: " << vector_size/(1024*1024*1024.0) << " GB\n";
+        std::cerr << "Workspace size: " << workspace_size/(1024*1024*1024.0) << " GB\n";
+        std::cerr << "Total required: " << total_required/(1024*1024*1024.0) << " GB\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    cuDoubleComplex *b_dev = nullptr, *work_dev = nullptr;
+    int *pivot_dev = nullptr, *info_dev = nullptr;
+    int info_host = 0;
 
     // Allocate device memory with error checking
-    CHECK_CUDA(cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N));
-    CHECK_CUDA(cudaMalloc(&b_dev, sizeof(cuDoubleComplex) * N));
-    CHECK_CUDA(cudaMalloc(&pivot_dev, sizeof(int) * N));
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUDA(cudaMalloc(&b_dev, vector_size));
+    CHECK_CUDA(cudaMalloc(&pivot_dev, pivot_size));
     CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
+    CHECK_CUDA(cudaMalloc(&work_dev, workspace_size));
 
     // Copy data to device with error checking
     CHECK_CUDA(cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(b_dev, b_host, sizeof(cuDoubleComplex) * N, cudaMemcpyHostToDevice));
-
-    // Get workspace size
-    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
-    CHECK_CUDA(cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size));
 
     // Perform LU factorization and solve
     CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev));
@@ -127,31 +147,47 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
-    // Calculate required memory
-    size_t matrix_size = N * N * sizeof(cuDoubleComplex);
-    size_t total_required = matrix_size * 3;  // Main matrix + Identity + Work space
+    // Calculate required memory with proper size_t multiplication
+    size_t matrix_size = (size_t)N * (size_t)N * sizeof(cuDoubleComplex);
+    size_t pivot_size = (size_t)N * sizeof(int);
+    
+    // Get workspace size first
+    cusolverDnHandle_t handle;
+    CHECK_CUSOLVER(cusolverDnCreate(&handle));
+    cuDoubleComplex *A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));  // Temporary allocation for workspace query
+    int work_size = 0;
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
+    CHECK_CUDA(cudaFree(A_dev));
+    A_dev = nullptr;
+
+    size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
+    size_t total_required = matrix_size * 2 + pivot_size + sizeof(int) + workspace_size; // Two matrices (A and identity) + workspace
 
     if (!check_gpu_memory(total_required)) {
-        std::cerr << "Not enough GPU memory for matrix size " << N << "x" << N << "\n";
+        std::cerr << "Not enough GPU memory for matrix inversion " << N << "x" << N << "\n";
+        std::cerr << "Matrix size: " << matrix_size/(1024*1024*1024.0) << " GB\n";
+        std::cerr << "Workspace size: " << workspace_size/(1024*1024*1024.0) << " GB\n";
+        std::cerr << "Total required: " << total_required/(1024*1024*1024.0) << " GB\n";
         std::exit(EXIT_FAILURE);
     }
 
-    cusolverDnHandle_t handle;
     cublasHandle_t cublas_handle;
-    cuDoubleComplex *A_dev = nullptr, *work_dev = nullptr;
+    cuDoubleComplex *work_dev = nullptr;
     cuDoubleComplex *identity_dev = nullptr;
     int *pivot_dev = nullptr, *info_dev = nullptr;
-    int work_size = 0, info_host = 0;
+    int info_host = 0;
 
     // Create handles with error checking
     CHECK_CUSOLVER(cusolverDnCreate(&handle));
     CHECK_CUBLAS(cublasCreate(&cublas_handle));
 
     // Allocate device memory with error checking
-    CHECK_CUDA(cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N));
-    CHECK_CUDA(cudaMalloc(&identity_dev, sizeof(cuDoubleComplex) * N * N));
-    CHECK_CUDA(cudaMalloc(&pivot_dev, sizeof(int) * N));
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUDA(cudaMalloc(&identity_dev, matrix_size));
+    CHECK_CUDA(cudaMalloc(&pivot_dev, pivot_size));
     CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
+    CHECK_CUDA(cudaMalloc(&work_dev, workspace_size));
 
     // Copy matrix to device
     CHECK_CUDA(cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice));
@@ -164,10 +200,6 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
             CHECK_CUDA(cudaMemcpy(&identity_dev[idx], &value, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice));
         }
     }
-
-    // Get workspace size for LU factorization
-    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
-    CHECK_CUDA(cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size));
 
     // Perform LU factorization
     CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev));
