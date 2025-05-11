@@ -181,28 +181,23 @@ cuDoubleComplex* get_full_interaction_matrix(
 
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(6 * N * 6 * N);
-    size_t elements_processed = 0;
-    const size_t total_elements = N * N;
-
-    // Progress tracking
-    int last_percentage = -1;
+    int total_elements = N * N;
+    int elements_processed = 0;
+    int last_percent = -1;
 
     #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
-            size_t local_processed;
-            #pragma omp atomic capture
-            local_processed = ++elements_processed;
+            #pragma omp atomic
+            elements_processed++;
             
-            double progress = (local_processed * 100.0) / total_elements;
-            int current_percentage = static_cast<int>(progress);
-            
-            if (current_percentage != last_percentage && current_percentage % 10 == 0) {
+            int percent_complete = (elements_processed * 100) / total_elements;
+            if (percent_complete != last_percent && percent_complete % 10 == 0) {
                 #pragma omp critical
                 {
-                    if (current_percentage != last_percentage) {
-                        std::cout << "Matrix construction: " << current_percentage << "% complete\n";
-                        last_percentage = current_percentage;
+                    if (percent_complete != last_percent) {
+                        std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                        last_percent = percent_complete;
                     }
                 }
             }
