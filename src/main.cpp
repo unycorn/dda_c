@@ -29,7 +29,11 @@ void run_simulation(
     int num_freqs,
     const std::vector<vec3>& positions,
     int N,
-}
+    double spacing,
+    double disorder,
+    double f0_disorder,
+    double angle_disorder,
+    unsigned int seed);
 
 // Function to create a rotation matrix for the 6x6 polarizability tensor
 void create_rotation_matrix(std::complex<double> out[6][6], double theta) {
