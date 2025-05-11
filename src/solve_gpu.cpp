@@ -107,32 +107,34 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
     size_t matrix_size = (size_t)N * (size_t)N * sizeof(cuDoubleComplex);
     size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
     size_t pivot_size = (size_t)N * sizeof(int);
-    
-    cusolverDnHandle_t handle = nullptr;
-    cuDoubleComplex *A_dev = nullptr;
-    int work_size = 0;
 
     // Create temporary handle just to get workspace size
-    CHECK_CUSOLVER(cusolverDnCreate(&handle));
-    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
-    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
-    CHECK_CUDA(cudaFree(A_dev));
-    cusolverDnDestroy(handle);
+    cusolverDnHandle_t temp_handle = nullptr;
+    cuDoubleComplex *temp_A_dev = nullptr;
+    int work_size = 0;
+
+    CHECK_CUSOLVER(cusolverDnCreate(&temp_handle));
+    CHECK_CUDA(cudaMalloc(&temp_A_dev, matrix_size));
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(temp_handle, N, N, temp_A_dev, N, &work_size));
+    CHECK_CUDA(cudaFree(temp_A_dev));
+    cusolverDnDestroy(temp_handle);
 
     size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
+    // We only need one copy of the matrix plus workspace
     size_t total_required = matrix_size + vector_size + pivot_size + sizeof(int) + workspace_size;
-    
+
     if (!check_gpu_memory(total_required)) {
         std::cerr << "Not enough GPU memory for " << N << "x" << N << " system\n";
         std::cerr << "Matrix size: " << matrix_size/(1024.0*1024.0*1024.0) << " GB\n";
+        std::cerr << "Vector size: " << vector_size/(1024.0*1024.0*1024.0) << " GB\n";
         std::cerr << "Workspace size: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
         std::cerr << "Total required: " << total_required/(1024.0*1024.0*1024.0) << " GB\n";
         std::exit(EXIT_FAILURE);
     }
 
     // Reset pointers for actual solve
-    handle = nullptr;
-    A_dev = nullptr;
+    cusolverDnHandle_t handle = nullptr;
+    cuDoubleComplex *A_dev = nullptr;
     cuDoubleComplex *b_dev = nullptr, *work_dev = nullptr;
     int *pivot_dev = nullptr, *info_dev = nullptr;
     int info_host = 0;
