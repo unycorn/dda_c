@@ -27,26 +27,66 @@
         } \
     } while (0)
 
+// Helper function to check cuBLAS errors
+#define CHECK_CUBLAS(call) \
+    do { \
+        cublasStatus_t status = call; \
+        if (status != CUBLAS_STATUS_SUCCESS) { \
+            std::cerr << "cuBLAS error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << status << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
 // Initialize CUDA device
 void init_cuda_device() {
     static bool initialized = false;
     if (!initialized) {
         int deviceCount;
-        CHECK_CUDA(cudaGetDeviceCount(&deviceCount));
+        cudaError_t err = cudaGetDeviceCount(&deviceCount);
+        if (err != cudaSuccess) {
+            std::cerr << "\nError: Cannot access CUDA devices.\n"
+                      << "This could be because:\n"
+                      << "1. You're running directly with './solver' instead of through SLURM\n"
+                      << "2. No GPU resources have been allocated\n"
+                      << "Please use 'sbatch' to submit the job through SLURM instead.\n"
+                      << "For example: sbatch run_dda_ordered.slurm\n\n"
+                      << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        
         if (deviceCount == 0) {
-            std::cerr << "No CUDA devices found\n";
+            std::cerr << "\nError: No CUDA devices found.\n"
+                      << "This program requires GPU access through SLURM.\n"
+                      << "Please use 'sbatch' to submit the job.\n"
+                      << "For example: sbatch run_dda_ordered.slurm\n\n";
             std::exit(EXIT_FAILURE);
         }
 
-        // Get the device ID from CUDA_VISIBLE_DEVICES if set
+        // Try to get CUDA_VISIBLE_DEVICES
         const char* visibleDevices = std::getenv("CUDA_VISIBLE_DEVICES");
+        if (visibleDevices == nullptr) {
+            std::cerr << "\nWarning: CUDA_VISIBLE_DEVICES is not set.\n"
+                      << "This usually means the job is not running through SLURM.\n"
+                      << "Please use 'sbatch' to submit the job instead of running directly.\n"
+                      << "For example: sbatch run_dda_ordered.slurm\n\n";
+        }
+
         int deviceId = 0;
         if (visibleDevices != nullptr) {
             deviceId = std::atoi(visibleDevices);
         }
 
-        // Set the device
-        CHECK_CUDA(cudaSetDevice(deviceId));
+        err = cudaSetDevice(deviceId);
+        if (err != cudaSuccess) {
+            std::cerr << "\nError: Failed to select GPU device " << deviceId << "\n"
+                      << "This usually means the GPU is already in use or not allocated.\n"
+                      << "Please submit the job through SLURM to ensure proper GPU allocation.\n"
+                      << "For example: sbatch run_dda_ordered.slurm\n\n"
+                      << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        
         initialized = true;
     }
 }
@@ -112,7 +152,7 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
 
     // Create handles with error checking
     CHECK_CUSOLVER(cusolverDnCreate(&handle));
-    CHECK_CUSOLVER(cublasCreate(&cublas_handle));
+    CHECK_CUBLAS(cublasCreate(&cublas_handle));
 
     // Allocate device memory with error checking
     CHECK_CUDA(cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N));
@@ -162,5 +202,5 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
     CHECK_CUDA(cudaFree(info_dev));
     CHECK_CUDA(cudaFree(work_dev));
     CHECK_CUSOLVER(cusolverDnDestroy(handle));
-    CHECK_CUSOLVER(cublasDestroy(cublas_handle));
+    CHECK_CUBLAS(cublasDestroy(cublas_handle));
 }
