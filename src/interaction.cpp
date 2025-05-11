@@ -202,7 +202,8 @@ cuDoubleComplex* get_full_interaction_matrix(
             int col_offset = k_idx * 6;
 
             if (j == k_idx) {
-                // Convert polarizability to cuDoubleComplex for GPU inversion
+                // Diagonal blocks store inverted polarizability tensors
+                // Convert polarizability to cuDoubleComplex for inversion
                 cuDoubleComplex polarizability_gpu[36];  // 6x6 matrix
                 for (int i = 0; i < 6; ++i) {
                     for (int m = 0; m < 6; ++m) {
@@ -215,9 +216,9 @@ cuDoubleComplex* get_full_interaction_matrix(
 
                 std::cout << "Inverting polarizability matrix for dipole " << j + 1 << "/" << N << "\r";
                 std::cout.flush();
-
-                // Invert the 6x6 polarizability matrix using GPU
-                invert_matrix_gpu(polarizability_gpu, 6);
+                
+                // Invert the 6x6 polarizability matrix using LAPACK
+                invert_6x6_matrix_lapack(polarizability_gpu);
 
                 // Copy inverted matrix to interaction matrix on GPU
                 for (int i = 0; i < 6; ++i) {

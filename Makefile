@@ -5,7 +5,7 @@ CXXFLAGS := -std=c++11 -O3 -Wall -Iinclude
 # CUDA paths - make configurable for different systems
 CUDA_PATH ?= /usr/local/cuda
 LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart -lcusolver -lcublas -llapack -lblas
-CXXFLAGS += -I$(CUDA_PATH)/include
+CXXFLAGS += -I$(CUDA_PATH)/include -I/opt/cuda/include -I/usr/local/cuda/include
 
 # Google Test settings - build from source
 GTEST_VERSION := release-1.11.0

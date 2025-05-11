@@ -7,7 +7,6 @@
 #include <chrono>
 #include <complex>
 #include <sstream>
-#include <random>
 #include <cuda_runtime.h>
 #include "constants.hpp"
 #include "vector3.hpp"
@@ -18,17 +17,18 @@
 using mat6x6 = std::complex<double>[6][6];
 constexpr std::complex<double> I(0.0, 1.0);
 
-// Function to print a 6x6 complex matrix
-void print_matrix(const std::complex<double> matrix[6][6], const std::string& label) {
-    std::cout << "\n" << label << ":\n";
-    for (int i = 0; i < 6; ++i) {
-        for (int j = 0; j < 6; ++j) {
-            std::cout << std::setw(15) << std::real(matrix[i][j]) 
-                     << " + " << std::setw(15) << std::imag(matrix[i][j]) << "i  ";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
+// Function declarations
+void create_rotation_matrix(std::complex<double> out[6][6], double theta);
+void matrix_multiply(std::complex<double> result[6][6], 
+                    const std::complex<double> a[6][6], 
+                    const std::complex<double> b[6][6]);
+
+void run_simulation(
+    double f_start,
+    double f_end,
+    int num_freqs,
+    const std::vector<vec3>& positions,
+    int N,
 }
 
 // Function to create a rotation matrix for the 6x6 polarizability tensor
