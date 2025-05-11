@@ -1,44 +1,89 @@
-#include <iostream>     // std::cerr
-#include <cstdlib>      // std::exit, EXIT_FAILURE
-
+#include <iostream>
+#include <cstdlib>
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
-#include <cuComplex.h>
 #include <cublas_v2.h>
+#include <cuComplex.h>
+
+// Helper function to check CUDA errors
+#define CHECK_CUDA(call) \
+    do { \
+        cudaError_t err = call; \
+        if (err != cudaSuccess) { \
+            std::cerr << "CUDA error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << cudaGetErrorString(err) << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+// Helper function to check cuSOLVER errors
+#define CHECK_CUSOLVER(call) \
+    do { \
+        cusolverStatus_t status = call; \
+        if (status != CUSOLVER_STATUS_SUCCESS) { \
+            std::cerr << "cuSOLVER error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << status << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+// Initialize CUDA device
+void init_cuda_device() {
+    static bool initialized = false;
+    if (!initialized) {
+        int deviceCount;
+        CHECK_CUDA(cudaGetDeviceCount(&deviceCount));
+        if (deviceCount == 0) {
+            std::cerr << "No CUDA devices found\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        // Get the device ID from CUDA_VISIBLE_DEVICES if set
+        const char* visibleDevices = std::getenv("CUDA_VISIBLE_DEVICES");
+        int deviceId = 0;
+        if (visibleDevices != nullptr) {
+            deviceId = std::atoi(visibleDevices);
+        }
+
+        // Set the device
+        CHECK_CUDA(cudaSetDevice(deviceId));
+        initialized = true;
+    }
+}
 
 void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
+    // Initialize CUDA device first
+    init_cuda_device();
+
     cusolverDnHandle_t handle;
     cuDoubleComplex *A_dev = nullptr, *b_dev = nullptr, *work_dev = nullptr;
     int *pivot_dev = nullptr, *info_dev = nullptr;
     int work_size = 0, info_host = 0;
 
-    // Create cuSolver handle
-    if (cusolverDnCreate(&handle) != CUSOLVER_STATUS_SUCCESS) {
-        std::cerr << "solve_gpu: Failed to create cuSolver handle.\n";
-        std::exit(EXIT_FAILURE);
-    }
+    // Create cuSolver handle with error checking
+    CHECK_CUSOLVER(cusolverDnCreate(&handle));
 
-    // Allocate device memory
-    cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N);
-    cudaMalloc(&b_dev, sizeof(cuDoubleComplex) * N);
-    cudaMalloc(&pivot_dev, sizeof(int) * N);
-    cudaMalloc(&info_dev, sizeof(int));
+    // Allocate device memory with error checking
+    CHECK_CUDA(cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N));
+    CHECK_CUDA(cudaMalloc(&b_dev, sizeof(cuDoubleComplex) * N));
+    CHECK_CUDA(cudaMalloc(&pivot_dev, sizeof(int) * N));
+    CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
 
-    // Copy inputs to device
-    cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice);
-    cudaMemcpy(b_dev, b_host, sizeof(cuDoubleComplex) * N, cudaMemcpyHostToDevice);
+    // Copy data to device with error checking
+    CHECK_CUDA(cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(b_dev, b_host, sizeof(cuDoubleComplex) * N, cudaMemcpyHostToDevice));
 
-    // Query workspace size and allocate
-    cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size);
-    cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size);
+    // Get workspace size
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
+    CHECK_CUDA(cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size));
 
     // Perform LU factorization and solve
-    cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev);
-    cusolverDnZgetrs(handle, CUBLAS_OP_N, N, 1, A_dev, N, pivot_dev, b_dev, N, info_dev);
+    CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev));
+    CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, 1, A_dev, N, pivot_dev, b_dev, N, info_dev));
 
     // Copy solution back to host
-    cudaMemcpy(b_host, b_dev, sizeof(cuDoubleComplex) * N, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost);
+    CHECK_CUDA(cudaMemcpy(b_host, b_dev, sizeof(cuDoubleComplex) * N, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
 
     if (info_host != 0) {
         std::cerr << "solve_gpu: solver returned error code " << info_host << "\n";
@@ -46,15 +91,18 @@ void solve_gpu(cuDoubleComplex* A_host, cuDoubleComplex* b_host, int N) {
     }
 
     // Free resources
-    cudaFree(A_dev);
-    cudaFree(b_dev);
-    cudaFree(pivot_dev);
-    cudaFree(info_dev);
-    cudaFree(work_dev);
-    cusolverDnDestroy(handle);
+    CHECK_CUDA(cudaFree(A_dev));
+    CHECK_CUDA(cudaFree(b_dev));
+    CHECK_CUDA(cudaFree(pivot_dev));
+    CHECK_CUDA(cudaFree(info_dev));
+    CHECK_CUDA(cudaFree(work_dev));
+    CHECK_CUSOLVER(cusolverDnDestroy(handle));
 }
 
 void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
+    // Initialize CUDA device first
+    init_cuda_device();
+
     cusolverDnHandle_t handle;
     cublasHandle_t cublas_handle;
     cuDoubleComplex *A_dev = nullptr, *work_dev = nullptr;
@@ -62,63 +110,57 @@ void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
     int *pivot_dev = nullptr, *info_dev = nullptr;
     int work_size = 0, info_host = 0;
 
-    // Create handles
-    if (cusolverDnCreate(&handle) != CUSOLVER_STATUS_SUCCESS) {
-        std::cerr << "invert_matrix_gpu: Failed to create cuSolver handle.\n";
-        std::exit(EXIT_FAILURE);
-    }
-    if (cublasCreate(&cublas_handle) != CUBLAS_STATUS_SUCCESS) {
-        std::cerr << "invert_matrix_gpu: Failed to create cuBLAS handle.\n";
-        std::exit(EXIT_FAILURE);
-    }
+    // Create handles with error checking
+    CHECK_CUSOLVER(cusolverDnCreate(&handle));
+    CHECK_CUSOLVER(cublasCreate(&cublas_handle));
 
-    // Allocate device memory
-    cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N);
-    cudaMalloc(&identity_dev, sizeof(cuDoubleComplex) * N * N);
-    cudaMalloc(&pivot_dev, sizeof(int) * N);
-    cudaMalloc(&info_dev, sizeof(int));
+    // Allocate device memory with error checking
+    CHECK_CUDA(cudaMalloc(&A_dev, sizeof(cuDoubleComplex) * N * N));
+    CHECK_CUDA(cudaMalloc(&identity_dev, sizeof(cuDoubleComplex) * N * N));
+    CHECK_CUDA(cudaMalloc(&pivot_dev, sizeof(int) * N));
+    CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
 
     // Copy matrix to device
-    cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice);
+    CHECK_CUDA(cudaMemcpy(A_dev, A_host, sizeof(cuDoubleComplex) * N * N, cudaMemcpyHostToDevice));
 
     // Create identity matrix on device
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             int idx = i * N + j;
             cuDoubleComplex value = (i == j) ? make_cuDoubleComplex(1.0, 0.0) : make_cuDoubleComplex(0.0, 0.0);
-            cudaMemcpy(&identity_dev[idx], &value, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice);
+            CHECK_CUDA(cudaMemcpy(&identity_dev[idx], &value, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice));
         }
     }
 
     // Get workspace size for LU factorization
-    cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size);
-    cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size);
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_dev, N, &work_size));
+    CHECK_CUDA(cudaMalloc(&work_dev, sizeof(cuDoubleComplex) * work_size));
 
     // Perform LU factorization
-    cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev);
-    cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost);
+    CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_dev, N, work_dev, pivot_dev, info_dev));
+    CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
     if (info_host != 0) {
         std::cerr << "invert_matrix_gpu: LU factorization failed with error " << info_host << "\n";
         std::exit(EXIT_FAILURE);
     }
 
     // Solve N systems of equations to get inverse (A * X = I)
-    cusolverDnZgetrs(handle, CUBLAS_OP_N, N, N, A_dev, N, pivot_dev, identity_dev, N, info_dev);
-    cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost);
+    CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, N, A_dev, N, pivot_dev, identity_dev, N, info_dev));
+    CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
     if (info_host != 0) {
         std::cerr << "invert_matrix_gpu: Matrix inversion failed with error " << info_host << "\n";
         std::exit(EXIT_FAILURE);
     }
 
     // Copy result back to host
-    cudaMemcpy(A_host, identity_dev, sizeof(cuDoubleComplex) * N * N, cudaMemcpyDeviceToHost);
+    CHECK_CUDA(cudaMemcpy(A_host, identity_dev, sizeof(cuDoubleComplex) * N * N, cudaMemcpyDeviceToHost));
 
-    // Free resources
-    cudaFree(A_dev);
-    cudaFree(identity_dev);
-    cudaFree(pivot_dev);
-    cudaFree(info_dev);
-    cudaFree(work_dev);
-    cusolverDnDestroy(handle);
-    cublasDestroy(cublas_handle);
+    // Free resources with error checking
+    CHECK_CUDA(cudaFree(A_dev));
+    CHECK_CUDA(cudaFree(identity_dev));
+    CHECK_CUDA(cudaFree(pivot_dev));
+    CHECK_CUDA(cudaFree(info_dev));
+    CHECK_CUDA(cudaFree(work_dev));
+    CHECK_CUSOLVER(cusolverDnDestroy(handle));
+    CHECK_CUSOLVER(cublasDestroy(cublas_handle));
 }
