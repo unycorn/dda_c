@@ -92,7 +92,7 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
 
     size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
     // Only count additional memory needed beyond matrix
-    size_t additional_required = vector_size + pivot_size + sizeof(int);// + workspace_size;
+    size_t additional_required = vector_size + pivot_size + sizeof(int) + workspace_size;
 
     if (!check_gpu_memory(additional_required, "Additional Solver")) {
         std::cerr << "Not enough GPU memory for solver workspace\n";
