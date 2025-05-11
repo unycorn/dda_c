@@ -181,10 +181,23 @@ cuDoubleComplex* get_full_interaction_matrix(
     // Allocate matrix on GPU
     cuDoubleComplex* A_dev = nullptr;
     CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    std::cout << "GPU memory allocated successfully\n";
 
     // Build matrix directly on GPU
+    int total_elements = N * N;
+    int elements_processed = 0;
+    int last_percent = -1;
+
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
+            elements_processed++;
+            int percent_complete = (elements_processed * 100) / total_elements;
+            
+            if (percent_complete != last_percent && percent_complete % 10 == 0) {
+                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                last_percent = percent_complete;
+            }
+
             int row_offset = j * 6;
             int col_offset = k_idx * 6;
 
@@ -199,6 +212,9 @@ cuDoubleComplex* get_full_interaction_matrix(
                         );
                     }
                 }
+
+                std::cout << "Inverting polarizability matrix for dipole " << j + 1 << "/" << N << "\r";
+                std::cout.flush();
 
                 // Invert the 6x6 polarizability matrix using GPU
                 invert_matrix_gpu(polarizability_gpu, 6);
@@ -238,9 +254,11 @@ cuDoubleComplex* get_full_interaction_matrix(
             }
         }
     }
+    std::cout << "\nMatrix construction complete, copying to host...\n";
 
     // Copy final matrix back to host
     CHECK_CUDA(cudaMemcpy(A_host, A_dev, matrix_size, cudaMemcpyDeviceToHost));
+    std::cout << "Matrix copied to host successfully\n";
 
     // Keep the matrix on GPU for solving - this will be freed by the solve_gpu function
     return A_dev;
