@@ -1,7 +1,7 @@
 #include <iostream>
-#include <cstdlib>
-#include <vector>
 #include <complex>
+#include <vector>
+#include <stdexcept>  // Add this for std::runtime_error
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 #include <cublas_v2.h>
