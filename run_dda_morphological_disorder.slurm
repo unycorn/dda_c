@@ -4,7 +4,7 @@
 #SBATCH --error=dda_%A_%a.err       # Error file name
 #SBATCH --array=0-10                # Array jobs for 11 seed values
 #SBATCH --partition=volta           # Specify the partition
-#SBATCH --gpus=1                    # Request 1 GPU
+#SBATCH --gres=gpu:1                # Request 1 GPU using GRES syntax
 #SBATCH --time=24:00:00             # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                   # Memory per node
 #SBATCH --qos=normal                # Quality of Service
@@ -12,12 +12,6 @@
 # Calculate the seed based on array task ID
 # Using array task ID + 1 to avoid seed=0
 SEED=$((SLURM_ARRAY_TASK_ID + 1))
-
-# Set disorder value (in nanometers)
-# Run the program with the calculated seed
-
-# solver usage: ./solver <disorder_nm> <f0_disorder_Hz> <angle_disorder_rad> <seed>
-# disorder types:    .    positional     morphological      orientational       .
 
 # Define array of disorder values
 DISORDERS=(5e12 15e12 25e12 35e12 45e12)
