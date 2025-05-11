@@ -4,6 +4,14 @@
 #include <cusolverDn.h>
 #include <cublas_v2.h>
 #include <cuComplex.h>
+#include <complex>
+// Add LAPACK headers
+extern "C" {
+    // LAPACK function declarations
+    void zgetrf_(int* m, int* n, std::complex<double>* a, int* lda, int* ipiv, int* info);
+    void zgetrs_(char* trans, int* n, int* nrhs, std::complex<double>* a, int* lda, 
+                 int* ipiv, std::complex<double>* b, int* ldb, int* info);
+}
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
@@ -174,7 +182,7 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
 
         std::cout << "Solve complete, copying solution back to host...\n";
         // Copy solution back to host
-        CHECK_CUDA(cudaMemcpy(b_host, b_dev, vector_size, cudaMemcpyDeviceToHost));
+        CHECK_CUDA(cudaMemcpy(b_host, b_dev, vector_size, cudaMemcpyHostToDevice));
         std::cout << "Solution copied to host successfully\n";
 
         // Clean up (but don't free A_device since it was passed in)
@@ -186,7 +194,57 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
     }
 }
 
+// For small matrices (N <= 6), use LAPACK on CPU instead of custom code
 void invert_matrix_gpu(cuDoubleComplex* A_host, int N) {
+    if (N > 6) {
+        // Use existing GPU implementation for larger matrices
+        invert_matrix_gpu_large(A_host, N);
+        return;
+    }
+
+    // For 6x6 and smaller, use LAPACK
+    std::vector<std::complex<double>> A(N * N);
+    std::vector<std::complex<double>> work(N);
+    std::vector<int> ipiv(N);
+    int info = 0;
+    
+    // Convert cuDoubleComplex to std::complex<double>
+    for (int i = 0; i < N * N; i++) {
+        A[i] = std::complex<double>(A_host[i].x, A_host[i].y);
+    }
+
+    // Perform LU factorization using LAPACK
+    zgetrf_(&N, &N, A.data(), &N, ipiv.data(), &info);
+    
+    if (info != 0) {
+        std::cerr << "LAPACK zgetrf_ failed with error " << info << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Create identity matrix as RHS
+    std::vector<std::complex<double>> B(N * N, 0.0);
+    for (int i = 0; i < N; i++) {
+        B[i * N + i] = 1.0;
+    }
+
+    // Solve the system using the LU factorization
+    char trans = 'N';
+    zgetrs_(&trans, &N, &N, A.data(), &N, ipiv.data(), B.data(), &N, &info);
+    
+    if (info != 0) {
+        std::cerr << "LAPACK zgetrs_ failed with error " << info << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Copy result back to cuDoubleComplex format
+    for (int i = 0; i < N * N; i++) {
+        A_host[i].x = std::real(B[i]);
+        A_host[i].y = std::imag(B[i]);
+    }
+}
+
+// Original GPU implementation renamed for large matrices
+void invert_matrix_gpu_large(cuDoubleComplex* A_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
