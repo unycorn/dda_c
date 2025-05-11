@@ -218,40 +218,55 @@ void run_simulation(
         cuDoubleComplex* A_device = get_full_interaction_matrix(A_host.data(), positions.data(), alpha.data(), N, k);
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
-        // Initialize incident field (now 6N components, but only E-field is non-zero)
-        std::vector<std::complex<double>> inc_field(6 * N, std::complex<double>(0.0, 0.0));
-        for (int j = 0; j < N; ++j) {
-            double phase = k * positions[j].z;
-            auto val = std::exp(I * phase);
-            inc_field[6 * j] = val;  // Only x-component of E-field is non-zero
-        }
-
-        std::vector<std::complex<double>> b(6 * N);
-        for (int i = 0; i < N; ++i) {
-            for (int j = 0; j < 6; ++j) {
-                b[i * 6 + j] = inc_field[i * 6 + j];
+        try {
+            // Initialize incident field (now 6N components, but only E-field is non-zero)
+            std::vector<std::complex<double>> inc_field(6 * N, std::complex<double>(0.0, 0.0));
+            for (int j = 0; j < N; ++j) {
+                double phase = k * positions[j].z;
+                auto val = std::exp(I * phase);
+                inc_field[6 * j] = val;  // Only x-component of E-field is non-zero
             }
+
+            std::vector<std::complex<double>> b(6 * N);
+            for (int i = 0; i < N; ++i) {
+                for (int j = 0; j < 6; ++j) {
+                    b[i * 6 + j] = inc_field[i * 6 + j];
+                }
+            }
+
+            std::vector<cuDoubleComplex> b_cuda(6 * N);
+            for (int i = 0; i < 6 * N; ++i) {
+                b_cuda[i] = make_cuDoubleComplex(std::real(b[i]), std::imag(b[i]));
+            }
+
+            solve_gpu(A_device, b_cuda.data(), 6 * N);
+
+            for (int i = 0; i < 6 * N; ++i) {
+                b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
+            }
+
+            // Clean up GPU resources before next iteration
+            if (A_device != nullptr) {
+                cudaFree(A_device);
+                A_device = nullptr;
+            }
+
+            // For output, we only use the electric part of the response
+            write_polarizations(filename.str().c_str(), b.data(), positions, alpha[0][0][0], inc_field, N);
+
+            auto end_time = std::chrono::high_resolution_clock::now();
+            auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+            std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
+
+        } catch (const std::exception& e) {
+            std::cerr << "Error during frequency " << freq << ": " << e.what() << std::endl;
+            // Make sure to clean up even if there's an error
+            if (A_device != nullptr) {
+                cudaFree(A_device);
+                A_device = nullptr;
+            }
+            throw;
         }
-
-        std::vector<cuDoubleComplex> b_cuda(6 * N);
-        for (int i = 0; i < 6 * N; ++i) {
-            b_cuda[i] = make_cuDoubleComplex(std::real(b[i]), std::imag(b[i]));
-        }
-
-        solve_gpu(A_device, b_cuda.data(), 6 * N);
-
-        for (int i = 0; i < 6 * N; ++i) {
-            b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
-        }
-
-        cudaFree(A_device);
-
-        // For output, we only use the electric part of the response
-        write_polarizations(filename.str().c_str(), b.data(), positions, alpha[0][0][0], inc_field, N);
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        std::cout << "Elapsed: " << ms_duration.count() << " ms\n";
     }
 }
 
