@@ -24,8 +24,27 @@ extern "C" {
         } \
     } while (0)
 
-#define CHECK_CUSOLVER(call) CHECK_CUDA(call)
-#define CHECK_CUBLAS(call) CHECK_CUDA(call)
+// Helper function to check cuSOLVER errors
+#define CHECK_CUSOLVER(call) \
+    do { \
+        cusolverStatus_t err = call; \
+        if (err != CUSOLVER_STATUS_SUCCESS) { \
+            std::cerr << "CUSOLVER error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << err << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+// Helper function to check cuBLAS errors
+#define CHECK_CUBLAS(call) \
+    do { \
+        cublasStatus_t err = call; \
+        if (err != CUBLAS_STATUS_SUCCESS) { \
+            std::cerr << "CUBLAS error in " << __FILE__ << ":" << __LINE__ << ": " \
+                      << err << std::endl; \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while (0)
 
 void init_cuda_device() {
     cudaFree(0);  // Force CUDA context initialization
@@ -136,6 +155,7 @@ void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
     std::vector<std::complex<double>> A(N * N);
     std::vector<int> ipiv(N);
     int info = 0;
+    int n = N;  // Non-const version for LAPACK
     
     // Convert cuDoubleComplex to std::complex<double>
     for (int i = 0; i < N * N; i++) {
@@ -143,7 +163,8 @@ void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
     }
 
     // Perform LU factorization using LAPACK
-    zgetrf_(&N, &N, A.data(), &N, ipiv.data(), &info);
+    // Note: We're using non-const variables for LAPACK parameters
+    zgetrf_(&n, &n, A.data(), &n, ipiv.data(), &info);
     if (info != 0) {
         std::cerr << "LAPACK zgetrf_ failed with error " << info << std::endl;
         std::exit(EXIT_FAILURE);
@@ -157,7 +178,8 @@ void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
 
     // Solve the system using the LU factorization
     char trans = 'N';
-    zgetrs_(&trans, &N, &N, A.data(), &N, ipiv.data(), B.data(), &N, &info);
+    // Note: Using non-const variables for LAPACK parameters
+    zgetrs_(&trans, &n, &n, A.data(), &n, ipiv.data(), B.data(), &n, &info);
     if (info != 0) {
         std::cerr << "LAPACK zgetrs_ failed with error " << info << std::endl;
         std::exit(EXIT_FAILURE);
