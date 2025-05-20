@@ -252,7 +252,7 @@ void run_simulation(
             }
 
             // For output, we only use the electric part of the response
-            write_polarizations(filename.str().c_str(), b.data(), positions, alpha[0][0][0], inc_field, N);
+            write_polarizations(filename.str().c_str(), b.data(), positions, alpha, N);
 
             auto end_time = std::chrono::high_resolution_clock::now();
             auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

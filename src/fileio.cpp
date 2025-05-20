@@ -40,9 +40,8 @@ cuDoubleComplex* load_vector(const char* filename, int& N) {
 void write_polarizations(
     const char* filename,
     std::complex<double>* p, 
-    std::vector<vec3> positions, 
-    std::complex<double> alpha, 
-    std::vector<std::complex<double>> E_inc, 
+    std::vector<vec3> positions,
+    const std::vector<std::complex<double>[6][6]>& alpha,
     int N
     ) {
 
@@ -52,26 +51,36 @@ void write_polarizations(
         std::exit(EXIT_FAILURE);
     }
 
-    out << "Re_px,Im_px,Re_py,Im_py,Re_pz,Im_pz,x,y,z,Re_alpha,Im_alpha,Re_Ex,Im_Ex,Re_Ey,Im_Ey,Re_Ez,Im_Ez\n";
+    // Write header
+    out << "Re_px,Im_px,Re_py,Im_py,Re_pz,Im_pz,Re_mx,Im_mx,Re_my,Im_my,Re_mz,Im_mz,x,y,z";
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 6; ++j) {
+            out << ",Re_alpha" << i << j << ",Im_alpha" << i << j;
+        }
+    }
+    out << "\n";
+    
     out << std::scientific << std::setprecision(9);
 
-    for (int j = 0; j < N; ++j) {
-        int idx = 3 * j;
-        out
-            << p[idx + 0].real() << ',' << p[idx + 0].imag() << ','
-            << p[idx + 1].real() << ',' << p[idx + 1].imag() << ','
-            << p[idx + 2].real() << ',' << p[idx + 2].imag() << ',';
-        out
-            << positions[j].x << ','
-            << positions[j].y << ','
-            << positions[j].z << ',';
-        out
-            << alpha.real() << ','
-            << alpha.imag() << ',';
-        out
-            << E_inc[idx + 0].real() << ',' << E_inc[idx + 0].imag() << ','
-            << E_inc[idx + 1].real() << ',' << E_inc[idx + 1].imag() << ','
-            << E_inc[idx + 2].real() << ',' << E_inc[idx + 2].imag() << '\n';
+    for (int n = 0; n < N; ++n) {
+        // Write all 6 components of p (3 electric + 3 magnetic)
+        for (int j = 0; j < 6; ++j) {
+            if (j > 0) out << ",";
+            out << p[6*n + j].real() << "," << p[6*n + j].imag();
+        }
+        
+        // Write positions
+        out << "," << positions[n].x << ","
+            << positions[n].y << ","
+            << positions[n].z;
+        
+        // Write all 36 elements of the alpha matrix
+        for (int i = 0; i < 6; ++i) {
+            for (int j = 0; j < 6; ++j) {
+                out << "," << alpha[n][i][j].real() << "," << alpha[n][i][j].imag();
+            }
+        }
+        out << "\n";
     }
 
     out.close();
