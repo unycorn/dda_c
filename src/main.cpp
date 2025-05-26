@@ -173,11 +173,11 @@ void generate_disordered_positions(vec3* positions, int N_width, int N_height, d
 }
 
 // Disordered Lorentzian polarizability function with pre-generated F0 value
-std::complex<double> disordered_lorentz_alpha(double f, double disordered_f0) {
-    std::complex<double> denom = (disordered_f0 * disordered_f0 - f * f) - I * f * GAMMA_PARAM;
-    std::complex<double> norm_alpha = A_PARAM / denom + B_PARAM + C_PARAM * f;
-    return norm_alpha * EPSILON_0;
-}
+// std::complex<double> disordered_lorentz_alpha(double f, double disordered_f0) {
+//     std::complex<double> denom = (disordered_f0 * disordered_f0 - f * f) - I * f * GAMMA_PARAM;
+//     std::complex<double> norm_alpha = A_PARAM / denom + B_PARAM + C_PARAM * f;
+//     return norm_alpha * EPSILON_0;
+// }
 
 void run_simulation(
     double f_start,
