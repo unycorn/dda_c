@@ -246,7 +246,8 @@ void run_simulation(
             for (int j = 0; j < N; ++j) {
                 double phase = k * positions[j].z;
                 auto val = std::exp(I * phase);
-                inc_field[6 * j] = val;  // Only x-component of E-field is non-zero
+                inc_field[6 * j + 0] = val;  // x-component of E-field
+                inc_field[6 * j + 4] = val / Z_0;  // y-component of H-field
             }
 
             std::vector<std::complex<double>> b(6 * N);
