@@ -76,7 +76,7 @@ void green_H_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
 
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            out[i][j] = prefac * term * cross[i][j];
+            out[i][j] = -prefac * term * cross[i][j];
         }
     }
 }
@@ -101,7 +101,7 @@ void green_E_M_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
 
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            out[i][j] = prefac * term * cross[i][j];
+            out[i][j] = -prefac * term * cross[i][j];
         }
     }
 }
