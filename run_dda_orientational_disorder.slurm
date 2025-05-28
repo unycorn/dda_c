@@ -12,7 +12,7 @@
 SEED=$((SLURM_ARRAY_TASK_ID + 1))
 
 # Define array of disorder values (in radians)
-DISORDERS=(0.1 0.2 0.3 0.4 0.5)
+DISORDERS=(0.1 0.3 0.5 1.0 2.0 20.0)
 
 # Loop through disorder values
 for DISORDER in "${DISORDERS[@]}"; do
