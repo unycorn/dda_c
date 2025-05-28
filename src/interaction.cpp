@@ -203,12 +203,12 @@ cuDoubleComplex* get_full_interaction_matrix(
                     }
                 }
 
-                print_complex_matrix("Polarizability matrix before inversion", polarizability_block.data(), 6);
+                // print_complex_matrix("Polarizability matrix before inversion", polarizability_block.data(), 6);
     
                 // Invert the 6x6 polarizability matrix
                 invert_6x6_matrix_lapack(polarizability_block.data());
 
-                print_complex_matrix("Polarizability matrix after inversion", polarizability_block.data(), 6);
+                // print_complex_matrix("Polarizability matrix after inversion", polarizability_block.data(), 6);
 
                 // Copy inverted matrix to the big interaction matrix
                 for (int i = 0; i < 6; ++i) {
@@ -256,21 +256,21 @@ cuDoubleComplex* get_full_interaction_matrix(
 
     // Some Debug Stuff to make sure the interaction matrix is correct
     // Print positions
-    std::cout << "\nPositions (in meters):\n";
-    std::cout << "positions = np.array([";
-    for (int i = 0; i < N; ++i) {
-        std::cout << "[" << positions[i].x << ", " << positions[i].y << ", " << positions[i].z << "]";
-        if (i < N-1) std::cout << ",\n";
-    }
-    std::cout << "])\n";
+    // std::cout << "\nPositions (in meters):\n";
+    // std::cout << "positions = np.array([";
+    // for (int i = 0; i < N; ++i) {
+    //     std::cout << "[" << positions[i].x << ", " << positions[i].y << ", " << positions[i].z << "]";
+    //     if (i < N-1) std::cout << ",\n";
+    // }
+    // std::cout << "])\n";
 
-    // Print wavenumber
-    std::cout << "\nWavenumber k (in m^-1):\n";
-    std::cout << "k = " << k << "\n";
+    // // Print wavenumber
+    // std::cout << "\nWavenumber k (in m^-1):\n";
+    // std::cout << "k = " << k << "\n";
 
-    // Print full interaction matrix
-    std::cout << "\nFull interaction matrix:\n";
-    print_complex_matrix("A", A_cpu.data(), 6*N);
+    // // Print full interaction matrix
+    // std::cout << "\nFull interaction matrix:\n";
+    // print_complex_matrix("A", A_cpu.data(), 6*N);
 
     return A_dev;
 }

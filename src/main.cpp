@@ -264,13 +264,14 @@ void run_simulation(
                 b_cuda[i] = make_cuDoubleComplex(std::real(b[i]), std::imag(b[i]));
             }
 
-            std::cout << "\nInteraction matrix A_device:\n";
-            std::vector<cuDoubleComplex> A_temp(6 * N * 6 * N);
-            cudaMemcpy(A_temp.data(), A_device, sizeof(cuDoubleComplex) * 6 * N * 6 * N, cudaMemcpyDeviceToHost);
-            print_complex_matrix("A", A_temp.data(), 6 * N);
+            // Some Debug Stuff
+            // std::cout << "\nInteraction matrix A_device:\n";
+            // std::vector<cuDoubleComplex> A_temp(6 * N * 6 * N);
+            // cudaMemcpy(A_temp.data(), A_device, sizeof(cuDoubleComplex) * 6 * N * 6 * N, cudaMemcpyDeviceToHost);
+            // print_complex_matrix("A", A_temp.data(), 6 * N);
 
-            std::cout << "\nIncident field vector b_cuda:\n";
-            print_complex_vector("b", b_cuda.data(), 6 * N);
+            // std::cout << "\nIncident field vector b_cuda:\n";
+            // print_complex_vector("b", b_cuda.data(), 6 * N);
 
             // Transpose A_device (copy to CPU, transpose, copy back)
             std::vector<cuDoubleComplex> A_host(6 * N * 6 * N);
@@ -289,8 +290,8 @@ void run_simulation(
             
             solve_gpu(A_device, b_cuda.data(), 6 * N);
 
-            std::cout << "\nPolarization vector b_cuda (post-solve):\n";
-            print_complex_vector("b", b_cuda.data(), 6 * N);
+            // std::cout << "\nPolarization vector b_cuda (post-solve):\n";
+            // print_complex_vector("b", b_cuda.data(), 6 * N);
 
             for (int i = 0; i < 6 * N; ++i) {
                 b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
