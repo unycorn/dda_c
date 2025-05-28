@@ -8,6 +8,17 @@
 #include "constants.hpp"
 #include "vector3.hpp"
 
+void print_complex_matrix(const char* label, const cuDoubleComplex* matrix, int n) {
+    std::cout << "\n" << label << ":\n";
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            std::cout << "(" << matrix[i*n + j].x << "," << matrix[i*n + j].y << ") ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << std::endl;
+}
+
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
     do { \
@@ -202,8 +213,12 @@ cuDoubleComplex* get_full_interaction_matrix(
                     }
                 }
 
+                print_complex_matrix("Polarizability matrix before inversion", polarizability_block.data(), 6);
+    
                 // Invert the 6x6 polarizability matrix
                 invert_6x6_matrix_lapack(polarizability_block.data());
+
+                print_complex_matrix("Polarizability matrix after inversion", polarizability_block.data(), 6);
 
                 // Copy inverted matrix to the big interaction matrix
                 for (int i = 0; i < 6; ++i) {
