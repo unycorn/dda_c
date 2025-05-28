@@ -13,6 +13,7 @@
 #include "interaction.hpp"
 #include "fileio.hpp"
 #include "solve_gpu.hpp"
+#include "print_utils.hpp"
 
 using mat6x6 = std::complex<double>[6][6];
 constexpr std::complex<double> I(0.0, 1.0);
