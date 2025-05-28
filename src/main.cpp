@@ -275,6 +275,9 @@ void run_simulation(
 
             solve_gpu(A_device, b_cuda.data(), 6 * N);
 
+            std::cout << "\nPolarization vector b_cuda (post-solve):\n";
+            print_complex_vector("b", b_cuda.data(), 6 * N);
+
             for (int i = 0; i < 6 * N; ++i) {
                 b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
             }
