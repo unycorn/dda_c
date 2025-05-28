@@ -7,29 +7,7 @@
 #include "solve_gpu.hpp"
 #include "constants.hpp"
 #include "vector3.hpp"
-
-void print_complex_matrix(const char* label, const cuDoubleComplex* matrix, int n) {
-    std::cout << "\n" << label << ":\n";
-    std::cout << "np.array([";
-    for (int i = 0; i < n; ++i) {
-        std::cout << "[";
-        for (int j = 0; j < n; ++j) {
-            // Handle real and imaginary parts
-            if (j > 0) std::cout << ", ";
-            if (matrix[i*n + j].y == 0) {
-                std::cout << matrix[i*n + j].x;
-            } else if (matrix[i*n + j].x == 0) {
-                std::cout << matrix[i*n + j].y << "j";
-            } else {
-                std::cout << matrix[i*n + j].x;
-                if (matrix[i*n + j].y > 0) std::cout << "+";
-                std::cout << matrix[i*n + j].y << "j";
-            }
-        }
-        std::cout << "]" << (i < n-1 ? "," : "") << "\n";
-    }
-    std::cout << "])" << std::endl;
-}
+#include "print_utils.hpp"
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
