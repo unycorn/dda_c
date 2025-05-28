@@ -209,7 +209,8 @@ void run_simulation(
     }
 
     for (int i = 0; i < num_freqs; ++i) {
-        double freq = f_start + i * (f_end - f_start) / (num_freqs - 1);
+        // Replace the existing line with this:
+        double freq = (num_freqs == 1) ? f_start : f_start + i * (f_end - f_start) / (num_freqs - 1);
         
         // Check if output file already exists
         std::ostringstream filename;
@@ -393,10 +394,8 @@ int main(int argc, char* argv[]) {
     std::vector<vec3> positions(N);
     generate_disordered_positions(positions.data(), N_width, N_height, spacing, disorder, seed);
 
-    // run_simulation(201e12, 240e12, 10, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
-    // run_simulation(100e12, 500e12, 50, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
-    // run_simulation(151e12, 251e12, 20, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
-    run_simulation(150e12, 350e12, 80, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
+    run_simulation(150e12, 350e12, 1, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
+    // run_simulation(150e12, 350e12, 80, positions, N, spacing, disorder, f0_disorder, angle_disorder, seed);
 
     return 0;
 }

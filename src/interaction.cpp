@@ -257,6 +257,8 @@ cuDoubleComplex* get_full_interaction_matrix(
         }
     }
 
+
+
     std::cout << "\nMatrix construction complete, transferring to GPU...\n";
 
     // Allocate and transfer matrix to GPU in one operation
@@ -273,5 +275,24 @@ cuDoubleComplex* get_full_interaction_matrix(
     }
 
     std::cout << "Matrix transferred to GPU successfully\n";
+
+    // Some Debug Stuff to make sure the interaction matrix is correct
+    // Print positions
+    std::cout << "\nPositions (in meters):\n";
+    std::cout << "positions = np.array([";
+    for (int i = 0; i < N; ++i) {
+        std::cout << "[" << positions[i].x << ", " << positions[i].y << ", " << positions[i].z << "]";
+        if (i < N-1) std::cout << ",\n";
+    }
+    std::cout << "])\n";
+
+    // Print wavenumber
+    std::cout << "\nWavenumber k (in m^-1):\n";
+    std::cout << "k = " << k << "\n";
+
+    // Print full interaction matrix
+    std::cout << "\nFull interaction matrix:\n";
+    print_complex_matrix("A", A_cpu.data(), 6*N);
+
     return A_dev;
 }
