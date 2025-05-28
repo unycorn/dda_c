@@ -272,7 +272,21 @@ void run_simulation(
             std::cout << "\nIncident field vector b_cuda:\n";
             print_complex_vector("b", b_cuda.data(), 6 * N);
 
+            // Transpose A_device (copy to CPU, transpose, copy back)
+            std::vector<cuDoubleComplex> A_host(6 * N * 6 * N);
+            cudaMemcpy(A_host.data(), A_device, sizeof(cuDoubleComplex) * 6 * N * 6 * N, cudaMemcpyDeviceToHost);
+            
+            // Perform transpose on CPU
+            std::vector<cuDoubleComplex> A_transposed(6 * N * 6 * N);
+            for (int i = 0; i < 6 * N; ++i) {
+                for (int j = 0; j < 6 * N; ++j) {
+                    A_transposed[i * 6 * N + j] = A_host[j * 6 * N + i];
+                }
+            }
 
+            // Copy transposed matrix back to device
+            cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 6 * N * 6 * N, cudaMemcpyHostToDevice);
+            
             solve_gpu(A_device, b_cuda.data(), 6 * N);
 
             std::cout << "\nPolarization vector b_cuda (post-solve):\n";
