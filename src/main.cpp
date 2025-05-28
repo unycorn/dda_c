@@ -386,7 +386,7 @@ int main(int argc, char* argv[]) {
     unsigned int seed = static_cast<unsigned int>(std::stoul(argv[4]));
 
     const int N_width = 2;
-    const int N_height = 2;
+    const int N_height = 1;
     const int N = N_width * N_height;
     const double spacing = 300e-9;
 
