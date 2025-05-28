@@ -86,8 +86,8 @@ std::complex<double> lorentz_alpha_params(double f, const LorentzianParams& para
             break;
     }
     
-    std::complex<double> norm_alpha = scale_factor * numerator / denom + params.B + params.C * f;
-    return norm_alpha;
+    std::complex<double> norm_alpha = numerator / denom + params.B + params.C * f;
+    return scale_factor * norm_alpha;
 }
 
 // Function to create a rotation matrix for the 6x6 polarizability tensor
