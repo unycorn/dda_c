@@ -10,6 +10,7 @@
 #include "print_utils.hpp"
 #include <chrono>  // Add at top with other includes
 #include <omp.h>  // Add at top with other includes
+#include <atomic> // Add at top with other includes
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
@@ -377,21 +378,22 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     auto total_start = std::chrono::high_resolution_clock::now();
     size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
     
-    // Progress tracking
-    std::atomic<size_t> elements_processed{0};
+    // Progress tracking (non-atomic since OpenMP will handle synchronization)
+    size_t elements_processed = 0;
     int last_percent = -1;
     size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
 
-    // Timing counters (made thread-safe)
-    std::atomic<long long> green_function_time{0};
-    std::atomic<long long> matrix_copy_time{0};
-    std::atomic<long long> inversion_time{0};
+    // Timing counters (use regular variables with OpenMP reduction)
+    double green_function_time = 0;
+    double matrix_copy_time = 0;
+    double inversion_time = 0;
 
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
 
-    // Main construction loop with OpenMP parallelization
-    #pragma omp parallel for collapse(2) schedule(dynamic) 
+    // Main construction loop with OpenMP parallelization and reduction
+    #pragma omp parallel for collapse(2) schedule(dynamic) \
+        reduction(+:green_function_time,matrix_copy_time,inversion_time)
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
             // Update progress atomically
