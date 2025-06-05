@@ -5,5 +5,6 @@
 #include <cuComplex.h>
 
 void print_complex_matrix(const char* label, const cuDoubleComplex* matrix, int n);
+void print_complex_vector(const char* label, const cuDoubleComplex* vector, int n);
 
-#endif // PRINT_UTILS_HPP
+#endif

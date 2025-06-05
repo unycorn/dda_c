@@ -155,6 +155,46 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
     }
 }
 
+void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
+    std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
+    
+    // Calculate the Green's function tensors
+    green_E_E_dipole(EE, r_j, r_k, k);
+    green_H_E_dipole(HE, r_j, r_k, k);
+    green_E_M_dipole(EM, r_j, r_k, k);
+    green_H_M_dipole(HM, r_j, r_k, k);
+
+    // Define the unit vectors
+    vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
+    vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
+    vec3 u_m_j = {0.0, 0.0, 1.0};
+    vec3 u_m_k = {0.0, 0.0, 1.0};
+
+    // Calculate the scalar products for each 3x3 block
+    std::complex<double> ee_scalar = 0.0;
+    std::complex<double> he_scalar = 0.0;
+    std::complex<double> em_scalar = 0.0;
+    std::complex<double> hm_scalar = 0.0;
+
+    // Calculate u_j * EE * u_k
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
+            he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
+            em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
+            hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
+        }
+    }
+
+    // Fill the 4x4 matrix
+    // [EE EM]
+    // [HE HM]
+    out[0] = ee_scalar;    // (0,0)
+    out[1] = em_scalar;    // (0,1)
+    out[2] = he_scalar;    // (1,0)
+    out[3] = hm_scalar;    // (1,1)
+}
+
 // Builds the full 6N x 6N interaction matrix
 cuDoubleComplex* get_full_interaction_matrix(
     std::complex<double>* A_host,
@@ -272,5 +312,99 @@ cuDoubleComplex* get_full_interaction_matrix(
     // std::cout << "\nFull interaction matrix:\n";
     // print_complex_matrix("A", A_cpu.data(), 6*N);
 
+    return A_dev;
+}
+
+// Builds the full 2N x 2N interaction matrix
+cuDoubleComplex* get_full_interaction_matrix_scalar(
+    std::complex<double>* A_host,
+    const vec3* positions,
+    const std::complex<double> (*pol_2x2)[2][2],
+    const double* thetas,
+    int N,
+    double k
+) {
+    // Calculate total memory needed (2N x 2N matrix)
+    size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
+    
+    // Progress tracking
+    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
+    size_t elements_processed = 0;
+    int last_percent = -1;
+
+    // Allocate CPU buffer for matrix construction
+    std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
+
+    // Main construction loop
+    for (int j = 0; j < N; ++j) {
+        for (int k_idx = 0; k_idx < N; ++k_idx) {
+            // Update progress
+            elements_processed++;
+            double progress = (static_cast<double>(elements_processed) * 100.0) / 
+                            static_cast<double>(total_elements);
+            int percent_complete = static_cast<int>(progress);
+            
+            if (percent_complete != last_percent && percent_complete % 10 == 0) {
+                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                last_percent = percent_complete;
+            }
+
+            int row_offset = j * 2;
+            int col_offset = k_idx * 2;
+
+            if (j == k_idx) {
+             
+                // Invert the 2x2 matrix
+                std::complex<double> det = pol_2x2[j][0][0] * pol_2x2[j][1][1] - pol_2x2[j][0][1] * pol_2x2[j][1][0];
+                std::complex<double> inv_2x2[4];
+                inv_2x2[0] = pol_2x2[j][1][1] / det;     // (0,0)
+                inv_2x2[1] = -pol_2x2[j][0][1] / det;    // (0,1)
+                inv_2x2[2] = -pol_2x2[j][1][0] / det;    // (1,0)
+                inv_2x2[3] = pol_2x2[j][0][0] / det;     // (1,1)
+
+                // Copy inverted 2x2 matrix to interaction matrix
+                for (int i = 0; i < 2; ++i) {
+                    for (int m = 0; m < 2; ++m) {
+                        A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
+                            std::real(inv_2x2[i*2 + m]),
+                            std::imag(inv_2x2[i*2 + m])
+                        );
+                    }
+                }
+            } else {
+                // Get 2x2 Green's function using scalar version
+                std::complex<double> block[4];
+                biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
+                                        thetas[j], thetas[k_idx], k);
+                
+                // Copy 2x2 block to interaction matrix
+                for (int i = 0; i < 2; ++i) {
+                    for (int m = 0; m < 2; ++m) {
+                        A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
+                            std::real(block[i*2 + m]),
+                            std::imag(block[i*2 + m])
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "\nMatrix construction complete, transferring to GPU...\n";
+
+    // Allocate and transfer matrix to GPU
+    cuDoubleComplex* A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUDA(cudaMemcpy(A_dev, A_cpu.data(), matrix_size, cudaMemcpyHostToDevice));
+    
+    // Copy to host buffer if provided
+    if (A_host != nullptr) {
+        size_t total_elements = static_cast<size_t>(2 * N) * static_cast<size_t>(2 * N);
+        for (size_t i = 0; i < total_elements; ++i) {
+            A_host[i] = std::complex<double>(A_cpu[i].x, A_cpu[i].y);
+        }
+    }
+
+    std::cout << "Matrix transferred to GPU successfully\n";
     return A_dev;
 }
