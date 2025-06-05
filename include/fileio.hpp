@@ -15,6 +15,21 @@ cuDoubleComplex* load_matrix(const char* filename, int& N);
 cuDoubleComplex* load_vector(const char* filename, int& N);
 
 // Writes polarizations (6N-vector of cuDoubleComplex) and full polarizability matrices to CSV text file.
-void write_polarizations(const char* filename, std::complex<double>* p, std::vector<vec3> positions, const std::vector<std::complex<double>[6][6]>& alpha, int N);
+void write_polarizations(
+    const char* filename, 
+    std::complex<double>* p, 
+    std::vector<vec3> positions, 
+    const std::vector<std::complex<double>[6][6]>& alpha, 
+    int N
+);
+
+// Overload for scalar (2x2) polarizability matrices
+void write_polarizations(
+    const char* filename, 
+    std::complex<double>* p, 
+    std::vector<vec3> positions, 
+    const std::vector<std::complex<double>[2][2]>& alpha, 
+    int N
+);
 
 #endif // FILEIO_HPP

@@ -62,7 +62,7 @@ void run_simulation(
         }
 
         std::vector<std::complex<double>> A_host(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
-        cuDoubleComplex* A_device = get_full_interaction_matrix_scalar(A_host.data(), positions.data(), alpha.data(), angles, N, k);
+        cuDoubleComplex* A_device = get_full_interaction_matrix_scalar(A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
         try {
@@ -71,34 +71,28 @@ void run_simulation(
             for (int j = 0; j < N; ++j) {
                 // Calculate phase at dipole position (these should all be identity)
                 double phase = k * positions[j].z;
-                auto phase_factor = std::exp(I * phase);
+                std::complex<double> phase_factor = std::exp(I * phase);
                 
-                // Calculate incident field vectors at this position
-                vec3 E_inc = {phase_factor, 0.0, 0.0};  // Electric field vector (x-component)
-                vec3 H_inc = {0.0, phase_factor / Z_0, 0.0};  // Magnetic field vector (y-component)
+                // Create complex vectors for E and H fields
+                vec3 E_inc_real = {1.0, 0.0, 0.0};  // Real part of E-field (x-component)
+                vec3 H_inc_real = {0.0, 1.0/Z_0, 0.0};  // Real part of H-field (y-component)
                 
-                // Define projection vectors for E and H fields
+                // Create projection vectors
                 vec3 u_e = {cos(angles[j]), sin(angles[j]), 0.0}; // Electric projection vector
                 vec3 u_h = {0.0, 0.0, 1.0}; // Magnetic projection vector (assumed along z-axis)
                 
-                // Calculate dot products and store in incident field array
-                inc_field[2 * j + 0] = vec3_dot(E_inc, u_e);         // Electric projection
-                inc_field[2 * j + 1] = vec3_dot(H_inc, u_h) / Z_0;   // Magnetic projection
+                // Calculate projections and multiply by phase factor
+                inc_field[2 * j + 0] = phase_factor * vec3_dot(E_inc_real, u_e);     // Electric projection
+                inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
             }
 
-            std::vector<std::complex<double>> b(2 * N);
-            for (int i = 0; i < 2 * N; ++i) {
-                b[i] = inc_field[i];
-            }
-
+            // Convert incident field to cuDoubleComplex for GPU
             std::vector<cuDoubleComplex> b_cuda(2 * N);
             for (int i = 0; i < 2 * N; ++i) {
-                b_cuda[i] = make_cuDoubleComplex(std::real(b[i]), std::imag(b[i]));
+                b_cuda[i] = make_cuDoubleComplex(std::real(inc_field[i]), std::imag(inc_field[i]));
             }
 
-            std::vector<cuDoubleComplex> A_host(2 * N * 2 * N);
-            cudaMemcpy(A_host.data(), A_device, sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyDeviceToHost);
-            
+            // Transpose matrix for GPU solver (expects column-major format)
             std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
             for (int i = 0; i < 2 * N; ++i) {
                 for (int j = 0; j < 2 * N; ++j) {
@@ -110,6 +104,7 @@ void run_simulation(
             
             solve_gpu(A_device, b_cuda.data(), 2 * N);
 
+            std::vector<std::complex<double>> b(2 * N);
             for (int i = 0; i < 2 * N; ++i) {
                 b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
             }

@@ -24,6 +24,18 @@ vec3 vec3_unit(const vec3& v) {
     return vec3_scale(v, 1.0 / vec3_norm(v));
 }
 
+// Real dot product
+double vec3_dot(const vec3& a, const vec3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+// Complex dot product - for when one vector has complex components
+std::complex<double> vec3_dot(const vec3& a, const vec3& b_complex) {
+    return std::complex<double>(
+        a.x * b_complex.x + a.y * b_complex.y + a.z * b_complex.z
+    );
+}
+
 // Outer product of two vectors (returns 3x3 matrix)
 void outer_product(std::complex<double> out[3][3], const vec3& a, const vec3& b) {
     out[0][0] = a.x * b.x;

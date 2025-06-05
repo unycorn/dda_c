@@ -85,3 +85,50 @@ void write_polarizations(
 
     out.close();
 }
+
+void write_polarizations(
+    const char* filename,
+    std::complex<double>* p, 
+    std::vector<vec3> positions,
+    const std::vector<std::complex<double>[2][2]>& alpha,
+    int N
+) {
+    std::ofstream out(filename);
+    if (!out) {
+        std::cerr << "Error: could not open " << filename << " for writing.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Write header for 2x2 case (only Ex,Mz components)
+    out << "Re_px,Im_px,Re_mz,Im_mz,x,y,z";
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            out << ",Re_alpha" << i << j << ",Im_alpha" << i << j;
+        }
+    }
+    out << "\n";
+    
+    out << std::scientific << std::setprecision(9);
+
+    // Write data
+    for (int n = 0; n < N; ++n) {
+        // Write Ex,Mz components only
+        out << p[2*n + 0].real() << "," << p[2*n + 0].imag() << ",";     // Ex
+        out << p[2*n + 1].real() << "," << p[2*n + 1].imag();            // Mz
+        
+        // Write positions
+        out << "," << positions[n].x << ","
+            << positions[n].y << ","
+            << positions[n].z;
+        
+        // Write all 4 elements of the alpha matrix
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 2; ++j) {
+                out << "," << alpha[n][i][j].real() << "," << alpha[n][i][j].imag();
+            }
+        }
+        out << "\n";
+    }
+
+    out.close();
+}
