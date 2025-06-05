@@ -157,41 +157,45 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
 }
 
 void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
-    std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
+    // std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
     
-    // Calculate the Green's function tensors
-    green_E_E_dipole(EE, r_j, r_k, k);
-    green_H_E_dipole(HE, r_j, r_k, k);
-    green_E_M_dipole(EM, r_j, r_k, k);
-    green_H_M_dipole(HM, r_j, r_k, k);
+    // // Calculate the Green's function tensors
+    // green_E_E_dipole(EE, r_j, r_k, k);
+    // green_H_E_dipole(HE, r_j, r_k, k);
+    // green_E_M_dipole(EM, r_j, r_k, k);
+    // green_H_M_dipole(HM, r_j, r_k, k);
 
-    // Define the unit vectors
-    vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
-    vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
-    vec3 u_m_j = {0.0, 0.0, 1.0};
-    vec3 u_m_k = {0.0, 0.0, 1.0};
+    // // Define the unit vectors
+    // vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
+    // vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
+    // vec3 u_m_j = {0.0, 0.0, 1.0};
+    // vec3 u_m_k = {0.0, 0.0, 1.0};
 
-    // Calculate the scalar products for each 3x3 block
-    std::complex<double> ee_scalar = 0.0;
-    std::complex<double> he_scalar = 0.0;
-    std::complex<double> em_scalar = 0.0;
-    std::complex<double> hm_scalar = 0.0;
+    // // Calculate the scalar products for each 3x3 block
+    // std::complex<double> ee_scalar = 0.0;
+    // std::complex<double> he_scalar = 0.0;
+    // std::complex<double> em_scalar = 0.0;
+    // std::complex<double> hm_scalar = 0.0;
 
-    // Calculate u_j * EE * u_k etc using array indexing
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
-            he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
-            em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
-            hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
-        }
+    // // Calculate u_j * EE * u_k etc using array indexing
+    // for (int i = 0; i < 3; ++i) {
+    //     for (int j = 0; j < 3; ++j) {
+    //         ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
+    //         he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
+    //         em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
+    //         hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
+    //     }
+    // }
+
+    // // Fill output matrix (2x2 scalar result)
+    // out[0] = ee_scalar;  // EE block
+    // out[1] = em_scalar;  // EM block
+    // out[2] = he_scalar;  // HE block
+    // out[3] = hm_scalar;  // HM block
+
+    for (int i = 0; i < 4; i++) {
+        out[i] = 0.0;  // Initialize output matrix to zero
     }
-
-    // Fill output matrix (2x2 scalar result)
-    out[0] = ee_scalar;  // EE block
-    out[1] = em_scalar;  // EM block
-    out[2] = he_scalar;  // HE block
-    out[3] = hm_scalar;  // HM block
 }
 
 // Builds the full 6N x 6N interaction matrix
