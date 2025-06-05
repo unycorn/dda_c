@@ -96,7 +96,10 @@ void run_simulation(
             std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
             for (int i = 0; i < 2 * N; ++i) {
                 for (int j = 0; j < 2 * N; ++j) {
-                    A_transposed[i * 2 * N + j] = A_host[j * 2 * N + i];
+                    A_transposed[i * 2 * N + j] = make_cuDoubleComplex(
+                        std::real(A_host[j * 2 * N + i]),
+                        std::imag(A_host[j * 2 * N + i])
+                    );
                 }
             }
 
