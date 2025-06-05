@@ -176,7 +176,7 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
     std::complex<double> em_scalar = 0.0;
     std::complex<double> hm_scalar = 0.0;
 
-    // Calculate u_j * EE * u_k
+    // Calculate u_j * EE * u_k etc using array indexing
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
@@ -186,13 +186,11 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
         }
     }
 
-    // Fill the 4x4 matrix
-    // [EE EM]
-    // [HE HM]
-    out[0] = ee_scalar;    // (0,0)
-    out[1] = em_scalar;    // (0,1)
-    out[2] = he_scalar;    // (1,0)
-    out[3] = hm_scalar;    // (1,1)
+    // Fill output matrix (2x2 scalar result)
+    out[0] = ee_scalar;  // EE block
+    out[1] = em_scalar;  // EM block
+    out[2] = he_scalar;  // HE block
+    out[3] = hm_scalar;  // HM block
 }
 
 // Builds the full 6N x 6N interaction matrix
