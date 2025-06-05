@@ -389,8 +389,8 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
             } else {
                 // Get 2x2 Green's function using scalar version
                 std::complex<double> block[4];
-                biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
-                                        thetas[j], thetas[k_idx], k);
+                // biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
+                //                         thetas[j], thetas[k_idx], k);
                 
                 // Copy 2x2 block to interaction matrix
                 for (int i = 0; i < 2; ++i) {
