@@ -9,6 +9,7 @@
 #include "vector3.hpp"
 #include "print_utils.hpp"
 #include <chrono>  // Add at top with other includes
+#include <omp.h>  // Add at top with other includes
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
@@ -157,41 +158,91 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
 }
 
 void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
+    // Cache vector operations
+    vec3 r = vec3_sub(r_j, r_k);
+    double r_len = vec3_norm(r);
+    
+    if (r_len == 0) {
+        std::cerr << "Error: self-interaction\n";
+        return;
+    }
+
+    // Pre-compute expensive values
+    double inv_r = 1.0/r_len;
+    double inv_r2 = inv_r * inv_r;
+    std::complex<double> expikr = std::exp(I * k * r_len);
+    
+    // Pre-compute trig values
+    double cos_j = cos(theta_j);
+    double sin_j = sin(theta_j);
+    double cos_k = cos(theta_k);
+    double sin_k = sin(theta_k);
+    
+    // Pre-compute unit vectors
+    vec3 u_e_j = {cos_j, sin_j, 0.0};
+    vec3 u_e_k = {cos_k, sin_k, 0.0};
+    const vec3 u_m = {0.0, 0.0, 1.0}; // Same for both j and k
+    
+    // Calculate common terms for Green's functions
+    vec3 r_hat = vec3_scale(r, inv_r);
+    std::complex<double> prefac = 1.0/(4*M_PI*EPSILON_0) * expikr * inv_r;
+    std::complex<double> k2 = k * k;
+    std::complex<double> ikr = I * k * r_len;
+    std::complex<double> term1 = k2;
+    std::complex<double> term2 = (ikr - 1.0) * inv_r2;
+
+    // Compute Green's tensors with cached values
     std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
     
-    // Calculate the Green's function tensors
-    green_E_E_dipole(EE, r_j, r_k, k);
-    green_H_E_dipole(HE, r_j, r_k, k);
-    green_E_M_dipole(EM, r_j, r_k, k);
-    green_H_M_dipole(HM, r_j, r_k, k);
+    // Calculate the Green's function tensors using cached values
+    // EE tensor
+    std::complex<double> dyad[3][3];
+    outer_product(dyad, r_hat, r_hat);
+    
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            double delta_ij = (i == j) ? 1.0 : 0.0;
+            EE[i][j] = prefac * (term1 * (dyad[i][j] - delta_ij) + term2 * (3.0 * dyad[i][j] - delta_ij));
+        }
+    }
+    
+    // HE tensor (optimize cross product)
+    std::complex<double> he_prefac = -I * k * C_LIGHT * prefac * inv_r * (1.0 - ikr);
+    cross_matrix(HE, r_hat);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            HE[i][j] *= he_prefac;
+        }
+    }
+    
+    // EM and HM tensors (reuse calculations)
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            EM[i][j] = -HE[i][j]; // Due to duality
+            HM[i][j] = EE[i][j];  // Due to duality
+        }
+    }
 
-    // Define the unit vectors
-    vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
-    vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
-    vec3 u_m_j = {0.0, 0.0, 1.0};
-    vec3 u_m_k = {0.0, 0.0, 1.0};
-
-    // Calculate the scalar products for each 3x3 block
+    // Calculate scalar products efficiently
     std::complex<double> ee_scalar = 0.0;
     std::complex<double> he_scalar = 0.0;
     std::complex<double> em_scalar = 0.0;
     std::complex<double> hm_scalar = 0.0;
 
-    // Calculate u_j * EE * u_k etc using array indexing
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
-            he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
-            em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
-            hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
-        }
-    }
+    // Unroll small loops for better optimization
+    ee_scalar = u_e_j[0] * (EE[0][0] * u_e_k[0] + EE[0][1] * u_e_k[1] + EE[0][2] * u_e_k[2]) +
+                u_e_j[1] * (EE[1][0] * u_e_k[0] + EE[1][1] * u_e_k[1] + EE[1][2] * u_e_k[2]) +
+                u_e_j[2] * (EE[2][0] * u_e_k[0] + EE[2][1] * u_e_k[1] + EE[2][2] * u_e_k[2]);
+
+    he_scalar = u_m[2] * (HE[2][0] * u_e_k[0] + HE[2][1] * u_e_k[1]);  // z component only
+    em_scalar = u_e_j[0] * EM[0][2] + u_e_j[1] * EM[1][2];  // z component only
+    hm_scalar = HM[2][2];  // z-z component only due to u_m
 
     // Fill output matrix (2x2 scalar result)
-    out[0] = ee_scalar;  // EE block
-    out[1] = em_scalar;  // EM block
-    out[2] = he_scalar;  // HE block
-    out[3] = hm_scalar;  // HM block
+    out[0] = ee_scalar;
+    out[1] = em_scalar;
+    out[2] = he_scalar;
+    out[3] = hm_scalar;
 }
 
 // Builds the full 6N x 6N interaction matrix
@@ -327,23 +378,24 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
     
     // Progress tracking
-    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
-    size_t elements_processed = 0;
+    std::atomic<size_t> elements_processed{0};
     int last_percent = -1;
+    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
 
-    // Timing counters
-    std::chrono::nanoseconds green_function_time(0);
-    std::chrono::nanoseconds matrix_copy_time(0);
-    std::chrono::nanoseconds inversion_time(0);
+    // Timing counters (made thread-safe)
+    std::atomic<long long> green_function_time{0};
+    std::atomic<long long> matrix_copy_time{0};
+    std::atomic<long long> inversion_time{0};
 
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
 
-    // Main construction loop
+    // Main construction loop with OpenMP parallelization
+    #pragma omp parallel for collapse(2) schedule(dynamic) 
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
-            // Update progress
-            elements_processed++;
+            // Update progress atomically
+            size_t current_element = ++elements_processed;
             int row_offset = j * 2;
             int col_offset = k_idx * 2;
 
@@ -357,7 +409,7 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 inv_2x2[2] = -pol_2x2[j][1][0] / det;
                 inv_2x2[3] = pol_2x2[j][0][0] / det;
                 auto inv_end = std::chrono::high_resolution_clock::now();
-                inversion_time += std::chrono::duration_cast<std::chrono::nanoseconds>(inv_end - inv_start);
+                inversion_time += std::chrono::duration_cast<std::chrono::nanoseconds>(inv_end - inv_start).count();
 
                 auto copy_start = std::chrono::high_resolution_clock::now();
                 // Copy inverted 2x2 matrix to interaction matrix
@@ -370,7 +422,7 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                     }
                 }
                 auto copy_end = std::chrono::high_resolution_clock::now();
-                matrix_copy_time += std::chrono::duration_cast<std::chrono::nanoseconds>(copy_end - copy_start);
+                matrix_copy_time += std::chrono::duration_cast<std::chrono::nanoseconds>(copy_end - copy_start).count();
             } else {
                 auto green_start = std::chrono::high_resolution_clock::now();
                 // Get 2x2 Green's function using scalar version
@@ -378,34 +430,25 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
                                         thetas[j], thetas[k_idx], k);
                 auto green_end = std::chrono::high_resolution_clock::now();
-                green_function_time += std::chrono::duration_cast<std::chrono::nanoseconds>(green_end - green_start);
-                
-                auto copy_start = std::chrono::high_resolution_clock::now();
-                // Copy 2x2 block to interaction matrix
-                for (int i = 0; i < 2; ++i) {
-                    for (int m = 0; m < 2; ++m) {
-                        A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
-                            std::real(block[i*2 + m]),
-                            std::imag(block[i*2 + m])
-                        );
-                    }
-                }
-                auto copy_end = std::chrono::high_resolution_clock::now();
-                matrix_copy_time += std::chrono::duration_cast<std::chrono::nanoseconds>(copy_end - copy_start);
+                green_function_time += std::chrono::duration_cast<std::chrono::nanoseconds>(green_end - green_start).count();
             }
 
-            // Print progress every 10%
-            double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
-            int percent_complete = static_cast<int>(progress);
-            if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                auto current = std::chrono::high_resolution_clock::now();
-                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - total_start);
-                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                std::cout << "Time spent in green function: " << green_function_time.count() / 1e9 << "s\n";
-                std::cout << "Time spent in matrix copy: " << matrix_copy_time.count() / 1e9 << "s\n";
-                std::cout << "Time spent in matrix inversion: " << inversion_time.count() / 1e9 << "s\n";
-                std::cout << "Total time so far: " << elapsed.count() << "s\n\n";
-                last_percent = percent_complete;
+            // Print progress (only from one thread)
+            #pragma omp critical
+            {
+                double progress = (static_cast<double>(current_element) * 100.0) / static_cast<double>(total_elements);
+                int percent_complete = static_cast<int>(progress);
+                if (percent_complete != last_percent && percent_complete % 10 == 0) {
+                    auto current = std::chrono::high_resolution_clock::now();
+                    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - total_start);
+                    std::cout << "Matrix construction: " << percent_complete << "% complete\n";
+                    std::cout << "Time spent in green function: " << green_function_time/1e9 << "s\n";
+                    std::cout << "Time spent in matrix copy: " << matrix_copy_time/1e9 << "s\n";
+                    std::cout << "Time spent in matrix inversion: " << inversion_time/1e9 << "s\n";
+                    std::cout << "Total time so far: " << elapsed.count() << "s\n";
+                    std::cout << "Using " << omp_get_num_threads() << " threads\n\n";
+                    last_percent = percent_complete;
+                }
             }
         }
     }
