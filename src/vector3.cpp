@@ -30,9 +30,9 @@ double vec3_dot(const vec3& a, const vec3& b) {
 }
 
 // Complex dot product - for when one vector has complex components
-std::complex<double> vec3_dot(const vec3& a, const vec3& b_complex) {
+std::complex<double> vec3_dot(const vec3& a, const std::complex<double>* b) {
     return std::complex<double>(
-        a.x * b_complex.x + a.y * b_complex.y + a.z * b_complex.z
+        a.x * b[0] + a.y * b[1] + a.z * b[2]
     );
 }
 
