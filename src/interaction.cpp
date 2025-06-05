@@ -276,28 +276,12 @@ cuDoubleComplex* get_full_interaction_matrix(
     // Calculate total memory needed
     size_t matrix_size = (size_t)(6 * N) * (size_t)(6 * N) * sizeof(cuDoubleComplex);
     
-    // Calculate total elements and initialize progress tracking
-    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
-    size_t elements_processed = 0;
-    int last_percent = -1;
-
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(6 * N * 6 * N);
 
     // Main construction loop
     for (int j = 0; j < N; ++j) {
         for (int k_idx = 0; k_idx < N; ++k_idx) {
-            // Update progress
-            elements_processed++;
-            double progress = (static_cast<double>(elements_processed) * 100.0) / 
-                            static_cast<double>(total_elements);
-            int percent_complete = static_cast<int>(progress);
-            
-            if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                last_percent = percent_complete;
-            }
-
             int row_offset = j * 6;
             int col_offset = k_idx * 6;
 
@@ -313,12 +297,8 @@ cuDoubleComplex* get_full_interaction_matrix(
                     }
                 }
 
-                // print_complex_matrix("Polarizability matrix before inversion", polarizability_block.data(), 6);
-    
                 // Invert the 6x6 polarizability matrix
                 invert_6x6_matrix_lapack(polarizability_block.data());
-
-                // print_complex_matrix("Polarizability matrix after inversion", polarizability_block.data(), 6);
 
                 // Copy inverted matrix to the big interaction matrix
                 for (int i = 0; i < 6; ++i) {
@@ -345,10 +325,6 @@ cuDoubleComplex* get_full_interaction_matrix(
         }
     }
 
-
-
-    std::cout << "\nMatrix construction complete, transferring to GPU...\n";
-
     // Allocate and transfer matrix to GPU in one operation
     cuDoubleComplex* A_dev = nullptr;
     CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
@@ -362,26 +338,6 @@ cuDoubleComplex* get_full_interaction_matrix(
         }
     }
 
-    std::cout << "Matrix transferred to GPU successfully\n";
-
-    // Some Debug Stuff to make sure the interaction matrix is correct
-    // Print positions
-    // std::cout << "\nPositions (in meters):\n";
-    // std::cout << "positions = np.array([";
-    // for (int i = 0; i < N; ++i) {
-    //     std::cout << "[" << positions[i].x << ", " << positions[i].y << ", " << positions[i].z << "]";
-    //     if (i < N-1) std::cout << ",\n";
-    // }
-    // std::cout << "])\n";
-
-    // // Print wavenumber
-    // std::cout << "\nWavenumber k (in m^-1):\n";
-    // std::cout << "k = " << k << "\n";
-
-    // // Print full interaction matrix
-    // std::cout << "\nFull interaction matrix:\n";
-    // print_complex_matrix("A", A_cpu.data(), 6*N);
-
     return A_dev;
 }
 
@@ -394,18 +350,12 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     int N,
     double k
 ) {
-    auto total_start = std::chrono::high_resolution_clock::now();
     size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
     
     // Progress tracking
     size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
     size_t elements_processed = 0;
     int last_percent = -1;
-
-    // Timing counters
-    std::chrono::nanoseconds green_function_time(0);
-    std::chrono::nanoseconds matrix_copy_time(0);
-    std::chrono::nanoseconds inversion_time(0);
 
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
@@ -419,7 +369,6 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
             int col_offset = k_idx * 2;
 
             if (j == k_idx) {
-                auto inv_start = std::chrono::high_resolution_clock::now();
                 // Invert the 2x2 matrix
                 std::complex<double> det = pol_2x2[j][0][0] * pol_2x2[j][1][1] - pol_2x2[j][0][1] * pol_2x2[j][1][0];
                 std::complex<double> inv_2x2[4];
@@ -427,10 +376,7 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 inv_2x2[1] = -pol_2x2[j][0][1] / det;
                 inv_2x2[2] = -pol_2x2[j][1][0] / det;
                 inv_2x2[3] = pol_2x2[j][0][0] / det;
-                auto inv_end = std::chrono::high_resolution_clock::now();
-                inversion_time += std::chrono::duration_cast<std::chrono::nanoseconds>(inv_end - inv_start);
 
-                auto copy_start = std::chrono::high_resolution_clock::now();
                 // Copy inverted 2x2 matrix to interaction matrix
                 for (int i = 0; i < 2; ++i) {
                     for (int m = 0; m < 2; ++m) {
@@ -440,18 +386,12 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                         );
                     }
                 }
-                auto copy_end = std::chrono::high_resolution_clock::now();
-                matrix_copy_time += std::chrono::duration_cast<std::chrono::nanoseconds>(copy_end - copy_start);
             } else {
-                auto green_start = std::chrono::high_resolution_clock::now();
                 // Get 2x2 Green's function using scalar version
                 std::complex<double> block[4];
-                // biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
-                //                         thetas[j], thetas[k_idx], k);
-                auto green_end = std::chrono::high_resolution_clock::now();
-                green_function_time += std::chrono::duration_cast<std::chrono::nanoseconds>(green_end - green_start);
+                biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
+                                        thetas[j], thetas[k_idx], k);
                 
-                auto copy_start = std::chrono::high_resolution_clock::now();
                 // Copy 2x2 block to interaction matrix
                 for (int i = 0; i < 2; ++i) {
                     for (int m = 0; m < 2; ++m) {
@@ -461,28 +401,17 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                         );
                     }
                 }
-                auto copy_end = std::chrono::high_resolution_clock::now();
-                matrix_copy_time += std::chrono::duration_cast<std::chrono::nanoseconds>(copy_end - copy_start);
             }
 
             // Print progress every 10%
             double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
             int percent_complete = static_cast<int>(progress);
             if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                auto current = std::chrono::high_resolution_clock::now();
-                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - total_start);
                 std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                std::cout << "Time spent in green function: " << green_function_time.count() / 1e9 << "s\n";
-                std::cout << "Time spent in matrix copy: " << matrix_copy_time.count() / 1e9 << "s\n";
-                std::cout << "Time spent in matrix inversion: " << inversion_time.count() / 1e9 << "s\n";
-                std::cout << "Total time so far: " << elapsed.count() << "s\n\n";
                 last_percent = percent_complete;
             }
         }
     }
-
-    auto gpu_start = std::chrono::high_resolution_clock::now();
-    std::cout << "\nMatrix construction complete, transferring to GPU...\n";
 
     // Allocate and transfer matrix to GPU
     cuDoubleComplex* A_dev = nullptr;
