@@ -446,8 +446,8 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 auto green_start = std::chrono::high_resolution_clock::now();
                 // Get 2x2 Green's function using scalar version
                 std::complex<double> block[4];
-                biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
-                                        thetas[j], thetas[k_idx], k);
+                // biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
+                //                         thetas[j], thetas[k_idx], k);
                 auto green_end = std::chrono::high_resolution_clock::now();
                 green_function_time += std::chrono::duration_cast<std::chrono::nanoseconds>(green_end - green_start);
                 
