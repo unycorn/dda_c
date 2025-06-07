@@ -45,7 +45,7 @@ void green_E_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
     std::complex<double> prefac = 1.0/(4*M_PI*EPSILON_0) * expikr / r_len;
 
     std::complex<double> term1 = k * k;
-    std::complex<double> term2 = (I * k * r_len - 1.0) / (r_len * r_len);
+    std::complex<double> term2 = (1.0 - I * k * r_len) / (r_len * r_len);
 
     std::complex<double> dyad[3][3];
     outer_product(dyad, r_hat, r_hat);
@@ -53,7 +53,7 @@ void green_E_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             double delta_ij = (i == j) ? 1.0 : 0.0;
-            out[i][j] = prefac * (term1 * (dyad[i][j] - delta_ij) + term2 * (3.0 * dyad[i][j] - delta_ij));
+            out[i][j] = prefac * (term2 * (3.0 * dyad[i][j] - delta_ij) + term1 * (delta_ij - dyad[i][j]));
         }
     }
 }
@@ -123,7 +123,7 @@ void green_H_M_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
     std::complex<double> prefac = 1.0/(4*M_PI) * expikr / r_len;
 
     std::complex<double> term1 = k * k;
-    std::complex<double> term2 = (I * k * r_len - 1.0) / (r_len * r_len);
+    std::complex<double> term2 = (1.0 - I * k * r_len) / (r_len * r_len);
 
     std::complex<double> dyad[3][3];
     outer_product(dyad, r_hat, r_hat);
@@ -131,7 +131,7 @@ void green_H_M_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             double delta_ij = (i == j) ? 1.0 : 0.0;
-            out[i][j] = prefac * (term1 * (dyad[i][j] - delta_ij) + term2 * (3.0 * dyad[i][j] - delta_ij));
+            out[i][j] = prefac * (term2 * (3.0 * dyad[i][j] - delta_ij) + term1 * (delta_ij - dyad[i][j]));
         }
     }
 }
