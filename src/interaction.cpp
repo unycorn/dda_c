@@ -156,107 +156,68 @@ void biani_green_matrix(std::complex<double>* out, vec3 r_j, vec3 r_k, double k)
     }
 }
 
-void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
-    // Calculate shared geometric terms
-    vec3 r = vec3_sub(r_j, r_k);
-    double r_len = vec3_norm(r);
-
-    if (r_len == 0) {
-        std::cerr << "Error: self-interaction\n";
-        return;
-    }
-    
-    // Unit vectors for dipole orientations
-    vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
-    vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
-    vec3 u_m_j = {0.0, 0.0, 1.0};  // z-direction
-    
-    // Precompute shared terms
-    vec3 r_hat = vec3_unit(r);
-    std::complex<double> expikr = std::exp(I * k * r_len);
-    double omega = k * C_LIGHT;
-    
-    // Dot products we'll need multiple times
-    double r_dot_ej = vec3_dot(r_hat, u_e_j);
-    double r_dot_ek = vec3_dot(r_hat, u_e_k);
-    double ej_dot_ek = vec3_dot(u_e_j, u_e_k);
-    
-    // EE block (electric-electric coupling)
-    std::complex<double> ee_prefac = expikr / (4*M_PI*EPSILON_0*r_len);
-    std::complex<double> ee_term1 = k * k;
-    std::complex<double> ee_term2 = (I * k * r_len - 1.0) / (r_len * r_len);
-    std::complex<double> ee_scalar = ee_prefac * (
-        ee_term1 * (3.0 * r_dot_ej * r_dot_ek - ej_dot_ek) +
-        ee_term2 * (3.0 * r_dot_ej * r_dot_ek - ej_dot_ek)
-    );
-    
-    // HM block (magnetic-magnetic coupling) - similar structure to EE
-    // Since u_m is in z direction, many terms simplify
-    double r_dot_m = r_hat.z;  // dot product with z unit vector
-    std::complex<double> hm_scalar = ee_prefac * (
-        ee_term1 * (3.0 * r_dot_m * r_dot_m - 1.0) +
-        ee_term2 * (3.0 * r_dot_m * r_dot_m - 1.0)
-    );
-    
-    // HE and EM blocks (cross coupling)
-    // These involve cross products with r_hat
-    std::complex<double> cross_prefac = -I * omega * expikr / (4 * M_PI * r_len * r_len);
-    std::complex<double> cross_term = (1.0/r_len - I*k);
-    
-    // For z cross r_hat cross u_e
-    vec3 r_cross_ue_k = {
-        -r_hat.y * cos(theta_k),
-        r_hat.x * cos(theta_k),
-        0.0
-    };
-    vec3 r_cross_ue_j = {
-        -r_hat.y * cos(theta_j),
-        r_hat.x * cos(theta_j),
-        0.0
-    };
-    
-    std::complex<double> he_scalar = cross_prefac * cross_term * r_cross_ue_k.z;  // Only z component matters for u_m_j
-    std::complex<double> em_scalar = cross_prefac * cross_term * r_cross_ue_j.z;  // Only z component matters for u_m_k
-    
-    // Fill output matrix (2x2 scalar result)
-    out[0] = ee_scalar;  // EE block
-    out[1] = em_scalar;  // EM block
-    out[2] = he_scalar;  // HE block
-    out[3] = hm_scalar;  // HM block
-
-}
-
 // void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
-//     std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
-    
-//     // Calculate the Green's function tensors
-//     green_E_E_dipole(EE, r_j, r_k, k);
-//     green_H_E_dipole(HE, r_j, r_k, k);
-//     green_E_M_dipole(EM, r_j, r_k, k);
-//     green_H_M_dipole(HM, r_j, r_k, k);
+//     // Calculate shared geometric terms
+//     vec3 r = vec3_sub(r_j, r_k);
+//     double r_len = vec3_norm(r);
 
-//     // Define the unit vectors
+//     if (r_len == 0) {
+//         std::cerr << "Error: self-interaction\n";
+//         return;
+//     }
+    
+//     // Unit vectors for dipole orientations
 //     vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
 //     vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
-//     vec3 u_m_j = {0.0, 0.0, 1.0};
-//     vec3 u_m_k = {0.0, 0.0, 1.0};
-
-//     // Calculate the scalar products for each 3x3 block
-//     std::complex<double> ee_scalar = 0.0;
-//     std::complex<double> he_scalar = 0.0;
-//     std::complex<double> em_scalar = 0.0;
-//     std::complex<double> hm_scalar = 0.0;
-
-//     // Calculate u_j * EE * u_k etc using array indexing
-//     for (int i = 0; i < 3; ++i) {
-//         for (int j = 0; j < 3; ++j) {
-//             ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
-//             he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
-//             em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
-//             hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
-//         }
-//     }
-
+//     vec3 u_m_j = {0.0, 0.0, 1.0};  // z-direction
+    
+//     // Precompute shared terms
+//     vec3 r_hat = vec3_unit(r);
+//     std::complex<double> expikr = std::exp(I * k * r_len);
+//     double omega = k * C_LIGHT;
+    
+//     // Dot products we'll need multiple times
+//     double r_dot_ej = vec3_dot(r_hat, u_e_j);
+//     double r_dot_ek = vec3_dot(r_hat, u_e_k);
+//     double ej_dot_ek = vec3_dot(u_e_j, u_e_k);
+    
+//     // EE block (electric-electric coupling)
+//     std::complex<double> ee_prefac = expikr / (4*M_PI*EPSILON_0*r_len);
+//     std::complex<double> ee_term1 = k * k;
+//     std::complex<double> ee_term2 = (I * k * r_len - 1.0) / (r_len * r_len);
+//     std::complex<double> ee_scalar = ee_prefac * (
+//         ee_term1 * (3.0 * r_dot_ej * r_dot_ek - ej_dot_ek) +
+//         ee_term2 * (3.0 * r_dot_ej * r_dot_ek - ej_dot_ek)
+//     );
+    
+//     // HM block (magnetic-magnetic coupling) - similar structure to EE
+//     // Since u_m is in z direction, many terms simplify
+//     double r_dot_m = r_hat.z;  // dot product with z unit vector
+//     std::complex<double> hm_scalar = ee_prefac * (
+//         ee_term1 * (3.0 * r_dot_m * r_dot_m - 1.0) +
+//         ee_term2 * (3.0 * r_dot_m * r_dot_m - 1.0)
+//     );
+    
+//     // HE and EM blocks (cross coupling)
+//     // These involve cross products with r_hat
+//     std::complex<double> cross_prefac = -I * omega * expikr / (4 * M_PI * r_len * r_len);
+//     std::complex<double> cross_term = (1.0/r_len - I*k);
+    
+//     // For z cross r_hat cross u_e
+//     vec3 r_cross_ue_k = {
+//         -r_hat.y * cos(theta_k),
+//         r_hat.x * cos(theta_k),
+//         0.0
+//     };
+//     vec3 r_cross_ue_j = {
+//         -r_hat.y * cos(theta_j),
+//         r_hat.x * cos(theta_j),
+//         0.0
+//     };
+    
+//     std::complex<double> he_scalar = cross_prefac * cross_term * r_cross_ue_k.z;  // Only z component matters for u_m_j
+//     std::complex<double> em_scalar = cross_prefac * cross_term * r_cross_ue_j.z;  // Only z component matters for u_m_k
+    
 //     // Fill output matrix (2x2 scalar result)
 //     out[0] = ee_scalar;  // EE block
 //     out[1] = em_scalar;  // EM block
@@ -264,6 +225,45 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
 //     out[3] = hm_scalar;  // HM block
 
 // }
+
+void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, double theta_j, double theta_k, double k) {
+    std::complex<double> EE[3][3], HE[3][3], EM[3][3], HM[3][3];
+    
+    // Calculate the Green's function tensors
+    green_E_E_dipole(EE, r_j, r_k, k);
+    green_H_E_dipole(HE, r_j, r_k, k);
+    green_E_M_dipole(EM, r_j, r_k, k);
+    green_H_M_dipole(HM, r_j, r_k, k);
+
+    // Define the unit vectors
+    vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
+    vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
+    vec3 u_m_j = {0.0, 0.0, 1.0};
+    vec3 u_m_k = {0.0, 0.0, 1.0};
+
+    // Calculate the scalar products for each 3x3 block
+    std::complex<double> ee_scalar = 0.0;
+    std::complex<double> he_scalar = 0.0;
+    std::complex<double> em_scalar = 0.0;
+    std::complex<double> hm_scalar = 0.0;
+
+    // Calculate u_j * EE * u_k etc using array indexing
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            ee_scalar += u_e_j[i] * EE[i][j] * u_e_k[j];
+            he_scalar += u_m_j[i] * HE[i][j] * u_e_k[j];
+            em_scalar += u_e_j[i] * EM[i][j] * u_m_k[j];
+            hm_scalar += u_m_j[i] * HM[i][j] * u_m_k[j];
+        }
+    }
+
+    // Fill output matrix (2x2 scalar result)
+    out[0] = ee_scalar;  // EE block
+    out[1] = em_scalar;  // EM block
+    out[2] = he_scalar;  // HE block
+    out[3] = hm_scalar;  // HM block
+
+}
 
 // Builds the full 6N x 6N interaction matrix
 cuDoubleComplex* get_full_interaction_matrix(
