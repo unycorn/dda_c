@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the simulation with the loaded parameters
-    run_simulation(150e12, 350e12, 80, positions, params_00, params_05, params_50, params_55, angles);
+    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
 
     return 0;
 }
