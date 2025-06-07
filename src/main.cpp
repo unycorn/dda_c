@@ -208,7 +208,27 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the simulation with the loaded parameters
-    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
+    // run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
+
+    // Test biani_green_matrix_scalar with two test points
+    vec3 point1 = {0.0, 0.0, 0.0};  // Origin
+    vec3 point2 = {1e-6, 0.0, 0.0};  // 1 micron away in x direction
+    double angle1 = 0.0;  // No rotation
+    double angle2 = M_PI/4.0;  // 45 degree rotation
+    double k = 2.0 * M_PI / (C_LIGHT / 220e12);  // Wavevector at 220 THz
+    
+    mat2x2 result;
+    biani_green_matrix_scalar(
+        result, point1, point2, angle1, angle2, k
+    );
+    
+    // Print the resulting 2x2 matrix
+    std::cout << "\nTesting biani_green_matrix_scalar:\n";
+    std::cout << "Points: (0,0,0) and (1μm,0,0)\n";
+    std::cout << "Angles: 0° and 45°\n";
+    std::cout << "Matrix result:\n";
+    std::cout << result[0][0] << "  " << result[0][1] << "\n";
+    std::cout << result[1][0] << "  " << result[1][1] << "\n";
 
     return 0;
 }
