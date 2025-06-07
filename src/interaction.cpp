@@ -234,6 +234,39 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
     green_H_E_dipole(HE, r_j, r_k, k);
     green_E_M_dipole(EM, r_j, r_k, k);
     green_H_M_dipole(HM, r_j, r_k, k);
+    
+    // Print all four matrices
+    std::cout << "\nElectric-Electric (EE) Green's function:\n";
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            std::cout << "(" << EE[i][j].real() << "," << EE[i][j].imag() << ")\t";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\nMagnetic-Electric (HE) Green's function:\n";
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            std::cout << "(" << HE[i][j].real() << "," << HE[i][j].imag() << ")\t";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\nElectric-Magnetic (EM) Green's function:\n";
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            std::cout << "(" << EM[i][j].real() << "," << EM[i][j].imag() << ")\t";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\nMagnetic-Magnetic (HM) Green's function:\n";
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            std::cout << "(" << HM[i][j].real() << "," << HM[i][j].imag() << ")\t";
+        }
+        std::cout << "\n";
+    }
 
     // Define the unit vectors
     vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
