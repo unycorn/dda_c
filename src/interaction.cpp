@@ -232,8 +232,20 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
     // Calculate the Green's function tensors
     green_E_E_dipole(EE, r_j, r_k, k);
     green_H_E_dipole(HE, r_j, r_k, k);
-    green_E_M_dipole(EM, r_j, r_k, k);
-    green_H_M_dipole(HM, r_j, r_k, k);
+
+    // green_E_M_dipole(EM, r_j, r_k, k);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            EM[i][j] = -MU_0 * HE[i][j];
+        }
+    }
+
+    // green_H_M_dipole(HM, r_j, r_k, k);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            HM[i][j] = EPSILON_0 * EE[i][j];
+        }
+    }
 
     // Print all four matrices
     // std::cout << "\nElectric-Electric (EE) Green's function:\n";
