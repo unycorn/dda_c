@@ -32,16 +32,8 @@ void cross_matrix(std::complex<double> out[3][3], const vec3& r) {
 
 // Electric field from electric dipole
 void green_E_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double k) {
-    std::cout << "\nDEBUG: green_E_E_dipole function" << std::endl;
-    std::cout << "Input r_j: " << r_j.x << ", " << r_j.y << ", " << r_j.z << std::endl;
-    std::cout << "Input r_k: " << r_k.x << ", " << r_k.y << ", " << r_k.z << std::endl;
-    std::cout << "Input k: " << k << std::endl;
-
     vec3 r = vec3_sub(r_j, r_k);
-    std::cout << "r vector: " << r.x << ", " << r.y << ", " << r.z << std::endl;
-
     double r_len = vec3_norm(r);
-    std::cout << "r_len: " << r_len << std::endl;
 
     if (r_len == 0) {
         std::cerr << "Error: self-interaction\n";
@@ -49,40 +41,21 @@ void green_E_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
     }
 
     vec3 r_hat = vec3_unit(r);
-    std::cout << "r_hat: " << r_hat.x << ", " << r_hat.y << ", " << r_hat.z << std::endl;
-
     std::complex<double> expikr = std::exp(I * k * r_len);
-    std::cout << "expikr: " << expikr.real() << " + " << expikr.imag() << "i" << std::endl;
-
     std::complex<double> prefac = 1.0/(4*M_PI*EPSILON_0) * expikr / r_len;
-    std::cout << "prefac: " << prefac.real() << " + " << prefac.imag() << "i" << std::endl;
 
     std::complex<double> term1 = k * k;
-    std::cout << "term1: " << term1.real() << " + " << term1.imag() << "i" << std::endl;
-
     std::complex<double> term2 = (1.0 - I * k * r_len) / (r_len * r_len);
-    std::cout << "term2: " << term2.real() << " + " << term2.imag() << "i" << std::endl;
 
     std::complex<double> dyad[3][3];
     outer_product(dyad, r_hat, r_hat);
-    std::cout << "dyad matrix:" << std::endl;
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            std::cout << "dyad[" << i << "][" << j << "]: " << dyad[i][j].real() << " + " << dyad[i][j].imag() << "i\t";
-        }
-        std::cout << std::endl;
-    }
 
-    std::cout << "\nFinal out matrix:" << std::endl;
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             double delta_ij = (i == j) ? 1.0 : 0.0;
             out[i][j] = prefac * (term2 * (3.0 * dyad[i][j] - delta_ij) + term1 * (delta_ij - dyad[i][j]));
-            std::cout << "out[" << i << "][" << j << "]: " << out[i][j].real() << " + " << out[i][j].imag() << "i\t";
         }
-        std::cout << std::endl;
     }
-    std::cout << "DEBUG: End of green_E_E_dipole function\n" << std::endl;
 }
 
 // Magnetic field from electric dipole
@@ -263,37 +236,37 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
     green_H_M_dipole(HM, r_j, r_k, k);
 
     // Print all four matrices
-    std::cout << "\nElectric-Electric (EE) Green's function:\n";
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            std::cout << "(" << EE[i][j].real() << "," << EE[i][j].imag() << ")\t";
-        }
-        std::cout << "\n";
-    }
+    // std::cout << "\nElectric-Electric (EE) Green's function:\n";
+    // for(int i = 0; i < 3; i++) {
+    //     for(int j = 0; j < 3; j++) {
+    //         std::cout << "(" << EE[i][j].real() << "," << EE[i][j].imag() << ")\t";
+    //     }
+    //     std::cout << "\n";
+    // }
 
-    std::cout << "\nMagnetic-Electric (HE) Green's function:\n";
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            std::cout << "(" << HE[i][j].real() << "," << HE[i][j].imag() << ")\t";
-        }
-        std::cout << "\n";
-    }
+    // std::cout << "\nMagnetic-Electric (HE) Green's function:\n";
+    // for(int i = 0; i < 3; i++) {
+    //     for(int j = 0; j < 3; j++) {
+    //         std::cout << "(" << HE[i][j].real() << "," << HE[i][j].imag() << ")\t";
+    //     }
+    //     std::cout << "\n";
+    // }
 
-    std::cout << "\nElectric-Magnetic (EM) Green's function:\n";
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            std::cout << "(" << EM[i][j].real() << "," << EM[i][j].imag() << ")\t";
-        }
-        std::cout << "\n";
-    }
+    // std::cout << "\nElectric-Magnetic (EM) Green's function:\n";
+    // for(int i = 0; i < 3; i++) {
+    //     for(int j = 0; j < 3; j++) {
+    //         std::cout << "(" << EM[i][j].real() << "," << EM[i][j].imag() << ")\t";
+    //     }
+    //     std::cout << "\n";
+    // }
 
-    std::cout << "\nMagnetic-Magnetic (HM) Green's function:\n";
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            std::cout << "(" << HM[i][j].real() << "," << HM[i][j].imag() << ")\t";
-        }
-        std::cout << "\n";
-    }
+    // std::cout << "\nMagnetic-Magnetic (HM) Green's function:\n";
+    // for(int i = 0; i < 3; i++) {
+    //     for(int j = 0; j < 3; j++) {
+    //         std::cout << "(" << HM[i][j].real() << "," << HM[i][j].imag() << ")\t";
+    //     }
+    //     std::cout << "\n";
+    // }
 
     // Define the unit vectors
     vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
