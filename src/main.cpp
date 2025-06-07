@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
     double angle2 = M_PI/4.0;  // 45 degree rotation
     double k = 2.0 * M_PI / (C_LIGHT / 220e12);  // Wavevector at 220 THz
     
-    mat2x2 result;
+    std::complex<double> result[4];  // Flat array for 2x2 matrix
     biani_green_matrix_scalar(
         result, point1, point2, angle1, angle2, k
     );
@@ -227,8 +227,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Points: (0,0,0) and (1μm,0,0)\n";
     std::cout << "Angles: 0° and 45°\n";
     std::cout << "Matrix result:\n";
-    std::cout << result[0][0] << "  " << result[0][1] << "\n";
-    std::cout << result[1][0] << "  " << result[1][1] << "\n";
+    std::cout << result[0] << "  " << result[1] << "\n";
+    std::cout << result[2] << "  " << result[3] << "\n";
 
     return 0;
 }
