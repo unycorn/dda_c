@@ -437,12 +437,13 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
                                         thetas[j], thetas[k_idx], k);
                 
-                // Copy 2x2 block to interaction matrix
+                // Copy 2x2 block to interaction matrix -- and NEGATE it!!
+                // interaction matrix contains -G in offdiagonal blocks
                 for (int i = 0; i < 2; ++i) {
                     for (int m = 0; m < 2; ++m) {
                         A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
-                            std::real(block[i*2 + m]),
-                            std::imag(block[i*2 + m])
+                            -std::real(block[i*2 + m]),
+                            -std::imag(block[i*2 + m])
                         );
                     }
                 }
