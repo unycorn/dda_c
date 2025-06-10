@@ -9,6 +9,7 @@
 #include "vector3.hpp"
 #include "print_utils.hpp"
 #include <chrono>
+#include <omp.h>
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \
@@ -413,58 +414,63 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
 
     // Main construction loop
-    for (int j = 0; j < N; ++j) {
-        for (int k_idx = 0; k_idx < N; ++k_idx) {
-            // Update progress
-            elements_processed++;
-            int row_offset = j * 2;
-            int col_offset = k_idx * 2;
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int last_percent = -1;
+        
+        #pragma omp for schedule(dynamic)
+        for (int j = 0; j < N; ++j) {
+            size_t thread_elements = 0;
+            for (int k_idx = 0; k_idx < N; ++k_idx) {
+                thread_elements++;
+                int row_offset = j * 2;
+                int col_offset = k_idx * 2;
 
-            if (j == k_idx) {
-                // Invert the 2x2 matrix
-                std::complex<double> det = pol_2x2[j][0][0] * pol_2x2[j][1][1] - pol_2x2[j][0][1] * pol_2x2[j][1][0];
-                std::complex<double> inv_2x2[4];
-                inv_2x2[0] = pol_2x2[j][1][1] / det;
-                inv_2x2[1] = -pol_2x2[j][0][1] / det;
-                inv_2x2[2] = -pol_2x2[j][1][0] / det;
-                inv_2x2[3] = pol_2x2[j][0][0] / det;
+                if (j == k_idx) {
+                    // Invert the 2x2 matrix
+                    std::complex<double> det = pol_2x2[j][0][0] * pol_2x2[j][1][1] - pol_2x2[j][0][1] * pol_2x2[j][1][0];
+                    std::complex<double> inv_2x2[4];
+                    inv_2x2[0] = pol_2x2[j][1][1] / det;
+                    inv_2x2[1] = -pol_2x2[j][0][1] / det;
+                    inv_2x2[2] = -pol_2x2[j][1][0] / det;
+                    inv_2x2[3] = pol_2x2[j][0][0] / det;
 
-                // Copy inverted 2x2 matrix to interaction matrix
-                for (int i = 0; i < 2; ++i) {
-                    for (int m = 0; m < 2; ++m) {
-                        A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
-                            std::real(inv_2x2[i*2 + m]),
-                            std::imag(inv_2x2[i*2 + m])
-                        );
+                    // Copy inverted 2x2 matrix to interaction matrix
+                    for (int i = 0; i < 2; ++i) {
+                        for (int m = 0; m < 2; ++m) {
+                            A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
+                                std::real(inv_2x2[i*2 + m]),
+                                std::imag(inv_2x2[i*2 + m])
+                            );
+                        }
+                    }
+                } else {
+                    // Get 2x2 Green's function using scalar version
+                    std::complex<double> block[4];
+                    biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
+                                            thetas[j], thetas[k_idx], k);
+                    
+                    // Copy 2x2 block to interaction matrix -- and NEGATE it!!
+                    for (int i = 0; i < 2; ++i) {
+                        for (int m = 0; m < 2; ++m) {
+                            A_cpu[(col_offset + i) * 2 * N + (row_offset + m)] = make_cuDoubleComplex(
+                                -std::real(block[i*2 + m]),
+                                -std::imag(block[i*2 + m])
+                            );
+                        }
                     }
                 }
-            } else {
-                // Get 2x2 Green's function using scalar version
-                std::complex<double> block[4];
-                biani_green_matrix_scalar(block, positions[j], positions[k_idx], 
-                                        thetas[j], thetas[k_idx], k);
-                
-                // Copy 2x2 block to interaction matrix -- and NEGATE it!!
-                // interaction matrix contains -G in offdiagonal blocks
-                for (int i = 0; i < 2; ++i) {
-                    for (int m = 0; m < 2; ++m) {
-                        A_cpu[(col_offset + i) * 2 * N + (row_offset + m)] = make_cuDoubleComplex(
-                            -std::real(block[i*2 + m]),
-                            -std::imag(block[i*2 + m])
-                        );
-                    }
-                }
-            }
 
-            // Print progress every 10%
-            double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
-            int percent_complete = static_cast<int>(progress);
-            if (percent_complete != last_percent && percent_complete % 10 == 0) {
-                std::cout << "Matrix construction: " << percent_complete << "% complete\n";
-                last_percent = percent_complete;
+                // Print progress every 10% for each thread
+                if (thread_elements % (N/10) == 0) {
+                    print_progress(tid, thread_elements, N);
+                }
             }
         }
     }
+
+    std::cout << "Matrix construction complete.\n";
 
     // Allocate and transfer matrix to GPU
     cuDoubleComplex* A_dev = nullptr;
@@ -481,4 +487,13 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
 
     std::cout << "Matrix transferred to GPU successfully\n";
     return A_dev;
+}
+
+void print_progress(int tid, size_t elements_processed, size_t total_elements) {
+    double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
+    int percent_complete = static_cast<int>(progress);
+    #pragma omp critical
+    {
+        std::cout << "Thread " << tid << ": " << percent_complete << "% complete\n";
+    }
 }
