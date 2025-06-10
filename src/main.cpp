@@ -211,7 +211,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the simulation with the loaded parameters
+    auto simulation_start = std::chrono::high_resolution_clock::now();
     run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
+    auto simulation_end = std::chrono::high_resolution_clock::now();
+    auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    std::cout << "Total simulation time: " << simulation_duration.count() << " seconds" << std::endl;
+
 
     // Test biani_green_matrix_scalar with two test points
     // vec3 point1 = {0.0, 0.0, 0.0};  // Origin
