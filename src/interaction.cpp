@@ -303,11 +303,11 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
     }
 
     // Print the scalar values
-    std::cout << "\nGreen's function scalar components:\n";
-    std::cout << "EE scalar: " << ee_scalar << "\n";
-    std::cout << "EM scalar: " << em_scalar << "\n";
-    std::cout << "HE scalar: " << he_scalar << "\n";
-    std::cout << "HM scalar: " << hm_scalar << "\n";
+    // std::cout << "\nGreen's function scalar components:\n";
+    // std::cout << "EE scalar: " << ee_scalar << "\n";
+    // std::cout << "EM scalar: " << em_scalar << "\n";
+    // std::cout << "HE scalar: " << he_scalar << "\n";
+    // std::cout << "HM scalar: " << hm_scalar << "\n";
 
     // Fill output matrix (2x2 scalar result)
     out[0] = ee_scalar;  // EE block

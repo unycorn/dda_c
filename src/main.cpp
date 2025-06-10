@@ -103,7 +103,7 @@ void run_simulation(
                 }
             }
             
-            print_complex_matrix("Transposed Interaction Matrix", A_transposed.data(), 2 * N);
+            // print_complex_matrix("Transposed Interaction Matrix", A_transposed.data(), 2 * N);
 
             cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyHostToDevice);
             
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the simulation with the loaded parameters
-    run_simulation(150e12, 350e12, 1, positions, params_00, params_05, params_50, params_55, angles);
+    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
 
     // Test biani_green_matrix_scalar with two test points
     // vec3 point1 = {0.0, 0.0, 0.0};  // Origin
