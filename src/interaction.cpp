@@ -472,9 +472,9 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 }
 
                 // Print progress every 10% for each thread
-                if (thread_elements % (N/10) == 0) {
-                    print_progress(tid, thread_elements, N);
-                }
+                // if (thread_elements % (N/10) == 0) {
+                //     print_progress(tid, thread_elements, N);
+                // }
             }
         }
     }
