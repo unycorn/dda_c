@@ -60,26 +60,60 @@ void green_E_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double
 
 // Magnetic field from electric dipole
 void green_H_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double k) {
-    vec3 r = vec3_sub(r_j, r_k);
-    double r_len = vec3_norm(r);
-
-    if (r_len == 0) {
-        std::cerr << "Error: self-interaction\n";
-        return;
-    }
-
-    std::complex<double> expikr = std::exp(I * k * r_len);
-    double omega = k * C_LIGHT;
-    std::complex<double> prefac = -I * omega * expikr / (4 * M_PI * r_len * r_len);
-    std::complex<double> term = (1.0/r_len - I*k);
-
-    std::complex<double> cross[3][3];
-    cross_matrix(cross, r);
-
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            out[i][j] = -prefac * term * cross[i][j];
+    void green_H_E_dipole(std::complex<double> out[3][3], vec3 r_j, vec3 r_k, double k) {
+        vec3 r = vec3_sub(r_j, r_k);
+        double r_len = vec3_norm(r);
+    
+        if (r_len == 0) {
+            std::cerr << "Error: self-interaction\n";
+            return;
         }
+    
+        std::complex<double> expikr = std::exp(I * k * r_len);
+        double omega = k * C_LIGHT;
+        std::complex<double> prefac = -I * omega * expikr / (4 * M_PI * r_len * r_len);
+        std::complex<double> term = (1.0/r_len - I*k);
+    
+        // Debug printing
+        std::cout << "\nDebug info for green_H_E_dipole:\n";
+        std::cout << "Input parameters:\n";
+        std::cout << "k: " << k << "\n";
+        std::cout << "r_j: (" << r_j.x << ", " << r_j.y << ", " << r_j.z << ")\n";
+        std::cout << "r_k: (" << r_k.x << ", " << r_k.y << ", " << r_k.z << ")\n";
+    
+        std::cout << "\nCalculated values:\n";
+        std::cout << "r: (" << r.x << ", " << r.y << ", " << r.z << ")\n";
+        std::cout << "r_len: " << r_len << "\n";
+        std::cout << "omega: " << omega << "\n";
+        std::cout << "expikr: " << expikr << "\n";
+        std::cout << "prefac: " << prefac << "\n";
+        std::cout << "term: " << term << "\n";
+    
+        std::complex<double> cross[3][3];
+        cross_matrix(cross, r);
+    
+        std::cout << "\nCross matrix:\n";
+        for(int i = 0; i < 3; i++) {
+            for(int j = 0; j < 3; j++) {
+                std::cout << cross[i][j] << "\t";
+            }
+            std::cout << "\n";
+        }
+    
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                out[i][j] = -prefac * term * cross[i][j];
+            }
+        }
+    
+        std::cout << "\nFinal output matrix:\n";
+        for(int i = 0; i < 3; i++) {
+            for(int j = 0; j < 3; j++) {
+                std::cout << out[i][j] << "\t";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "----------------------------------------\n";
     }
 }
 
