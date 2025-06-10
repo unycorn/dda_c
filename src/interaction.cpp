@@ -394,6 +394,15 @@ cuDoubleComplex* get_full_interaction_matrix(
     return A_dev;
 }
 
+void print_progress(int tid, size_t elements_processed, size_t total_elements) {
+    double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
+    int percent_complete = static_cast<int>(progress);
+    #pragma omp critical
+    {
+        std::cout << "Thread " << tid << ": " << percent_complete << "% complete\n";
+    }
+}
+
 // Builds the full 2N x 2N interaction matrix
 cuDoubleComplex* get_full_interaction_matrix_scalar(
     std::complex<double>* A_host,
@@ -487,13 +496,4 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
 
     std::cout << "Matrix transferred to GPU successfully\n";
     return A_dev;
-}
-
-void print_progress(int tid, size_t elements_processed, size_t total_elements) {
-    double progress = (static_cast<double>(elements_processed) * 100.0) / static_cast<double>(total_elements);
-    int percent_complete = static_cast<int>(progress);
-    #pragma omp critical
-    {
-        std::cout << "Thread " << tid << ": " << percent_complete << "% complete\n";
-    }
 }
