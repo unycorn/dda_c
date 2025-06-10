@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
 
         positions.push_back(vec3{values[0], values[1], values[2]});
         angles.push_back(values[3]);
-        std::cout << values[0] << "\n";
+        // std::cout << values[0] << "\n";
 
         // Create LorentzianParams for each component
         params_00.push_back(LorentzianParams{
