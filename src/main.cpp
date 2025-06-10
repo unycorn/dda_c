@@ -7,6 +7,8 @@
 #include <complex>
 #include <sstream>
 #include <cuda_runtime.h>
+#include <filesystem>  // Add filesystem support
+#include <system_error>  // For std::error_code
 
 #include "constants.hpp"
 #include "vector3.hpp"
@@ -31,15 +33,16 @@ void run_simulation(
     const std::vector<LorentzianParams>& params_05,
     const std::vector<LorentzianParams>& params_50,
     const std::vector<LorentzianParams>& params_55,
-    const std::vector<double>& angles
+    const std::vector<double>& angles,
+    const std::string& output_dir  // Add output directory parameter
 ) {
     const int N = positions.size();
     for (int i = 0; i < num_freqs; ++i) {
         double freq = (num_freqs == 1) ? f_start : f_start + i * (f_end - f_start) / (num_freqs - 1);
         
-        // Check if output file already exists
+        // Create output filename in the specific output directory
         std::ostringstream filename;
-        filename << "output/output_freq_" << std::scientific << std::setprecision(2) << freq << ".csv";
+        filename << output_dir << "/output_freq_" << std::scientific << std::setprecision(2) << freq << ".csv";
         
         if (std::ifstream(filename.str()).good()) {
             std::cout << "Skipping frequency " << freq << " Hz - output file already exists\n";
@@ -136,26 +139,27 @@ void run_simulation(
     }
 }
 
-
-// ---- Main Function ----
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_csv_file>\n";
-        std::cerr << "  input_csv_file: Path to CSV file containing dipole parameters\n";
-        std::cerr << "  CSV format: x,y,z,f0_00,gamma_00,A_00,...,angle\n";
-        return 1;
-    }
-
-    std::string input_file = argv[1];
+// ---- Process Single CSV File ----
+void process_csv_file(const std::filesystem::path& csv_path) {
     std::vector<vec3> positions;
     std::vector<LorentzianParams> params_00, params_05, params_50, params_55;
     std::vector<double> angles;
 
+    // Create output directory with same name as CSV (without extension)
+    std::filesystem::path output_dir = csv_path;
+    output_dir.replace_extension(); // Remove .csv extension
+    std::error_code ec;
+    std::filesystem::create_directories(output_dir, ec);
+    if (ec) {
+        std::cerr << "Error creating output directory " << output_dir << ": " << ec.message() << std::endl;
+        return;
+    }
+
     // Load the dipole parameters from CSV
-    std::ifstream file(input_file);
+    std::ifstream file(csv_path);
     if (!file.is_open()) {
-        std::cerr << "Error: Could not open input file " << input_file << std::endl;
-        return 1;
+        std::cerr << "Error: Could not open input file " << csv_path << std::endl;
+        return;
     }
 
     std::string line;
@@ -206,37 +210,41 @@ int main(int argc, char* argv[]) {
 
     int N = positions.size();
     if (N == 0) {
-        std::cerr << "Error: No dipoles loaded from input file\n";
+        std::cerr << "Error: No dipoles loaded from input file " << csv_path << std::endl;
+        return;
+    }
+
+    std::cout << "Processing " << csv_path.filename() << " with " << N << " dipoles" << std::endl;
+    
+    // Run the simulation with the loaded parameters
+    auto simulation_start = std::chrono::high_resolution_clock::now();
+    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir.string());
+    auto simulation_end = std::chrono::high_resolution_clock::now();
+    auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
+    std::cout << "Finished processing " << csv_path.filename() << " in " << simulation_duration.count() << " seconds" << std::endl;
+}
+
+// ---- Main Function ----
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <input_directory>\n";
+        std::cerr << "  input_directory: Path to directory containing CSV files\n";
+        std::cerr << "  CSV format: x,y,z,f0_00,gamma_00,A_00,...,angle\n";
         return 1;
     }
 
-    // Run the simulation with the loaded parameters
-    auto simulation_start = std::chrono::high_resolution_clock::now();
-    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles);
-    auto simulation_end = std::chrono::high_resolution_clock::now();
-    auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
-    std::cout << "Total simulation time: " << simulation_duration.count() << " seconds" << std::endl;
+    std::filesystem::path input_dir(argv[1]);
+    if (!std::filesystem::is_directory(input_dir)) {
+        std::cerr << "Error: " << input_dir << " is not a directory" << std::endl;
+        return 1;
+    }
 
-
-    // Test biani_green_matrix_scalar with two test points
-    // vec3 point1 = {0.0, 0.0, 0.0};  // Origin
-    // vec3 point2 = {1e-6, 0.0, 0.0};  // 1 micron away in x direction
-    // double angle1 = 0.0;  // No rotation
-    // double angle2 = M_PI/4.0;  // 45 degree rotation
-    // double k = 2.0 * M_PI / (C_LIGHT / 220e12);  // Wavevector at 220 THz
-    
-    // std::complex<double> result[4];  // Flat array for 2x2 matrix
-    // biani_green_matrix_scalar(
-    //     result, point1, point2, angle1, angle2, k
-    // );
-    
-    // // Print the resulting 2x2 matrix
-    // std::cout << "\nTesting biani_green_matrix_scalar:\n";
-    // std::cout << "Points: (0,0,0) and (1μm,0,0)\n";
-    // std::cout << "Angles: 0° and 45°\n";
-    // std::cout << "Matrix result:\n";
-    // std::cout << result[0] << "  " << result[1] << "\n";
-    // std::cout << result[2] << "  " << result[3] << "\n";
+    // Process each CSV file in the directory
+    for (const auto& entry : std::filesystem::directory_iterator(input_dir)) {
+        if (entry.path().extension() == ".csv") {
+            process_csv_file(entry.path());
+        }
+    }
 
     return 0;
 }
