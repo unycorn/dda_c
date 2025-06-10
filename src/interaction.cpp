@@ -1,14 +1,14 @@
 #include <complex>
 #include <cmath>
 #include <iostream>
-#include <vector>  // Add missing include
+#include <vector>
 #include <cuda_runtime.h>
 #include <cuComplex.h>
 #include "solve_gpu.hpp"
 #include "constants.hpp"
 #include "vector3.hpp"
 #include "print_utils.hpp"
-#include <chrono>  // Add at top with other includes
+#include <chrono>
 
 // Helper function to check CUDA errors
 #define CHECK_CUDA(call) \

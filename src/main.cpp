@@ -102,6 +102,9 @@ void run_simulation(
                     );
                 }
             }
+            
+            std::cout << "\nTransposed Interaction Matrix:\n";
+            print_complex_matrix(A_transposed.data(), 2 * N, 2 * N);
 
             cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyHostToDevice);
             
