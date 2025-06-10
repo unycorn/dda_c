@@ -7,8 +7,10 @@
 #include <complex>
 #include <sstream>
 #include <cuda_runtime.h>
-#include <filesystem>  // Add filesystem support
-#include <system_error>  // For std::error_code
+#include <dirent.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <errno.h>
 
 #include "constants.hpp"
 #include "vector3.hpp"
@@ -139,19 +141,46 @@ void run_simulation(
     }
 }
 
+// ---- Create directory if it doesn't exist ----
+bool create_directory(const std::string& path) {
+    // Check if directory exists
+    DIR* dir = opendir(path.c_str());
+    if (dir) {
+        closedir(dir);
+        return true;
+    }
+    
+    // Create directory with read/write/execute permissions for owner
+    int status = mkdir(path.c_str(), S_IRWXU);
+    if (status != 0) {
+        std::cerr << "Error creating directory " << path << ": " << strerror(errno) << std::endl;
+        return false;
+    }
+    return true;
+}
+
+// ---- Get filename without extension ----
+std::string get_filename_without_ext(const std::string& filepath) {
+    size_t lastSlash = filepath.find_last_of("/\\");
+    size_t lastDot = filepath.find_last_of(".");
+    
+    std::string filename = (lastSlash == std::string::npos) ? filepath : filepath.substr(lastSlash + 1);
+    if (lastDot != std::string::npos && (lastSlash == std::string::npos || lastDot > lastSlash)) {
+        filename = filename.substr(0, lastDot - (lastSlash == std::string::npos ? 0 : lastSlash + 1));
+    }
+    
+    return filepath.substr(0, filepath.length() - filename.length()) + filename;
+}
+
 // ---- Process Single CSV File ----
-void process_csv_file(const std::filesystem::path& csv_path) {
+void process_csv_file(const std::string& csv_path) {
     std::vector<vec3> positions;
     std::vector<LorentzianParams> params_00, params_05, params_50, params_55;
     std::vector<double> angles;
 
     // Create output directory with same name as CSV (without extension)
-    std::filesystem::path output_dir = csv_path;
-    output_dir.replace_extension(); // Remove .csv extension
-    std::error_code ec;
-    std::filesystem::create_directories(output_dir, ec);
-    if (ec) {
-        std::cerr << "Error creating output directory " << output_dir << ": " << ec.message() << std::endl;
+    std::string output_dir = get_filename_without_ext(csv_path);
+    if (!create_directory(output_dir)) {
         return;
     }
 
@@ -214,14 +243,14 @@ void process_csv_file(const std::filesystem::path& csv_path) {
         return;
     }
 
-    std::cout << "Processing " << csv_path.filename() << " with " << N << " dipoles" << std::endl;
+    std::cout << "Processing " << csv_path << " with " << N << " dipoles" << std::endl;
     
     // Run the simulation with the loaded parameters
     auto simulation_start = std::chrono::high_resolution_clock::now();
-    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir.string());
+    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir);
     auto simulation_end = std::chrono::high_resolution_clock::now();
     auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
-    std::cout << "Finished processing " << csv_path.filename() << " in " << simulation_duration.count() << " seconds" << std::endl;
+    std::cout << "Finished processing " << csv_path << " in " << simulation_duration.count() << " seconds" << std::endl;
 }
 
 // ---- Main Function ----
@@ -233,18 +262,32 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::filesystem::path input_dir(argv[1]);
-    if (!std::filesystem::is_directory(input_dir)) {
-        std::cerr << "Error: " << input_dir << " is not a directory" << std::endl;
+    // Open directory
+    DIR* dir = opendir(argv[1]);
+    if (dir == nullptr) {
+        std::cerr << "Error: Could not open directory " << argv[1] << ": " << strerror(errno) << std::endl;
         return 1;
     }
 
-    // Process each CSV file in the directory
-    for (const auto& entry : std::filesystem::directory_iterator(input_dir)) {
-        if (entry.path().extension() == ".csv") {
-            process_csv_file(entry.path());
+    // Read directory entries
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        std::string filename = entry->d_name;
+        
+        // Skip . and .. directories
+        if (filename == "." || filename == "..") {
+            continue;
+        }
+        
+        // Check if file ends with .csv
+        if (filename.length() >= 4 && 
+            filename.compare(filename.length() - 4, 4, ".csv") == 0) {
+            
+            std::string filepath = std::string(argv[1]) + "/" + filename;
+            process_csv_file(filepath);
         }
     }
 
+    closedir(dir);
     return 0;
 }

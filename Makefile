@@ -1,6 +1,6 @@
 # Compiler settings
 CXX := g++
-CXXFLAGS := -std=c++17 -O3 -Wall -Iinclude -fopenmp
+CXXFLAGS := -std=c++11 -O3 -Wall -Iinclude -fopenmp
 LDFLAGS := -fopenmp
 
 # CUDA paths - make configurable for different systems
