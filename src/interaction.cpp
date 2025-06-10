@@ -446,9 +446,9 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                 
                 // Copy 2x2 block to interaction matrix -- and NEGATE it!!
                 // interaction matrix contains -G in offdiagonal blocks
-                for (int m = 0; m < 2; ++m) {
-                    for (int i = 0; i < 2; ++i) {
-                        A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] = make_cuDoubleComplex(
+                for (int i = 0; i < 2; ++i) {
+                    for (int m = 0; m < 2; ++m) {
+                        A_cpu[(col_offset + i) * 2 * N + (row_offset + m)] = make_cuDoubleComplex(
                             -std::real(block[i*2 + m]),
                             -std::imag(block[i*2 + m])
                         );
