@@ -66,8 +66,8 @@ void load_dipole_data(const std::string& angle_filename, const std::string& dipo
         auto p_magnitude = make_cuDoubleComplex(pol_values[0], pol_values[1]);
         
         cvec3 p;
-        p.x = p_magnitude * cos(theta);
-        p.y = p_magnitude * sin(theta);
+        p.x = cuCmul(p_magnitude, make_cuDoubleComplex(cos(theta), 0.0));
+        p.y = cuCmul(p_magnitude, make_cuDoubleComplex(sin(theta), 0.0));
         p.z = make_cuDoubleComplex(0.0, 0.0);
 
         cvec3 m;
