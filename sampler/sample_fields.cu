@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
     combine_fields<<<gridSize, blockSize>>>(d_E_electric, d_B_electric, 
         d_E_electric, d_B_electric,
         d_E_magnetic, d_B_magnetic,
-        N_obs, Z0);
+        N_obs);
     cudaDeviceSynchronize();
 
     // Now d_E_electric and d_B_electric contain the total fields
