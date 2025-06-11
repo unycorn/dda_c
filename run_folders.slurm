@@ -22,7 +22,7 @@ if [ $NUM_FOLDERS -eq 0 ]; then
 fi
 
 # Calculate which folders this GPU should process
-FOLDERS_PER_GPU=$(( (NUM_FOLDERS + 7) / 8 ))  # Ceiling division
+FOLDERS_PER_GPU=$(( (NUM_FOLDERS + 6) / 7 ))  # Ceiling division
 START_IDX=$(( SLURM_ARRAY_TASK_ID * FOLDERS_PER_GPU ))
 END_IDX=$(( START_IDX + FOLDERS_PER_GPU - 1 ))
 
