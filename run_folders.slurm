@@ -8,8 +8,8 @@
 #SBATCH --mem=32G                   # Memory per node
 #SBATCH --qos=normal               # Quality of Service
 
-# Set which GPU this job will use
-export CUDA_VISIBLE_DEVICES=$SLURM_ARRAY_TASK_ID
+# Instead of manually setting CUDA_VISIBLE_DEVICES, let SLURM handle GPU assignment
+# SLURM will set CUDA_VISIBLE_DEVICES automatically based on the allocated GPU
 
 # Get the list of folders in csv_inputs directory
 cd csv_inputs || exit 1
@@ -25,6 +25,11 @@ fi
 FOLDERS_PER_GPU=$(( (NUM_FOLDERS + 7) / 8 ))  # Ceiling division
 START_IDX=$(( SLURM_ARRAY_TASK_ID * FOLDERS_PER_GPU ))
 END_IDX=$(( START_IDX + FOLDERS_PER_GPU - 1 ))
+
+# Print debug information
+echo "Running on node: $(hostname)"
+echo "GPU assignment: CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+nvidia-smi  # Show GPU status
 
 # Process each folder assigned to this GPU
 for (( i=START_IDX; i<=END_IDX && i<NUM_FOLDERS; i++ )); do
