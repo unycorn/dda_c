@@ -7,43 +7,80 @@
 #include <cstdlib>
 #include "dipole_field.hpp"
 
-void load_dipole_data(const std::string& filename, std::vector<vec3>& positions, std::vector<cvec3>& dipoles) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: could not open file " << filename << std::endl;
+void load_dipole_data(const std::string& angle_filename, const std::string& dipole_filename, std::vector<vec3>& positions, std::vector<cvec3>& electric_dipoles, std::vector<cvec3>& magnetic_dipoles) {
+    std::ifstream polarization_file(dipole_filename);
+    std::ifstream angle_file(angle_filename);
+    if (!polarization_file.is_open()) {
+        std::cerr << "Error: could not open polarization_file " << dipole_filename << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    if (!angle_file.is_open()) {
+        std::cerr << "Error: could not open angle_file " << angle_filename << std::endl;
         std::exit(EXIT_FAILURE);
     }
 
-    std::string line;
-    std::getline(file, line);  // Skip header
+    std::string polarization_line;
+    std::string angle_line;
+    
+    // Skip headers
+    std::getline(polarization_file, polarization_line);
+    std::getline(angle_file, angle_line);
 
-    while (std::getline(file, line)) {
-        std::istringstream ss(line);
+    while (std::getline(polarization_file, polarization_line) && std::getline(angle_file, angle_line)) {
+        // Process polarization file
+        std::istringstream pol_ss(polarization_line);
         std::string token;
-        std::vector<double> values;
+        std::vector<double> pol_values;
 
-        while (std::getline(ss, token, ',')) {
-            values.push_back(std::stod(token));
+        while (std::getline(pol_ss, token, ',')) {
+            pol_values.push_back(std::stod(token));
         }
 
-        if (values.size() < 9) {
-            std::cerr << "Warning: skipping malformed line\n";
+        if (pol_values.size() < 9) {
+            std::cerr << "Warning: skipping malformed polarization line\n";
             continue;
         }
 
-        cvec3 p;
-        p.x = make_cuDoubleComplex(values[0], values[1]);
-        p.y = make_cuDoubleComplex(values[2], values[3]);
-        p.z = make_cuDoubleComplex(values[4], values[5]);
+        // Process angle file
+        std::istringstream angle_ss(angle_line);
+        std::vector<double> angle_values;
+        
+        while (std::getline(angle_ss, token, ',')) {
+            angle_values.push_back(std::stod(token));
+        }
 
+        if (angle_values.size() < 24) {
+            std::cerr << "Warning: skipping malformed angle line (expected 24 columns)\n";
+            continue;
+        }
+
+        // Create position vector from polarization file
         vec3 r;
-        r.x = values[6];
-        r.y = values[7];
-        r.z = values[8];
+        r.x = angle_values[0];
+        r.y = angle_values[1];
+        r.z = angle_values[2];
 
-        dipoles.push_back(p);
+        double theta = angle_values[3];
+
+        // Create electric dipole vector from polarization file
+        auto p_magnitude = make_cuDoubleComplex(pol_values[0], pol_values[1]);
+        
+        cvec3 p;
+        p.x = p_magnitude * cos(theta);
+        p.y = p_magnitude * sin(theta);
+        p.z = make_cuDoubleComplex(0.0, 0.0);
+
+        cvec3 m;
+        m.x = make_cuDoubleComplex(0.0, 0.0);;
+        m.y = make_cuDoubleComplex(0.0, 0.0);;
+        m.z = make_cuDoubleComplex(1.0, 0.0);;
+        
+        // Store the vectors
+        electric_dipoles.push_back(p);
+        magnetic_dipoles.push_back(m);
         positions.push_back(r);
     }
 
-    file.close();
+    polarization_file.close();
+    angle_file.close();
 }

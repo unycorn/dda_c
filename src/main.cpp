@@ -162,14 +162,17 @@ bool create_directory(const std::string& path) {
 // ---- Get filename without extension ----
 std::string get_filename_without_ext(const std::string& filepath) {
     size_t lastSlash = filepath.find_last_of("/\\");
-    size_t lastDot = filepath.find_last_of(".");
     
+    // Extract just the filename part (after the last slash if it exists)
     std::string filename = (lastSlash == std::string::npos) ? filepath : filepath.substr(lastSlash + 1);
-    if (lastDot != std::string::npos && (lastSlash == std::string::npos || lastDot > lastSlash)) {
-        filename = filename.substr(0, lastDot - (lastSlash == std::string::npos ? 0 : lastSlash + 1));
+    
+    // Remove extension if it exists
+    size_t lastDot = filename.find_last_of(".");
+    if (lastDot != std::string::npos) {
+        filename = filename.substr(0, lastDot);
     }
     
-    return filepath.substr(0, filepath.length() - filename.length()) + filename;
+    return filename;
 }
 
 // ---- Process Single CSV File ----
