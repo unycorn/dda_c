@@ -90,7 +90,7 @@ __global__ void compute_field(
     double omega = k * c;
     
     // Only print debug info if this is our special point at (0,0,1e-6)
-    bool is_debug_point = (fabs(r_obs.x) < 1e-10 && fabs(r_obs.y) < 1e-10 && fabs(r_obs.z - 1e-6) < 1e-10);
+    bool is_debug_point = false; //(fabs(r_obs.x) < 1e-10 && fabs(r_obs.y) < 1e-10 && fabs(r_obs.z - 1e-6) < 1e-10);
     
     if (is_debug_point) {
         printf("\n=== Computing fields at observation point ===\n");

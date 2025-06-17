@@ -157,34 +157,34 @@ int main(int argc, char** argv) {
     cudaMemcpy(host_S.data(), d_S, N_obs * sizeof(double), cudaMemcpyDeviceToHost);
 
     // Print (0,0) entry of E and B fields
-    double x0 = center_x + dx * (-Nx/2);
-    double y0 = center_y + dy * (-Ny/2);
-    std::cout << "Fields at position (" << x0*1e6 << "μm, " << y0*1e6 << "μm, " << z_sample*1e6 << "μm):" << std::endl;
-    std::cout << "E-field at (0,0): (" 
-    << cuCreal(host_E_electric[0].x) << "+" << cuCimag(host_E_electric[0].x) << "i, "
-    << cuCreal(host_E_electric[0].y) << "+" << cuCimag(host_E_electric[0].y) << "i, "
-    << cuCreal(host_E_electric[0].z) << "+" << cuCimag(host_E_electric[0].z) << "i)" 
-    << std::endl;
+    // double x0 = center_x + dx * (-Nx/2);
+    // double y0 = center_y + dy * (-Ny/2);
+    // std::cout << "Fields at position (" << x0*1e6 << "μm, " << y0*1e6 << "μm, " << z_sample*1e6 << "μm):" << std::endl;
+    // std::cout << "E-field at (0,0): (" 
+    // << cuCreal(host_E_electric[0].x) << "+" << cuCimag(host_E_electric[0].x) << "i, "
+    // << cuCreal(host_E_electric[0].y) << "+" << cuCimag(host_E_electric[0].y) << "i, "
+    // << cuCreal(host_E_electric[0].z) << "+" << cuCimag(host_E_electric[0].z) << "i)" 
+    // << std::endl;
 
-    std::cout << "B-field at (0,0): ("
-        << cuCreal(host_B_electric[0].x) << "+" << cuCimag(host_B_electric[0].x) << "i, "
-        << cuCreal(host_B_electric[0].y) << "+" << cuCimag(host_B_electric[0].y) << "i, "
-        << cuCreal(host_B_electric[0].z) << "+" << cuCimag(host_B_electric[0].z) << "i)"
-        << std::endl;
+    // std::cout << "B-field at (0,0): ("
+    //     << cuCreal(host_B_electric[0].x) << "+" << cuCimag(host_B_electric[0].x) << "i, "
+    //     << cuCreal(host_B_electric[0].y) << "+" << cuCimag(host_B_electric[0].y) << "i, "
+    //     << cuCreal(host_B_electric[0].z) << "+" << cuCimag(host_B_electric[0].z) << "i)"
+    //     << std::endl;
 
-    // Print electric dipole
-    std::cout << "Electric dipole: ("
-        << cuCreal(host_electric_dipoles[0].x) << "+" << cuCimag(host_electric_dipoles[0].x) << "i, "
-        << cuCreal(host_electric_dipoles[0].y) << "+" << cuCimag(host_electric_dipoles[0].y) << "i, "
-        << cuCreal(host_electric_dipoles[0].z) << "+" << cuCimag(host_electric_dipoles[0].z) << "i)"
-        << std::endl;
+    // // Print electric dipole
+    // std::cout << "Electric dipole: ("
+    //     << cuCreal(host_electric_dipoles[0].x) << "+" << cuCimag(host_electric_dipoles[0].x) << "i, "
+    //     << cuCreal(host_electric_dipoles[0].y) << "+" << cuCimag(host_electric_dipoles[0].y) << "i, "
+    //     << cuCreal(host_electric_dipoles[0].z) << "+" << cuCimag(host_electric_dipoles[0].z) << "i)"
+    //     << std::endl;
 
-    // Print magnetic dipole
-    std::cout << "Magnetic dipole: ("
-        << cuCreal(host_magnetic_dipoles[0].x) << "+" << cuCimag(host_magnetic_dipoles[0].x) << "i, "
-        << cuCreal(host_magnetic_dipoles[0].y) << "+" << cuCimag(host_magnetic_dipoles[0].y) << "i, "
-        << cuCreal(host_magnetic_dipoles[0].z) << "+" << cuCimag(host_magnetic_dipoles[0].z) << "i)"
-        << std::endl;
+    // // Print magnetic dipole
+    // std::cout << "Magnetic dipole: ("
+    //     << cuCreal(host_magnetic_dipoles[0].x) << "+" << cuCimag(host_magnetic_dipoles[0].x) << "i, "
+    //     << cuCreal(host_magnetic_dipoles[0].y) << "+" << cuCimag(host_magnetic_dipoles[0].y) << "i, "
+    //     << cuCreal(host_magnetic_dipoles[0].z) << "+" << cuCimag(host_magnetic_dipoles[0].z) << "i)"
+    //     << std::endl;
 
     // Calculate reflection coefficient first (using just scattered fields)
     double total_flux_reflection = 0.0;
