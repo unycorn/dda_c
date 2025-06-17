@@ -69,9 +69,9 @@ int main(int argc, char** argv) {
     // Define sampling grid (example: 50x50 grid at z = 1000nm)
     const int Nx = 50, Ny = 50;
     const double z_sample = 1000e-9;
-    const double center_x = Nx / 2.0 * 300e-9; // Center at 15 microns
-    const double center_y = Ny / 2.0 * 300e-9; // Center at 15 microns
-    const double grid_size = 300e-9 * (Nx - 2);
+    const double center_x = Nx / 2.0 * 300e-9; // Center at 7.5 microns
+    const double center_y = Ny / 2.0 * 300e-9; // Center at 7.5 microns
+    const double grid_size = 300e-9 * (Nx - 1);
     const double dx = grid_size / (Nx - 1);
     const double dy = grid_size / (Ny - 1);
 
@@ -156,6 +156,22 @@ int main(int argc, char** argv) {
     cudaMemcpy(host_B_electric.data(), d_B_electric, N_obs * sizeof(cvec3), cudaMemcpyDeviceToHost);
     cudaMemcpy(host_S.data(), d_S, N_obs * sizeof(double), cudaMemcpyDeviceToHost);
 
+    // Print (0,0) entry of E and B fields
+    double x0 = center_x + dx * (-Nx/2);
+    double y0 = center_y + dy * (-Ny/2);
+    std::cout << "Fields at position (" << x0*1e6 << "μm, " << y0*1e6 << "μm, " << z_sample*1e6 << "μm):" << std::endl;
+    std::cout << "E-field at (0,0): (" 
+    << cuCreal(host_E_electric[0].x) << "+" << cuCimag(host_E_electric[0].x) << "i, "
+    << cuCreal(host_E_electric[0].y) << "+" << cuCimag(host_E_electric[0].y) << "i, "
+    << cuCreal(host_E_electric[0].z) << "+" << cuCimag(host_E_electric[0].z) << "i)" 
+    << std::endl;
+
+    std::cout << "B-field at (0,0): ("
+        << cuCreal(host_B_electric[0].x) << "+" << cuCimag(host_B_electric[0].x) << "i, "
+        << cuCreal(host_B_electric[0].y) << "+" << cuCimag(host_B_electric[0].y) << "i, "
+        << cuCreal(host_B_electric[0].z) << "+" << cuCimag(host_B_electric[0].z) << "i)"
+        << std::endl;
+
     // Calculate reflection coefficient first (using just scattered fields)
     double total_flux_reflection = 0.0;
     for (int i = 0; i < N_obs; ++i) {
@@ -206,8 +222,8 @@ int main(int argc, char** argv) {
     cudaFree(d_obs);
     cudaFree(d_E_electric);
     cudaFree(d_B_electric);
-    cudaFree(d_E_magnetic);
-    cudaFree(d_B_magnetic);
+    // cudaFree(d_E_magnetic);
+    // cudaFree(d_B_magnetic);
     cudaFree(d_S);
 
     return 0;
