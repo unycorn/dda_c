@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
 
     // Set physical parameters
     // Read frequency from command line
-    double frequency = std::atof(argv[2]);
+    double frequency = std::atof(argv[3]);
     double c = 299792458.0; // speed of light in vacuum
     double lambda = c / frequency;
     double k = 2 * M_PI / lambda;
@@ -202,9 +202,12 @@ int main(int argc, char** argv) {
     // Free device memory
     cudaFree(d_positions);
     cudaFree(d_electric_dipoles);
+    cudaFree(d_magnetic_dipoles);
     cudaFree(d_obs);
     cudaFree(d_E_electric);
     cudaFree(d_B_electric);
+    cudaFree(d_E_magnetic);
+    cudaFree(d_B_magnetic);
     cudaFree(d_S);
 
     return 0;
