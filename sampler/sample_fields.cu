@@ -172,6 +172,20 @@ int main(int argc, char** argv) {
         << cuCreal(host_B_electric[0].z) << "+" << cuCimag(host_B_electric[0].z) << "i)"
         << std::endl;
 
+    // Print electric dipole
+    std::cout << "Electric dipole: ("
+        << cuCreal(host_electric_dipoles[0].x) << "+" << cuCimag(host_electric_dipoles[0].x) << "i, "
+        << cuCreal(host_electric_dipoles[0].y) << "+" << cuCimag(host_electric_dipoles[0].y) << "i, "
+        << cuCreal(host_electric_dipoles[0].z) << "+" << cuCimag(host_electric_dipoles[0].z) << "i)"
+        << std::endl;
+
+    // Print magnetic dipole
+    std::cout << "Magnetic dipole: ("
+        << cuCreal(host_magnetic_dipoles[0].x) << "+" << cuCimag(host_magnetic_dipoles[0].x) << "i, "
+        << cuCreal(host_magnetic_dipoles[0].y) << "+" << cuCimag(host_magnetic_dipoles[0].y) << "i, "
+        << cuCreal(host_magnetic_dipoles[0].z) << "+" << cuCimag(host_magnetic_dipoles[0].z) << "i)"
+        << std::endl;
+
     // Calculate reflection coefficient first (using just scattered fields)
     double total_flux_reflection = 0.0;
     for (int i = 0; i < N_obs; ++i) {
