@@ -70,10 +70,12 @@ void load_dipole_data(const std::string& angle_filename, const std::string& dipo
         p.y = cuCmul(p_magnitude, make_cuDoubleComplex(sin(theta), 0.0));
         p.z = make_cuDoubleComplex(0.0, 0.0);
 
+        auto m_magnitude = make_cuDoubleComplex(pol_values[2], pol_values[3]);
+
         cvec3 m;
-        m.x = make_cuDoubleComplex(0.0, 0.0);;
-        m.y = make_cuDoubleComplex(0.0, 0.0);;
-        m.z = make_cuDoubleComplex(1.0, 0.0);;
+        m.x = make_cuDoubleComplex(0.0, 0.0);
+        m.y = make_cuDoubleComplex(0.0, 0.0);
+        m.z = cuCmul(m_magnitude, make_cuDoubleComplex(1.0, 0.0));
         
         // Store the vectors
         electric_dipoles.push_back(p);
