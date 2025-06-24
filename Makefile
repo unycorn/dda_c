@@ -5,7 +5,7 @@ LDFLAGS := -fopenmp
 
 # CUDA paths - make configurable for different systems
 CUDA_PATH ?= /usr/local/cuda
-LDFLAGS += -L$(CUDA_PATH)/lib64 -L/usr/lib64 -lcudart -lcusolver -lcublas -llapack -lblas
+LDFLAGS += -L$(CUDA_PATH)/lib64 -L/usr/lib64 -lcudart -lcusolver -lcublas -l:liblapack.so.3 -l:libblas.so.3
 CXXFLAGS += -I$(CUDA_PATH)/include -I/opt/cuda/include -I/usr/local/cuda/include
 
 # Google Test settings - build from source
