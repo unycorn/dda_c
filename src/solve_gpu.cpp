@@ -1,11 +1,13 @@
 #include <iostream>
 #include <complex>
 #include <vector>
-#include <stdexcept>  // Add this for std::runtime_error
+#include <stdexcept>
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 #include <cublas_v2.h>
 #include <cuComplex.h>
+#include <chrono>
+#include <omp.h>
 
 extern "C" {
     void zgetrf_(int* m, int* n, std::complex<double>* a, int* lda, int* ipiv, int* info);
@@ -183,6 +185,7 @@ void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
 
 void solve_cpu(const cuDoubleComplex* A, cuDoubleComplex* b, int N) {
     std::cout << "Starting CPU linear system solve for N = " << N << " using LAPACK\n";
+    std::cout << "Number of OpenMP threads: " << omp_get_max_threads() << "\n";
     
     // Convert to std::complex for LAPACK
     std::vector<std::complex<double>> A_comp(N * N);
@@ -204,8 +207,16 @@ void solve_cpu(const cuDoubleComplex* A, cuDoubleComplex* b, int N) {
     int n = N;
     int nrhs = 1;  // Number of right hand sides
 
+    // Time the solution step
+    auto solve_start = std::chrono::high_resolution_clock::now();
+    
     // Solve system in one step using zgesv
     zgesv_(&n, &nrhs, A_comp.data(), &n, ipiv.data(), b_comp.data(), &n, &info);
+    
+    auto solve_end = std::chrono::high_resolution_clock::now();
+    auto solve_duration = std::chrono::duration_cast<std::chrono::milliseconds>(solve_end - solve_start);
+    std::cout << "LAPACK solution time: " << solve_duration.count() << " ms\n";
+
     if (info != 0) {
         throw std::runtime_error("LAPACK zgesv_ failed with error " + std::to_string(info));
     }
