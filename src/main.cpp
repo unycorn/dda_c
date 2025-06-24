@@ -36,7 +36,8 @@ void run_simulation(
     const std::vector<LorentzianParams>& params_50,
     const std::vector<LorentzianParams>& params_55,
     const std::vector<double>& angles,
-    const std::string& output_dir  // Add output directory parameter
+    const std::string& output_dir,
+    SolverType solver = SolverType::GPU  // Add solver type parameter with GPU default
 ) {
     const int N = positions.size();
     for (int i = 0; i < num_freqs; ++i) {
@@ -91,28 +92,33 @@ void run_simulation(
                 inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
             }
 
-            // Convert incident field to cuDoubleComplex for GPU
+            // Convert incident field to cuDoubleComplex for GPU/CPU solvers
             std::vector<cuDoubleComplex> b_cuda(2 * N);
             for (int i = 0; i < 2 * N; ++i) {
                 b_cuda[i] = make_cuDoubleComplex(std::real(inc_field[i]), std::imag(inc_field[i]));
             }
 
-            // Transpose matrix for GPU solver (expects column-major format)
-            std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
-            for (int i = 0; i < 2 * N; ++i) {
-                for (int j = 0; j < 2 * N; ++j) {
-                    A_transposed[i * 2 * N + j] = make_cuDoubleComplex(
-                        std::real(A_host[j * 2 * N + i]),
-                        std::imag(A_host[j * 2 * N + i])
-                    );
+            // For GPU solver, transpose matrix (GPU expects column-major format)
+            // For CPU solver, keep in row-major format
+            if (solver == SolverType::GPU) {
+                std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
+                for (int i = 0; i < 2 * N; ++i) {
+                    for (int j = 0; j < 2 * N; ++j) {
+                        A_transposed[i * 2 * N + j] = make_cuDoubleComplex(
+                            std::real(A_host[j * 2 * N + i]),
+                            std::imag(A_host[j * 2 * N + i])
+                        );
+                    }
                 }
+                cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyHostToDevice);
+            } else {
+                // For CPU solver, just convert to cuDoubleComplex format
+                std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
+                for (int i = 0; i < 2 * N * 2 * N; ++i) {
+                    A_cpu[i] = make_cuDoubleComplex(std::real(A_host[i]), std::imag(A_host[i]));
+                }
+                solve_cpu(A_cpu.data(), b_cuda.data(), 2 * N);
             }
-            
-            // print_complex_matrix("Transposed Interaction Matrix", A_transposed.data(), 2 * N);
-
-            cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyHostToDevice);
-            
-            solve_gpu(A_device, b_cuda.data(), 2 * N);
 
             std::vector<std::complex<double>> b(2 * N);
             for (int i = 0; i < 2 * N; ++i) {
@@ -176,7 +182,7 @@ std::string get_filename_without_ext(const std::string& filepath) {
 }
 
 // ---- Process Single CSV File ----
-void process_csv_file(const std::string& csv_path) {
+void process_csv_file(const std::string& csv_path, SolverType solver = SolverType::GPU) {
     std::vector<vec3> positions;
     std::vector<LorentzianParams> params_00, params_05, params_50, params_55;
     std::vector<double> angles;
@@ -250,7 +256,7 @@ void process_csv_file(const std::string& csv_path) {
     
     // Run the simulation with the loaded parameters
     auto simulation_start = std::chrono::high_resolution_clock::now();
-    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir);
+    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir, solver);
     auto simulation_end = std::chrono::high_resolution_clock::now();
     auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
     std::cout << "Finished processing " << csv_path << " in " << simulation_duration.count() << " seconds" << std::endl;
@@ -258,11 +264,26 @@ void process_csv_file(const std::string& csv_path) {
 
 // ---- Main Function ----
 int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_directory>\n";
+    if (argc < 2 || argc > 3) {
+        std::cerr << "Usage: " << argv[0] << " <input_directory> [solver_type]\n";
         std::cerr << "  input_directory: Path to directory containing CSV files\n";
+        std::cerr << "  solver_type: 'cpu' or 'gpu' (default: gpu)\n";
         std::cerr << "  CSV format: x,y,z,f0_00,gamma_00,A_00,...,angle\n";
         return 1;
+    }
+
+    // Determine solver type
+    SolverType solver = SolverType::GPU;  // Default to GPU
+    if (argc == 3) {
+        std::string solver_arg = argv[2];
+        if (solver_arg == "cpu") {
+            solver = SolverType::CPU;
+        } else if (solver_arg == "gpu") {
+            solver = SolverType::GPU;
+        } else {
+            std::cerr << "Invalid solver type. Must be 'cpu' or 'gpu'\n";
+            return 1;
+        }
     }
 
     // Open directory
@@ -271,6 +292,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: Could not open directory " << argv[1] << ": " << strerror(errno) << std::endl;
         return 1;
     }
+
+    // Update process_csv_file to use selected solver
+    auto process_file = [solver](const std::string& filepath) {
+        process_csv_file(filepath, solver);
+    };
 
     // Read directory entries
     struct dirent* entry;
@@ -287,7 +313,7 @@ int main(int argc, char* argv[]) {
             filename.compare(filename.length() - 4, 4, ".csv") == 0) {
             
             std::string filepath = std::string(argv[1]) + "/" + filename;
-            process_csv_file(filepath);
+            process_file(filepath);
         }
     }
 

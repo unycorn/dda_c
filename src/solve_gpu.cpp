@@ -178,3 +178,45 @@ void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
         matrix[i].y = std::imag(B[i]);
     }
 }
+
+void solve_cpu(const cuDoubleComplex* A, cuDoubleComplex* b, int N) {
+    std::cout << "Starting CPU linear system solve for N = " << N << " using LAPACK\n";
+    
+    // Convert to std::complex for LAPACK
+    std::vector<std::complex<double>> A_comp(N * N);
+    std::vector<std::complex<double>> b_comp(N);
+    
+    #pragma omp parallel for
+    for (int i = 0; i < N * N; i++) {
+        A_comp[i] = std::complex<double>(A[i].x, A[i].y);
+    }
+    
+    #pragma omp parallel for
+    for (int i = 0; i < N; i++) {
+        b_comp[i] = std::complex<double>(b[i].x, b[i].y);
+    }
+
+    // Prepare for LAPACK
+    std::vector<int> ipiv(N);
+    int info = 0;
+    int n = N;
+    char trans = 'N';
+
+    // LU factorization
+    zgetrf_(&n, &n, A_comp.data(), &n, ipiv.data(), &info);
+    if (info != 0) {
+        throw std::runtime_error("LAPACK zgetrf_ failed with error " + std::to_string(info));
+    }
+
+    // Solve system
+    zgetrs_(&trans, &n, &n, A_comp.data(), &n, ipiv.data(), b_comp.data(), &n, &info);
+    if (info != 0) {
+        throw std::runtime_error("LAPACK zgetrs_ failed with error " + std::to_string(info));
+    }
+
+    // Convert solution back
+    #pragma omp parallel for
+    for (int i = 0; i < N; i++) {
+        b[i] = make_cuDoubleComplex(std::real(b_comp[i]), std::imag(b_comp[i]));
+    }
+}
