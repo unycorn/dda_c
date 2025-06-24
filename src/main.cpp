@@ -47,8 +47,13 @@ void run_simulation(
         std::ostringstream filename;
         filename << output_dir << "/output_freq_" << std::scientific << std::setprecision(2) << freq << ".csv";
         
-        if (std::ifstream(filename.str()).good()) {
+        struct stat buffer;
+        if (stat(filename.str().c_str(), &buffer) == 0) {
             std::cout << "Skipping frequency " << freq << " Hz - output file " << filename.str() << " already exists\n";
+            continue;
+        } else if (errno != ENOENT) {
+            // If error is not "file doesn't exist", we have a problem
+            std::cerr << "Error checking file " << filename.str() << ": " << strerror(errno) << std::endl;
             continue;
         }
         
