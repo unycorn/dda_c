@@ -8,9 +8,8 @@
 #include <cuComplex.h>
 
 extern "C" {
-    void zgetrf_(int* m, int* n, std::complex<double>* a, int* lda, int* ipiv, int* info);
-    void zgetrs_(char* trans, int* n, int* nrhs, std::complex<double>* a, int* lda, 
-                 int* ipiv, std::complex<double>* b, int* ldb, int* info);
+    void zgesv_(int* n, int* nrhs, std::complex<double>* a, int* lda, 
+        int* ipiv, std::complex<double>* b, int* ldb, int* info);
 }
 
 // Helper function to check CUDA errors
@@ -200,20 +199,12 @@ void solve_cpu(const cuDoubleComplex* A, cuDoubleComplex* b, int N) {
     std::vector<int> ipiv(N);
     int info = 0;
     int n = N;
-    char trans = 'N';
+    int nrhs = 1;  // Number of right hand sides
 
-    std::cout << "LU factorization step...\n";
-
-    // LU factorization
-    zgetrf_(&n, &n, A_comp.data(), &n, ipiv.data(), &info);
+    // Solve system in one step using zgesv
+    zgesv_(&n, &nrhs, A_comp.data(), &n, ipiv.data(), b_comp.data(), &n, &info);
     if (info != 0) {
-        throw std::runtime_error("LAPACK zgetrf_ failed with error " + std::to_string(info));
-    }
-
-    // Solve system
-    zgetrs_(&trans, &n, &n, A_comp.data(), &n, ipiv.data(), b_comp.data(), &n, &info);
-    if (info != 0) {
-        throw std::runtime_error("LAPACK zgetrs_ failed with error " + std::to_string(info));
+        throw std::runtime_error("LAPACK zgesv_ failed with error " + std::to_string(info));
     }
 
     // Convert solution back
