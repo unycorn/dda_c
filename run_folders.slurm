@@ -12,7 +12,7 @@
 # SLURM will set CUDA_VISIBLE_DEVICES automatically based on the allocated GPU
 
 # Get the list of folders in csv_inputs directory
-cd csv_inputs || exit 1
+cd /home/dharper/cdm_data/cdm_data/csv/ || exit 1
 FOLDERS=(*)  # This will get all folders in csv_inputs
 NUM_FOLDERS=${#FOLDERS[@]}
 
@@ -36,6 +36,6 @@ for (( i=START_IDX; i<=END_IDX && i<NUM_FOLDERS; i++ )); do
     FOLDER="${FOLDERS[i]}"
     echo "Processing folder: $FOLDER on GPU $SLURM_ARRAY_TASK_ID"
     cd "$FOLDER" || continue
-    ../../solver .
+    /home/dharper/dda_c/solver . gpu
     cd ..
 done
