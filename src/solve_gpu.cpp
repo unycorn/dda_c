@@ -202,6 +202,8 @@ void solve_cpu(const cuDoubleComplex* A, cuDoubleComplex* b, int N) {
     int n = N;
     char trans = 'N';
 
+    std::cout << "LU factorization step...\n";
+
     // LU factorization
     zgetrf_(&n, &n, A_comp.data(), &n, ipiv.data(), &info);
     if (info != 0) {
