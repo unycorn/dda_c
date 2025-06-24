@@ -8,8 +8,11 @@
 #include <cuComplex.h>
 
 extern "C" {
+    void zgetrf_(int* m, int* n, std::complex<double>* a, int* lda, int* ipiv, int* info);
+    void zgetrs_(char* trans, int* n, int* nrhs, std::complex<double>* a, int* lda, 
+                 int* ipiv, std::complex<double>* b, int* ldb, int* info);
     void zgesv_(int* n, int* nrhs, std::complex<double>* a, int* lda, 
-        int* ipiv, std::complex<double>* b, int* ldb, int* info);
+                 int* ipiv, std::complex<double>* b, int* ldb, int* info);
 }
 
 // Helper function to check CUDA errors
