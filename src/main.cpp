@@ -48,7 +48,7 @@ void run_simulation(
         filename << output_dir << "/output_freq_" << std::scientific << std::setprecision(2) << freq << ".csv";
         
         if (std::ifstream(filename.str()).good()) {
-            std::cout << "Skipping frequency " << freq << " Hz - output file already exists\n";
+            std::cout << "Skipping frequency " << freq << " Hz - output file " << filename.str() << " already exists\n";
             continue;
         }
         
