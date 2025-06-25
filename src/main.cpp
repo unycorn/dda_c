@@ -176,7 +176,7 @@ std::string get_filename_without_ext(const std::string& filepath) {
 }
 
 // ---- Process Single CSV File ----
-void process_csv_file(const std::string& csv_path) {
+void process_csv_file(const std::string& csv_path, double f_start, double f_end, int num_freqs) {
     std::vector<vec3> positions;
     std::vector<LorentzianParams> params_00, params_05, params_50, params_55;
     std::vector<double> angles;
@@ -250,7 +250,7 @@ void process_csv_file(const std::string& csv_path) {
     
     // Run the simulation with the loaded parameters
     auto simulation_start = std::chrono::high_resolution_clock::now();
-    run_simulation(150e12, 350e12, 50, positions, params_00, params_05, params_50, params_55, angles, output_dir);
+    run_simulation(f_start, f_end, num_freqs, positions, params_00, params_05, params_50, params_55, angles, output_dir);
     auto simulation_end = std::chrono::high_resolution_clock::now();
     auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
     std::cout << "Finished processing " << csv_path << " in " << simulation_duration.count() << " seconds" << std::endl;
@@ -258,10 +258,26 @@ void process_csv_file(const std::string& csv_path) {
 
 // ---- Main Function ----
 int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_directory>\n";
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <input_directory> <f_start> <f_end> <num_freqs>\n";
         std::cerr << "  input_directory: Path to directory containing CSV files\n";
+        std::cerr << "  f_start: Starting frequency in Hz\n";
+        std::cerr << "  f_end: Ending frequency in Hz\n";
+        std::cerr << "  num_freqs: Number of frequency points\n";
         std::cerr << "  CSV format: x,y,z,f0_00,gamma_00,A_00,...,angle\n";
+        return 1;
+    }
+
+    // Parse frequency parameters
+    double f_start = std::stod(argv[2]);
+    double f_end = std::stod(argv[3]);
+    int num_freqs = std::stoi(argv[4]);
+
+    // Validate frequency parameters
+    if (f_start <= 0 || f_end <= 0 || num_freqs <= 0 || f_start >= f_end) {
+        std::cerr << "Error: Invalid frequency parameters.\n";
+        std::cerr << "f_start and f_end must be positive, f_start must be less than f_end,\n";
+        std::cerr << "and num_freqs must be positive.\n";
         return 1;
     }
 
@@ -287,7 +303,7 @@ int main(int argc, char* argv[]) {
             filename.compare(filename.length() - 4, 4, ".csv") == 0) {
             
             std::string filepath = std::string(argv[1]) + "/" + filename;
-            process_csv_file(filepath);
+            process_csv_file(filepath, f_start, f_end, num_freqs);
         }
     }
 
