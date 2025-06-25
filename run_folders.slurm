@@ -36,6 +36,6 @@ for (( i=START_IDX; i<=END_IDX && i<NUM_FOLDERS; i++ )); do
     FOLDER="${FOLDERS[i]}"
     echo "Processing folder: $FOLDER on GPU $SLURM_ARRAY_TASK_ID"
     cd "$FOLDER" || continue
-    ../../solver .
+    ../../solver . 351e12 400e12 12  # Adjust the command as needed
     cd ..
 done
