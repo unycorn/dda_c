@@ -138,7 +138,8 @@ void write_polarizations_binary(
     std::complex<double>* p, 
     std::vector<vec3> positions,
     const std::vector<std::complex<double>[2][2]>& alpha,
-    int N
+    int N,
+    double frequency
 ) {
     std::ofstream out(filename, std::ios::binary);
     if (!out) {
@@ -148,6 +149,9 @@ void write_polarizations_binary(
 
     // Write the size N first
     out.write(reinterpret_cast<const char*>(&N), sizeof(int));
+    
+    // Write the frequency
+    out.write(reinterpret_cast<const char*>(&frequency), sizeof(double));
 
     // Write the polarization data
     for (int n = 0; n < N; ++n) {
@@ -159,7 +163,7 @@ void write_polarizations_binary(
     out.close();
 }
 
-std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N) {
+std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N, double& frequency) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) {
         std::cerr << "Error: could not open " << filename << " for reading.\n";
@@ -168,6 +172,9 @@ std::vector<std::complex<double>> read_polarizations_binary(const char* filename
 
     // Read the size N first
     in.read(reinterpret_cast<char*>(&N), sizeof(int));
+    
+    // Read the frequency
+    in.read(reinterpret_cast<char*>(&frequency), sizeof(double));
 
     // Each point has 2 complex values (Ex and Mz)
     std::vector<std::complex<double>> p(2 * N);

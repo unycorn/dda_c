@@ -125,7 +125,7 @@ void run_simulation(
             }
 
             // write_polarizations(filename.str().c_str(), b.data(), positions, alpha, N);  // Original plaintext writer
-            write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N);  // New binary writer
+            write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N, freq);  // New binary writer with frequency
 
             auto end_time = std::chrono::high_resolution_clock::now();
             auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

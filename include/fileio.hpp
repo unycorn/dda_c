@@ -38,10 +38,11 @@ void write_polarizations_binary(
     std::complex<double>* p,
     std::vector<vec3> positions,
     const std::vector<std::complex<double>[2][2]>& alpha,
-    int N
+    int N,
+    double frequency
 );
 
 // Reads polarizations from a binary file. Returns vector of complex doubles and sets N.
-std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N);
+std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N, double& frequency);
 
 #endif // FILEIO_HPP
