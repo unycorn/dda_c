@@ -32,4 +32,16 @@ void write_polarizations(
     int N
 );
 
+// Writes polarizations (2N-vector of cuDoubleComplex) and scalar polarizability matrices to binary file.
+void write_polarizations_binary(
+    const char* filename,
+    std::complex<double>* p,
+    std::vector<vec3> positions,
+    const std::vector<std::complex<double>[2][2]>& alpha,
+    int N
+);
+
+// Reads polarizations from a binary file. Returns vector of complex doubles and sets N.
+std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N);
+
 #endif // FILEIO_HPP

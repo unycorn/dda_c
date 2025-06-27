@@ -108,7 +108,7 @@ void write_polarizations(
     // }
     out << "\n";
     
-    out << std::scientific << std::setprecision(5);
+    out << std::scientific << std::setprecision(4);
 
     // Write data
     for (int n = 0; n < N; ++n) {
@@ -131,4 +131,50 @@ void write_polarizations(
     }
 
     out.close();
+}
+
+void write_polarizations_binary(
+    const char* filename,
+    std::complex<double>* p, 
+    std::vector<vec3> positions,
+    const std::vector<std::complex<double>[2][2]>& alpha,
+    int N
+) {
+    std::ofstream out(filename, std::ios::binary);
+    if (!out) {
+        std::cerr << "Error: could not open " << filename << " for writing.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Write the size N first
+    out.write(reinterpret_cast<const char*>(&N), sizeof(int));
+
+    // Write the polarization data
+    for (int n = 0; n < N; ++n) {
+        // Write Ex,Mz components
+        out.write(reinterpret_cast<const char*>(&p[2*n + 0]), sizeof(std::complex<double>));     // Ex
+        out.write(reinterpret_cast<const char*>(&p[2*n + 1]), sizeof(std::complex<double>));     // Mz
+    }
+
+    out.close();
+}
+
+std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        std::cerr << "Error: could not open " << filename << " for reading.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Read the size N first
+    in.read(reinterpret_cast<char*>(&N), sizeof(int));
+
+    // Each point has 2 complex values (Ex and Mz)
+    std::vector<std::complex<double>> p(2 * N);
+    
+    // Read all the polarization data
+    in.read(reinterpret_cast<char*>(p.data()), sizeof(std::complex<double>) * 2 * N);
+
+    in.close();
+    return p;
 }
