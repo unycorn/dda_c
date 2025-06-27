@@ -45,6 +45,8 @@ void run_simulation(
         // Create output filename in the specific output directory
         std::ostringstream filename;
         filename << output_dir << "/output_freq_" << std::scientific << std::setprecision(5) << freq << ".pols";
+        std::ostringstream csvfilename;
+        csvfilename << output_dir << "/output_freq_" << std::scientific << std::setprecision(5) << freq << ".csv";
         
         if (std::ifstream(filename.str()).good()) {
             std::cout << "Skipping frequency " << freq << " Hz - output file already exists\n";
@@ -124,7 +126,7 @@ void run_simulation(
                 A_device = nullptr;
             }
 
-            // write_polarizations(filename.str().c_str(), b.data(), positions, alpha, N);  // Original plaintext writer
+            write_polarizations(filename.str().c_str(), b.data(), positions, alpha, N);  // Original plaintext writer
             write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N, freq);  // New binary writer with frequency
 
             auto end_time = std::chrono::high_resolution_clock::now();
