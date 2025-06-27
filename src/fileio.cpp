@@ -100,15 +100,15 @@ void write_polarizations(
     }
 
     // Write header for 2x2 case (only Ex,Mz components)
-    out << "Re_px,Im_px,Re_mz,Im_mz,x,y,z";
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            out << ",Re_alpha" << i << j << ",Im_alpha" << i << j;
-        }
-    }
+    out << "Re_px,Im_px,Re_mz,Im_mz";
+    // for (int i = 0; i < 2; ++i) {
+    //     for (int j = 0; j < 2; ++j) {
+    //         out << ",Re_alpha" << i << j << ",Im_alpha" << i << j;
+    //     }
+    // }
     out << "\n";
     
-    out << std::scientific << std::setprecision(9);
+    out << std::scientific << std::setprecision(5);
 
     // Write data
     for (int n = 0; n < N; ++n) {
@@ -116,17 +116,17 @@ void write_polarizations(
         out << p[2*n + 0].real() << "," << p[2*n + 0].imag() << ",";     // Ex
         out << p[2*n + 1].real() << "," << p[2*n + 1].imag();            // Mz
         
-        // Write positions
-        out << "," << positions[n].x << ","
-            << positions[n].y << ","
-            << positions[n].z;
+        // // Write positions
+        // out << "," << positions[n].x << ","
+        //     << positions[n].y << ","
+        //     << positions[n].z;
         
         // Write all 4 elements of the alpha matrix
-        for (int i = 0; i < 2; ++i) {
-            for (int j = 0; j < 2; ++j) {
-                out << "," << alpha[n][i][j].real() << "," << alpha[n][i][j].imag();
-            }
-        }
+        // for (int i = 0; i < 2; ++i) {
+        //     for (int j = 0; j < 2; ++j) {
+        //         out << "," << alpha[n][i][j].real() << "," << alpha[n][i][j].imag();
+        //     }
+        // }
         out << "\n";
     }
 
