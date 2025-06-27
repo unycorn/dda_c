@@ -112,8 +112,8 @@ if __name__ == "__main__":
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
-        'c-shape-28': 'c-shape-28-cdm-param.csv',
         'c-shape-36': 'c-shape-36-cdm-param.csv',
+        'c-shape-28': 'c-shape-28-cdm-param.csv',
         'u-shape-37': 'u-shape-37-cdm-param.csv',
         'u-shape-29': 'u-shape-29-cdm-param.csv'
     }
