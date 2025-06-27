@@ -110,6 +110,14 @@ if __name__ == "__main__":
 
     seed_count = 20  # Number of seeds to generate
 
+    # Dictionary of available resonator types and their parameter files
+    resonator_files = {
+        'c-shape-28': 'c-shape-28-cdm-param.csv',
+        'c-shape-36': 'c-shape-36-cdm-param.csv',
+        'u-shape-37': 'u-shape-37-cdm-param.csv',
+        'u-shape-29': 'u-shape-29-cdm-param.csv'
+    }
+
     # Select lattice type ('square' or 'triangular')
     lattice_type = 'triangular'  # Change this to use different lattice types
 
@@ -135,66 +143,59 @@ if __name__ == "__main__":
     spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9]  # meters
     orientational_disorder_degrees = [0, np.deg2rad(10), np.deg2rad(20), np.deg2rad(50), np.deg2rad(1_000_000)]  # radians
 
-    # Dictionary of available resonator types and their parameter files
-    resonator_files = {
-        'c-shape-28': 'c-shape-28-cdm-param.csv',
-        'c-shape-36': 'c-shape-36-cdm-param.csv',
-        'u-shape-37': 'u-shape-37-cdm-param.csv',
-        'u-shape-29': 'u-shape-29-cdm-param.csv'
-    }
+    # Iterate through resonator types, spatial and orientational disorder
+    for m, (resonator_type, resonator_filename) in enumerate(resonator_files.items()):
+        print(f"\nProcessing resonator type {m}: {resonator_type}")
+        param_file = os.path.join(os.path.dirname(__file__), resonator_filename)
+        
+        for s, spatial_disorder in enumerate(spatial_disorder_degrees):
+            for o, orientational_disorder in enumerate(orientational_disorder_degrees):
+                output_folder = os.path.join(base_output_dir, f"p{s}_o{o}_m{m}")
+                print(output_folder)
+                os.makedirs(output_folder, exist_ok=True)
+                
+                for i in range(seed_count):
+                    output_file = os.path.join(output_folder, f"cdm_input_{i}.csv")
+                    
+                    # Load parameters from CSV
+                    distributions = [
+                        ("delta_x", 0, spatial_disorder),
+                        ("delta_y", 0, spatial_disorder),
+                        ("theta", 0, orientational_disorder)
+                    ]
+                    
+                    # Load all other parameters from the CSV file
+                    df = pd.read_csv(param_file)
+                    for _, row in df.iterrows():
+                        distributions.append((row['parameter'], row['mean'], row['std_dev']))
 
-    # Select which resonator configuration to use
-    resonator_type = 'u-shape-29'  # Change this to use different configurations
-    param_file = os.path.join(os.path.dirname(__file__), resonator_files[resonator_type])
-    
-    for s, spatial_disorder in enumerate(spatial_disorder_degrees):
-        for o, orientational_disorder in enumerate(orientational_disorder_degrees):
-            output_folder = os.path.join(base_output_dir, f"p{s}_o{o}_m2")
-            print(output_folder)
-            os.makedirs(output_folder, exist_ok=True)
-            
-            for i in range(seed_count):
-                output_file = os.path.join(output_folder, f"cdm_input_{i}.csv")
-                
-                # Load parameters from CSV
-                distributions = [
-                    ("delta_x", 0, spatial_disorder),
-                    ("delta_y", 0, spatial_disorder),
-                    ("theta", 0, orientational_disorder)
-                ]
-                
-                # Load all other parameters from the CSV file
-                df = pd.read_csv(param_file)
-                for _, row in df.iterrows():
-                    distributions.append((row['parameter'], row['mean'], row['std_dev']))
-
-                # Generate disorder parameters directly
-                num_points = len(x_base)
-                disorder_data = generate_normal_values(distributions, num_points)
-                
-                # Create final data dictionary
-                data = {}
-                data['x'] = x_base + disorder_data['delta_x'][:num_points]
-                data['y'] = y_base + disorder_data['delta_y'][:num_points]
-                data['z'] = z_base
-                
-                # Create the eight resonator parameter columns from the loaded distributions
-                for prefix in ['ee', 'em', 'me', 'mm']:
-                    data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
-                    data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
-                
-                # Copy all other parameters
-                for key in disorder_data:
-                    if key not in ['delta_x', 'delta_y']:  # f0 and hw are already handled
-                        data[key] = disorder_data[key][:num_points]
-                
-                # Use explicit column order
-                headers = ['x', 'y', 'z', 'theta',
-                         'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
-                         'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
-                         'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
-                         'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
-                
-                # Write the output file
-                write_output_csv(output_file, data, headers)
-                print(f"Generated CDM input parameters saved to {output_file}")
+                    # Generate disorder parameters directly
+                    num_points = len(x_base)
+                    disorder_data = generate_normal_values(distributions, num_points)
+                    
+                    # Create final data dictionary
+                    data = {}
+                    data['x'] = x_base + disorder_data['delta_x'][:num_points]
+                    data['y'] = y_base + disorder_data['delta_y'][:num_points]
+                    data['z'] = z_base
+                    
+                    # Create the eight resonator parameter columns from the loaded distributions
+                    for prefix in ['ee', 'em', 'me', 'mm']:
+                        data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
+                        data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
+                    
+                    # Copy all other parameters
+                    for key in disorder_data:
+                        if key not in ['delta_x', 'delta_y']:  # f0 and hw are already handled
+                            data[key] = disorder_data[key][:num_points]
+                    
+                    # Use explicit column order
+                    headers = ['x', 'y', 'z', 'theta',
+                            'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
+                            'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
+                            'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
+                            'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
+                    
+                    # Write the output file
+                    write_output_csv(output_file, data, headers)
+                    print(f"Generated CDM input parameters saved to {output_file}")
