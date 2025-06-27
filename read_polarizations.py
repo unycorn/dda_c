@@ -18,7 +18,7 @@ def read_polarizations_binary(filename):
 
 def write_polarizations_csv(data, freq, outfile=sys.stdout):
     # Write header with frequency as comment
-    print(f"# Frequency: {freq:.4e} Hz", file=outfile)
+    print(f"# Frequency: {freq:.8e} Hz", file=outfile)
     print("Re_px,Im_px,Re_mz,Im_mz", file=outfile)
     
     # Write data in scientific notation with 4 decimal places
