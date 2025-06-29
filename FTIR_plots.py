@@ -41,7 +41,7 @@ def process_m_value(m_val):
                     with open(file_path, "r") as f:
                         lines = f.readlines()
                         data = [eval(line.strip().rstrip(',')) for line in lines]
-                        print(data)
+                        print(file_path, data)
                     
                     _, refls, trans = zip(*data)
                     all_refls.extend(refls)
