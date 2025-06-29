@@ -54,7 +54,7 @@ __global__ void combine_fields(cvec3* E_total, cvec3* B_total,
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " angle_data.csv dipole_data.csv frequency_in_Hz" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " angle_data.csv dipole_data.pols" << std::endl;
         return 1;
     }
 
@@ -62,7 +62,8 @@ int main(int argc, char** argv) {
     std::vector<vec3> host_positions;
     std::vector<cvec3> host_electric_dipoles;
     std::vector<cvec3> host_magnetic_dipoles;
-    load_dipole_data(argv[1], argv[2], host_positions, host_electric_dipoles, host_magnetic_dipoles);
+    double frequency;
+    load_dipole_data(argv[1], argv[2], host_positions, host_electric_dipoles, host_magnetic_dipoles, frequency);
 
     int N_dip = host_positions.size();
 
@@ -119,8 +120,6 @@ int main(int argc, char** argv) {
     cudaMemcpy(d_obs, host_obs.data(), N_obs * sizeof(vec3), cudaMemcpyHostToDevice);
 
     // Set physical parameters
-    // Read frequency from command line
-    double frequency = std::atof(argv[3]);
     double c = 299792458.0; // speed of light in vacuum
     double lambda = c / frequency;
     double k = 2 * M_PI / lambda;

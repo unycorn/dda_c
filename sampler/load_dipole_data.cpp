@@ -9,7 +9,14 @@
 #include "dipole_field.hpp"
 #include "../include/fileio.hpp"
 
-void load_dipole_data(const std::string& angle_filename, const std::string& dipole_filename, std::vector<vec3>& positions, std::vector<cvec3>& electric_dipoles, std::vector<cvec3>& magnetic_dipoles) {
+void load_dipole_data(
+    const std::string& angle_filename, 
+    const std::string& dipole_filename, 
+    std::vector<vec3>& positions, 
+    std::vector<cvec3>& electric_dipoles, 
+    std::vector<cvec3>& magnetic_dipoles,
+    double& frequency
+) {
     std::ifstream angle_file(angle_filename);
     if (!angle_file.is_open()) {
         std::cerr << "Error: could not open angle_file " << angle_filename << std::endl;
@@ -18,7 +25,6 @@ void load_dipole_data(const std::string& angle_filename, const std::string& dipo
 
     // Read binary polarization data
     int N;
-    double frequency;
     std::vector<std::complex<double>> pol_data = read_polarizations_binary(dipole_filename.c_str(), N, frequency);
 
     std::string angle_line;
