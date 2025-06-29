@@ -5,14 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 
-# Find all unique m values in the directory structure
-base_dir = "./csv_inputs"  # Changed to local directory
-base_dir = os.path.abspath(base_dir)  # Get absolute path
-print(f"Looking in directory: {base_dir}")
-
-if not os.path.exists(base_dir):
-    print(f"Error: {base_dir} does not exist")
-    exit(1)
+base_dir = "./csv_inputs"
 
 # Get all subdirectories and extract m values
 m_values = set()
@@ -22,15 +15,7 @@ for dirname in os.listdir(base_dir):
     if match:
         m_values.add(int(match.group(1)))
 
-if not m_values:
-    print("No valid directories found")
-    exit(1)
-
-print(f"Found m values: {sorted(m_values)}")
-
-# Function to process data for a specific m value
 def process_m_value(m_val):
-    print(f"\nProcessing m value: {m_val}")
     all_refls = []
     all_trans = []
     
@@ -44,21 +29,6 @@ def process_m_value(m_val):
             folder_path = os.path.join(base_dir, folder_name)
             
             if not os.path.exists(folder_path):
-                print(f"Skipping non-existent folder: {folder_name}")
-                continue
-            
-            print(f"\nProcessing folder: {folder_name}")
-            print(f"Full path: {folder_path}")
-            data_found = False
-            
-            # List contents of the folder
-            try:
-                contents = os.listdir(folder_path)
-                print(f"Contents of {folder_name}:")
-                for item in contents:
-                    print(f"  {item}")
-            except Exception as e:
-                print(f"Error listing directory {folder_path}: {e}")
                 continue
                 
             for i in range(0, 20):
@@ -66,46 +36,22 @@ def process_m_value(m_val):
                 if not os.path.exists(subfolder):
                     continue
                 
-                print(f"Found subfolder: {subfolder}")
-                try:
-                    subcontents = os.listdir(subfolder)
-                    print(f"Contents of cdm_input_{i}:")
-                    for item in subcontents:
-                        print(f"    {item}")
-                except Exception as e:
-                    print(f"Error listing directory {subfolder}: {e}")
-                    continue
-                
-                data = []
-                for fname in ["freq_r_t.txt", "freq_r_t_augment.txt"]:
-                    file_path = os.path.join(subfolder, fname)
-                    if os.path.isfile(file_path):
-                        try:
-                            with open(file_path, "r") as f:
-                                lines = f.readlines()
-                            print(f"Successfully read {fname}")
-                            data.extend([eval(line.strip().rstrip(',')) for line in lines])
-                            data_found = True
-                        except Exception as e:
-                            print(f"Error reading {file_path}: {e}")
-                
-                if data:
+                file_path = os.path.join(subfolder, "freq_r_t.txt")
+                if os.path.isfile(file_path):
+                    with open(file_path, "r") as f:
+                        lines = f.readlines()
+                        data = [eval(line.strip().rstrip(',')) for line in lines]
+                    
                     _, refls, trans = zip(*data)
                     all_refls.extend(refls)
                     all_trans.extend(trans)
-            
-            if not data_found:
-                print(f"No data found in folder: {folder_name}")
     
     if not all_refls or not all_trans:
-        print(f"No data found for m={m_val}")
         return
     
     # Calculate ranges
     refl_max = max(all_refls)
     trans_min = min(all_trans)
-    
-    print(f"For m={m_val}: Reflection max = {refl_max:.3f}, Transmission min = {trans_min:.3f}")
     
     # Create three different plots with different y-axis limits
     ylims = [
@@ -115,7 +61,6 @@ def process_m_value(m_val):
     ]
     
     for ylim, plot_type in ylims:
-        # Reset the figure for each plot type
         fig, axes = plt.subplots(5, 5, figsize=(20, 20), sharex=True, sharey=True)
         
         for p in range(5):
@@ -132,20 +77,14 @@ def process_m_value(m_val):
                     subfolder = os.path.join(folder_path, f"cdm_input_{i}")
                     if not os.path.exists(subfolder):
                         continue
-                        
-                    data = []
-                    for fname in ["freq_r_t.txt", "freq_r_t_augment.txt"]:
-                        file_path = os.path.join(subfolder, fname)
-                        if os.path.isfile(file_path):
-                            try:
-                                with open(file_path, "r") as f:
-                                    lines = f.readlines()
-                                data.extend([eval(line.strip().rstrip(',')) for line in lines])
-                            except Exception as e:
-                                print(f"Error reading {file_path}: {e}")
                     
-                    if not data:
+                    file_path = os.path.join(subfolder, "freq_r_t.txt")
+                    if not os.path.isfile(file_path):
                         continue
+                        
+                    with open(file_path, "r") as f:
+                        lines = f.readlines()
+                        data = [eval(line.strip().rstrip(',')) for line in lines]
                     
                     freqs, refls, trans = zip(*data)
                     sort_idx = np.argsort(freqs)
@@ -170,7 +109,6 @@ def process_m_value(m_val):
         plt.tight_layout()
         output_file = os.path.join(base_dir, f'm{m_val}_{plot_type.lower()}_plot.png')
         plt.savefig(output_file)
-        print(f"Saved plot to {output_file}")
         plt.close()
 
 # Process each m value
