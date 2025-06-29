@@ -4,28 +4,8 @@ matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
 import re
-import struct
 
 base_dir = "./csv_inputs"
-
-def read_pols_file(filepath):
-    with open(filepath, 'rb') as f:
-        # Read N (4-byte integer)
-        N = struct.unpack('i', f.read(4))[0]
-        
-        # Read frequency (8-byte double)
-        freq = struct.unpack('d', f.read(8))[0]
-        
-        # Read polarization data (Ex and Mz complex values)
-        data = []
-        for _ in range(N):
-            # Read Ex (real, imag)
-            ex_real, ex_imag = struct.unpack('dd', f.read(16))
-            # Read Mz (real, imag)
-            mz_real, mz_imag = struct.unpack('dd', f.read(16))
-            data.append((freq, abs(complex(ex_real, ex_imag)), abs(complex(mz_real, mz_imag))))
-        
-        return data
 
 # Get all subdirectories and extract m values
 m_values = set()
@@ -56,9 +36,13 @@ def process_m_value(m_val):
                 if not os.path.exists(subfolder):
                     continue
                 
-                file_path = os.path.join(subfolder, "output.pols")
+                file_path = os.path.join(subfolder, "freq_r_t.txt")
                 if os.path.isfile(file_path):
-                    data = read_pols_file(file_path)
+                    with open(file_path, "r") as f:
+                        lines = f.readlines()
+                        data = [eval(line.strip().rstrip(',')) for line in lines]
+                        print(file_path, data)
+                    
                     _, refls, trans = zip(*data)
                     all_refls.extend(refls)
                     all_trans.extend(trans)
@@ -95,11 +79,14 @@ def process_m_value(m_val):
                     if not os.path.exists(subfolder):
                         continue
                     
-                    file_path = os.path.join(subfolder, "output.pols")
+                    file_path = os.path.join(subfolder, "freq_r_t.txt")
                     if not os.path.isfile(file_path):
                         continue
                         
-                    data = read_pols_file(file_path)
+                    with open(file_path, "r") as f:
+                        lines = f.readlines()
+                        data = [eval(line.strip().rstrip(',')) for line in lines]
+                    
                     freqs, refls, trans = zip(*data)
                     sort_idx = np.argsort(freqs)
                     freqs = np.array(freqs)[sort_idx]

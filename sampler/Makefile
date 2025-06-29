@@ -8,6 +8,7 @@ NVCCFLAGS := -arch=sm_60 -std=c++11
 # Source files
 CU_SOURCES := sample_fields.cu dipole_field.cu
 CPP_SOURCES := load_dipole_data.cpp
+EXTRA_OBJS := ../src/fileio.o
 
 # Object files
 CU_OBJS := $(CU_SOURCES:.cu=.o)
@@ -18,7 +19,7 @@ TARGET := sample_fields
 
 all: $(TARGET)
 
-$(TARGET): $(CU_OBJS) $(CPP_OBJS)
+$(TARGET): $(CU_OBJS) $(CPP_OBJS) $(EXTRA_OBJS)
 	$(NVCC) $(NVCCFLAGS) -o $@ $^
 
 %.o: %.cu
