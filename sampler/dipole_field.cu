@@ -6,16 +6,16 @@
 #include <math.h>
 #include "dipole_field.hpp"
 
-__device__ vec3 vec3_sub(vec3 a, vec3 b) {
+__device__ vec3 device_vec3_sub(vec3 a, vec3 b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
-__device__ double vec3_norm(vec3 v) {
+__device__ double device_vec3_norm(vec3 v) {
     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
-__device__ vec3 vec3_normalize(vec3 v) {
-    double norm = vec3_norm(v);
+__device__ vec3 device_vec3_normalize(vec3 v) {
+    double norm = device_vec3_norm(v);
     return {v.x / norm, v.y / norm, v.z / norm};
 }
 
@@ -109,9 +109,9 @@ __global__ void compute_field(
             print_cvec3("Dipole moment p", p);
         }
 
-        vec3 r = vec3_sub(r_obs, r_dip);
-        double R = vec3_norm(r);
-        vec3 n = vec3_normalize(r);
+        vec3 r = device_vec3_sub(r_obs, r_dip);
+        double R = device_vec3_norm(r);
+        vec3 n = device_vec3_normalize(r);
         
         if (is_debug_point) {
             print_vec3("Distance vector r", r);
