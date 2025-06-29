@@ -23,9 +23,11 @@ if not m_values:
     print("No valid directories found")
     exit(1)
 
+print(f"Found m values: {sorted(m_values)}")
+
 # Function to process data for a specific m value
 def process_m_value(m_val):
-    fig, axes = plt.subplots(5, 5, figsize=(20, 20), sharex=True, sharey=True)
+    print(f"\nProcessing m value: {m_val}")
     all_refls = []
     all_trans = []
     
@@ -39,27 +41,46 @@ def process_m_value(m_val):
             folder_path = os.path.join(base_dir, folder_name)
             
             if not os.path.exists(folder_path):
+                print(f"Skipping non-existent folder: {folder_name}")
                 continue
+            
+            print(f"Processing folder: {folder_name}")
+            data_found = False
                 
             for i in range(0, 20):
                 subfolder = os.path.join(folder_path, f"cdm_input_{i}")
-                data = []
+                if not os.path.exists(subfolder):
+                    continue
                 
+                data = []
                 for fname in ["freq_r_t.txt", "freq_r_t_augment.txt"]:
                     file_path = os.path.join(subfolder, fname)
                     if os.path.isfile(file_path):
-                        with open(file_path, "r") as f:
-                            lines = f.readlines()
-                        data.extend([eval(line.strip().rstrip(',')) for line in lines])
+                        try:
+                            with open(file_path, "r") as f:
+                                lines = f.readlines()
+                            data.extend([eval(line.strip().rstrip(',')) for line in lines])
+                            data_found = True
+                        except Exception as e:
+                            print(f"Error reading {file_path}: {e}")
                 
                 if data:
                     _, refls, trans = zip(*data)
                     all_refls.extend(refls)
                     all_trans.extend(trans)
+            
+            if not data_found:
+                print(f"No data found in folder: {folder_name}")
+    
+    if not all_refls or not all_trans:
+        print(f"No data found for m={m_val}")
+        return
     
     # Calculate ranges
     refl_max = max(all_refls)
     trans_min = min(all_trans)
+    
+    print(f"For m={m_val}: Reflection max = {refl_max:.3f}, Transmission min = {trans_min:.3f}")
     
     # Create three different plots with different y-axis limits
     ylims = [
@@ -84,14 +105,19 @@ def process_m_value(m_val):
                 
                 for i in range(0, 20):
                     subfolder = os.path.join(folder_path, f"cdm_input_{i}")
+                    if not os.path.exists(subfolder):
+                        continue
+                        
                     data = []
-                    
                     for fname in ["freq_r_t.txt", "freq_r_t_augment.txt"]:
                         file_path = os.path.join(subfolder, fname)
                         if os.path.isfile(file_path):
-                            with open(file_path, "r") as f:
-                                lines = f.readlines()
-                            data.extend([eval(line.strip().rstrip(',')) for line in lines])
+                            try:
+                                with open(file_path, "r") as f:
+                                    lines = f.readlines()
+                                data.extend([eval(line.strip().rstrip(',')) for line in lines])
+                            except Exception as e:
+                                print(f"Error reading {file_path}: {e}")
                     
                     if not data:
                         continue
@@ -117,7 +143,9 @@ def process_m_value(m_val):
         
         plt.suptitle(f'M={m_val} {plot_type} Plot')
         plt.tight_layout()
-        plt.savefig(os.path.join(base_dir, f'm{m_val}_{plot_type.lower()}_plot.png'))
+        output_file = os.path.join(base_dir, f'm{m_val}_{plot_type.lower()}_plot.png')
+        plt.savefig(output_file)
+        print(f"Saved plot to {output_file}")
         plt.close()
 
 # Process each m value
