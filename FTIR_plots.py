@@ -7,6 +7,9 @@ import re
 
 # Find all unique m values in the directory structure
 base_dir = "./csv_inputs"  # Changed to local directory
+base_dir = os.path.abspath(base_dir)  # Get absolute path
+print(f"Looking in directory: {base_dir}")
+
 if not os.path.exists(base_dir):
     print(f"Error: {base_dir} does not exist")
     exit(1)
@@ -44,12 +47,33 @@ def process_m_value(m_val):
                 print(f"Skipping non-existent folder: {folder_name}")
                 continue
             
-            print(f"Processing folder: {folder_name}")
+            print(f"\nProcessing folder: {folder_name}")
+            print(f"Full path: {folder_path}")
             data_found = False
+            
+            # List contents of the folder
+            try:
+                contents = os.listdir(folder_path)
+                print(f"Contents of {folder_name}:")
+                for item in contents:
+                    print(f"  {item}")
+            except Exception as e:
+                print(f"Error listing directory {folder_path}: {e}")
+                continue
                 
             for i in range(0, 20):
                 subfolder = os.path.join(folder_path, f"cdm_input_{i}")
                 if not os.path.exists(subfolder):
+                    continue
+                
+                print(f"Found subfolder: {subfolder}")
+                try:
+                    subcontents = os.listdir(subfolder)
+                    print(f"Contents of cdm_input_{i}:")
+                    for item in subcontents:
+                        print(f"    {item}")
+                except Exception as e:
+                    print(f"Error listing directory {subfolder}: {e}")
                     continue
                 
                 data = []
@@ -59,6 +83,7 @@ def process_m_value(m_val):
                         try:
                             with open(file_path, "r") as f:
                                 lines = f.readlines()
+                            print(f"Successfully read {fname}")
                             data.extend([eval(line.strip().rstrip(',')) for line in lines])
                             data_found = True
                         except Exception as e:
