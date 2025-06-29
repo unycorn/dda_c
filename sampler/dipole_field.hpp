@@ -3,12 +3,9 @@
 #define DIPOLE_FIELD_HPP
 
 #include <cuComplex.h>
+#include "../include/vector3.hpp"
 
-// Custom types
-struct vec3 {
-    double x, y, z;
-};
-
+// Custom type for complex vector
 struct cvec3 {
     cuDoubleComplex x, y, z;
 };
