@@ -3,7 +3,7 @@
 # Compiler and flags
 NVCC := nvcc
 CXXFLAGS := -std=c++11
-NVCCFLAGS := -arch=sm_60 -std=c++11
+NVCCFLAGS := -arch=sm_60 -std=c++11 -I../include
 
 # Source files
 CU_SOURCES := sample_fields.cu dipole_field.cu
@@ -26,6 +26,9 @@ $(TARGET): $(CU_OBJS) $(CPP_OBJS) $(EXTRA_OBJS)
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 %.o: %.cpp
+	$(NVCC) $(NVCCFLAGS) -x c++ -c $< -o $@
+
+../src/fileio.o: ../src/fileio.cpp
 	$(NVCC) $(NVCCFLAGS) -x c++ -c $< -o $@
 
 clean:
