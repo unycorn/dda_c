@@ -61,7 +61,7 @@ def process_m_value(m_val):
         (trans_min * 0.9, 1.0, 'T')  # Range for transmittance only
     ]
     
-    for ylim, plot_type in ylims:
+    for ymin, ymax, plot_type in ylims:
         fig, axes = plt.subplots(5, 5, figsize=(20, 20), sharex=True, sharey=True)
         
         for p in range(5):
@@ -69,7 +69,7 @@ def process_m_value(m_val):
                 folder_name = f"p{p}_o{o}_m{m_val}"
                 folder_path = os.path.join(base_dir, folder_name)
                 ax = axes[4 - p, o]
-                ax.set_ylim(ylim)
+                ax.set_ylim(ymin, ymax)
                 
                 if not os.path.exists(folder_path):
                     continue
