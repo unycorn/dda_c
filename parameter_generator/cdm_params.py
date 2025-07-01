@@ -123,14 +123,22 @@ if __name__ == "__main__":
     }
 
     # Select lattice type ('square' or 'triangular')
-    lattice_type = 'square'  # Change this to use different lattice types
-    M_OFFSET = 2
+    lattice_type = 'ammann-beenker'  # Change this to use different lattice types
+    M_OFFSET = 4
 
     # Create base lattice
     if lattice_type == 'square':
         x_base, y_base = create_square_lattice(lattice_spacing, lattice_size)
-    else:
+    elif lattice_type == 'triangular':
         x_base, y_base = create_triangular_lattice(lattice_spacing, lattice_size)
+    elif lattice_type == 'ammann-beenker':
+        # Load the Ammann-Beenker lattice from a file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, "Iteration4_300nm.npy")
+        xy_data = np.load(file_path)
+        
+        x_base = np.array([xyi.real for xyi in xy_data])
+        y_base = np.array([xyi.imag for xyi in xy_data])
     
     # Visualize the lattice
     plt.figure(figsize=(10, 10))
