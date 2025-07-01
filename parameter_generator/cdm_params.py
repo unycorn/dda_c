@@ -123,7 +123,8 @@ if __name__ == "__main__":
     }
 
     # Select lattice type ('square' or 'triangular')
-    lattice_type = 'triangular'  # Change this to use different lattice types
+    lattice_type = 'square'  # Change this to use different lattice types
+    M_OFFSET = 2
 
     # Create base lattice
     if lattice_type == 'square':
@@ -154,7 +155,7 @@ if __name__ == "__main__":
         
         for s, spatial_disorder in enumerate(spatial_disorder_degrees):
             for o, orientational_disorder in enumerate(orientational_disorder_degrees):
-                output_folder = os.path.join(base_output_dir, f"p{s}_o{o}_m{m}")
+                output_folder = os.path.join(base_output_dir, f"p{s}_o{o}_m{m+M_OFFSET}")
                 print(output_folder)
                 os.makedirs(output_folder, exist_ok=True)
                 
