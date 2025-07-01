@@ -111,11 +111,15 @@ if __name__ == "__main__":
     seed_count = 20  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
+    # resonator_files = {
+    #     'c-shape-36': 'c-shape-36-cdm-param.csv',
+    #     'c-shape-28': 'c-shape-28-cdm-param.csv',
+    #     'u-shape-37': 'u-shape-37-cdm-param.csv',
+    #     'u-shape-29': 'u-shape-29-cdm-param.csv'
+    # }
     resonator_files = {
-        'c-shape-36': 'c-shape-36-cdm-param.csv',
-        'c-shape-28': 'c-shape-28-cdm-param.csv',
-        'u-shape-37': 'u-shape-37-cdm-param.csv',
-        'u-shape-29': 'u-shape-29-cdm-param.csv'
+        'c-shape-ideal': 'c-shape-ideal-cdm-param.csv',
+        'u-shape-ideal': 'u-shape-ideal-cdm-param.csv'
     }
 
     # Select lattice type ('square' or 'triangular')
