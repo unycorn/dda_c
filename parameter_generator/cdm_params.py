@@ -104,9 +104,9 @@ if __name__ == "__main__":
     # Define base directory and check if it exists
     base_dir = "/home/dharper/dda_c"
     base_output_dir = os.path.join(base_dir, "csv_inputs")
-    if os.path.exists(base_output_dir):
-        print(f"Error: Output directory {base_output_dir} already exists. Please remove it first.")
-        exit(1)
+    # if os.path.exists(base_output_dir):
+    #     print(f"Error: Output directory {base_output_dir} already exists. Please remove it first.")
+    #     exit(1)
 
     seed_count = 20  # Number of seeds to generate
 
