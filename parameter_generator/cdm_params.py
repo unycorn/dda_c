@@ -102,13 +102,14 @@ if __name__ == "__main__":
     lattice_size = 50        # 50x50 lattice
 
     # Define base directory and check if it exists
-    base_dir = "/home/dharper/dda_c"
-    base_output_dir = os.path.join(base_dir, "csv_inputs")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # base_dir = "/home/dharper/dda_c"
+    base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
     # if os.path.exists(base_output_dir):
     #     print(f"Error: Output directory {base_output_dir} already exists. Please remove it first.")
     #     exit(1)
 
-    seed_count = 20  # Number of seeds to generate
+    seed_count = 1  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
@@ -133,7 +134,6 @@ if __name__ == "__main__":
         x_base, y_base = create_triangular_lattice(lattice_spacing, lattice_size)
     elif lattice_type == 'ammann-beenker':
         # Load the Ammann-Beenker lattice from a file
-        script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, "Iteration4_300nm.npy")
         xy_data = np.load(file_path)
         

@@ -25,11 +25,11 @@ std::complex<double> lorentz_alpha_params(double f, const LorentzianParams& para
             break;
         case LorentzianForm::NEG_IF_NUMERATOR:
             numerator = -I * f * params.A;
-            scale_factor = EPSILON_0;
+            scale_factor = 1.0 / Z_0;
             break;
         case LorentzianForm::F2_NUMERATOR:
             numerator = f * f * params.A;
-            scale_factor = EPSILON_0;
+            scale_factor = 1.0;
             break;
     }
     
