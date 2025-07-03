@@ -162,7 +162,7 @@ if __name__ == "__main__":
         2: ('ammann-beenker', (ab_x, ab_y))
     }
 
-    M_OFFSET = 6
+    M_OFFSET = 0
 
     # Disorder parameters
     spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9]  # meters
