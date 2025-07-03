@@ -5,40 +5,67 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def create_square_lattice(spacing, size):
+def create_square_lattice(spacing, physical_size):
     """
-    Create a square lattice with given spacing, starting from origin (0,0).
+    Create a square lattice with given spacing that fits within a physical size.
+    The lattice starts at (0,0) and extends in positive directions.
     
-    :param spacing: Spacing between points in meters
-    :param size: Number of points on each side
-    :return: Arrays of x and y coordinates
+    :param spacing: Spacing between points in meters (e.g., 300e-9 for 300nm)
+    :param physical_size: Physical size of the lattice in meters (e.g., 15e-6 for 15µm)
+    :return: Arrays of x and y coordinates in meters
+    :raises ValueError: If physical_size is not significantly larger than spacing
     """
-    x = np.arange(size) * spacing  # From 0 to (size-1)*spacing
-    y = np.arange(size) * spacing
+    if physical_size < spacing * 2:
+        raise ValueError(f"Physical size ({physical_size*1e9:.1f}nm) must be at least twice the spacing ({spacing*1e9:.1f}nm)")
+    
+    # Calculate number of points that fit within physical size
+    num_points = int(np.floor(physical_size / spacing))
+    
+    if num_points < 2:
+        raise ValueError(f"Physical size too small to fit multiple points with given spacing")
+    
+    # Create arrays starting from 0
+    x = np.arange(num_points) * spacing
+    y = np.arange(num_points) * spacing
+    
     xx, yy = np.meshgrid(x, y)
     return xx.flatten(), yy.flatten()
 
-def create_triangular_lattice(spacing, size):
+def create_triangular_lattice(spacing, physical_size):
     """
-    Create a triangular lattice with given spacing, starting from origin (0,0).
+    Create a triangular lattice with given spacing that fits within a physical size.
+    The lattice starts at (0,0) and extends in positive directions.
     The lattice is created by offsetting alternate rows to create equilateral triangles.
     
-    :param spacing: Spacing between points in meters
-    :param size: Number of points on each side
-    :return: Arrays of x and y coordinates
+    :param spacing: Spacing between points in meters (e.g., 300e-9 for 300nm)
+    :param physical_size: Physical size of the lattice in meters (e.g., 15e-6 for 15µm)
+    :return: Arrays of x and y coordinates in meters
+    :raises ValueError: If physical_size is not significantly larger than spacing
     """
+    if physical_size < spacing * 2:
+        raise ValueError(f"Physical size ({physical_size*1e9:.1f}nm) must be at least twice the spacing ({spacing*1e9:.1f}nm)")
+    
     # Calculate the vertical spacing between rows (height of equilateral triangle)
     y_spacing = spacing * np.sqrt(3) / 2
+    
+    # Calculate number of points that fit within physical size
+    num_points_x = int(np.floor(physical_size / spacing))
+    num_points_y = int(np.floor(physical_size / y_spacing))
+    
+    if num_points_x < 2 or num_points_y < 2:
+        raise ValueError(f"Physical size too small to fit multiple points with given spacing")
     
     # Create base coordinates
     x_coords = []
     y_coords = []
     
-    for i in range(size):
-        for j in range(size):
-            # For odd rows, offset x-coordinate by half the spacing
-            x = j * spacing + (i % 2) * (spacing / 2)
-            y = i * y_spacing
+    # Start at (0,0) and extend in positive directions
+    for i in range(num_points_y):
+        y = i * y_spacing
+        row_offset = (spacing / 2) if i % 2 else 0
+        
+        for j in range(num_points_x):
+            x = j * spacing + row_offset
             x_coords.append(x)
             y_coords.append(y)
     
@@ -97,118 +124,107 @@ def load_resonator_parameters(csv_file):
     return param_list
 
 if __name__ == "__main__":
-    # Parameters
+    # First load Ammann-Beenker data to determine physical dimensions
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ab_file_path = os.path.join(script_dir, "Iteration4_300nm.npy")
+    ab_xy_data = np.load(ab_file_path)
+    ab_x = np.array([xyi.real for xyi in ab_xy_data])
+    ab_y = np.array([xyi.imag for xyi in ab_xy_data])
+    
+    # Calculate physical size from Ammann-Beenker data
+    physical_size = max(
+        ab_x.max() - ab_x.min(),
+        ab_y.max() - ab_y.min()
+    )
     lattice_spacing = 300e-9  # 300 nm spacing
-    lattice_size = 50        # 50x50 lattice
+    
+    print(f"Using physical size of {physical_size*1e6:.1f} µm based on Ammann-Beenker tiling")
 
     # Define base directory and check if it exists
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # base_dir = "/home/dharper/dda_c"
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
-    # if os.path.exists(base_output_dir):
-    #     print(f"Error: Output directory {base_output_dir} already exists. Please remove it first.")
-    #     exit(1)
 
     seed_count = 1  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
+        'c-shape-ideal': 'c-shape-ideal-cdm-param.csv',
         'c-shape-36': 'c-shape-36-cdm-param.csv',
         'c-shape-28': 'c-shape-28-cdm-param.csv',
+        'u-shape-ideal': 'u-shape-ideal-cdm-param.csv',
         'u-shape-37': 'u-shape-37-cdm-param.csv',
         'u-shape-29': 'u-shape-29-cdm-param.csv'
     }
-    # resonator_files = {
-    #     'c-shape-ideal': 'c-shape-ideal-cdm-param.csv',
-    #     'u-shape-ideal': 'u-shape-ideal-cdm-param.csv'
-    # }
 
-    # Select lattice type ('square' or 'triangular')
-    lattice_type = 'ammann-beenker'  # Change this to use different lattice types
+    # Dictionary to store all lattice types
+    lattices = {
+        0: ('square', create_square_lattice(lattice_spacing, physical_size)),
+        1: ('triangular', create_triangular_lattice(lattice_spacing, physical_size)),
+        2: ('ammann-beenker', (ab_x, ab_y))
+    }
+
     M_OFFSET = 6
-
-    # Create base lattice
-    if lattice_type == 'square':
-        x_base, y_base = create_square_lattice(lattice_spacing, lattice_size)
-    elif lattice_type == 'triangular':
-        x_base, y_base = create_triangular_lattice(lattice_spacing, lattice_size)
-    elif lattice_type == 'ammann-beenker':
-        # Load the Ammann-Beenker lattice from a file
-        file_path = os.path.join(script_dir, "Iteration4_300nm.npy")
-        xy_data = np.load(file_path)
-        
-        x_base = np.array([xyi.real for xyi in xy_data])
-        y_base = np.array([xyi.imag for xyi in xy_data])
-    
-    # Visualize the lattice
-    plt.figure(figsize=(10, 10))
-    plt.scatter(x_base, y_base, c='blue', s=10)
-    plt.title(f'Generated {lattice_type.capitalize()} Lattice')
-    plt.xlabel('X Position (m)')
-    plt.ylabel('Y Position (m)')
-    plt.axis('equal')  # Make sure the aspect ratio is 1:1
-    plt.grid(True)
-    plt.show()
-    
-    z_base = np.zeros_like(x_base)  # z coordinates are all 0
 
     # Disorder parameters
     spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9]  # meters
     orientational_disorder_degrees = [0, np.deg2rad(10), np.deg2rad(20), np.deg2rad(50), np.deg2rad(1_000_000)]  # radians
 
-    # Iterate through resonator types, spatial and orientational disorder
+    # Iterate through resonator types, spatial and orientational disorder, and lattice types
     for m, (resonator_type, resonator_filename) in enumerate(resonator_files.items()):
         print(f"\nProcessing resonator type {m}: {resonator_type}")
         param_file = os.path.join(os.path.dirname(__file__), resonator_filename)
         
-        for s, spatial_disorder in enumerate(spatial_disorder_degrees):
-            for o, orientational_disorder in enumerate(orientational_disorder_degrees):
-                output_folder = os.path.join(base_output_dir, f"p{s}_o{o}_m{m+M_OFFSET}")
-                print(output_folder)
-                os.makedirs(output_folder, exist_ok=True)
-                
-                for i in range(seed_count):
-                    output_file = os.path.join(output_folder, f"cdm_input_{i}.csv")
+        for l, (lattice_name, (x_base, y_base)) in lattices.items():
+            print(f"Processing lattice type {l}: {lattice_name}")
+            z_base = np.zeros_like(x_base)  # z coordinates are all 0
+            
+            for s, spatial_disorder in enumerate(spatial_disorder_degrees):
+                for o, orientational_disorder in enumerate(orientational_disorder_degrees):
+                    output_folder = os.path.join(base_output_dir, f"l{l}_p{s}_o{o}_m{m+M_OFFSET}")
+                    print(output_folder)
+                    os.makedirs(output_folder, exist_ok=True)
                     
-                    # Load parameters from CSV
-                    distributions = [
-                        ("delta_x", 0, spatial_disorder),
-                        ("delta_y", 0, spatial_disorder),
-                        ("theta", 0, orientational_disorder)
-                    ]
-                    
-                    # Load all other parameters from the CSV file
-                    df = pd.read_csv(param_file)
-                    for _, row in df.iterrows():
-                        distributions.append((row['parameter'], row['mean'], row['std_dev']))
+                    for i in range(seed_count):
+                        output_file = os.path.join(output_folder, f"cdm_input_{i}.csv")
+                        
+                        # Load parameters from CSV
+                        distributions = [
+                            ("delta_x", 0, spatial_disorder),
+                            ("delta_y", 0, spatial_disorder),
+                            ("theta", 0, orientational_disorder)
+                        ]
+                        
+                        # Load all other parameters from the CSV file
+                        df = pd.read_csv(param_file)
+                        for _, row in df.iterrows():
+                            distributions.append((row['parameter'], row['mean'], row['std_dev']))
 
-                    # Generate disorder parameters directly
-                    num_points = len(x_base)
-                    disorder_data = generate_normal_values(distributions, num_points)
-                    
-                    # Create final data dictionary
-                    data = {}
-                    data['x'] = x_base + disorder_data['delta_x'][:num_points]
-                    data['y'] = y_base + disorder_data['delta_y'][:num_points]
-                    data['z'] = z_base
-                    
-                    # Create the eight resonator parameter columns from the loaded distributions
-                    for prefix in ['ee', 'em', 'me', 'mm']:
-                        data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
-                        data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
-                    
-                    # Copy all other parameters
-                    for key in disorder_data:
-                        if key not in ['delta_x', 'delta_y']:  # f0 and hw are already handled
-                            data[key] = disorder_data[key][:num_points]
-                    
-                    # Use explicit column order
-                    headers = ['x', 'y', 'z', 'theta',
-                            'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
-                            'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
-                            'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
-                            'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
-                    
-                    # Write the output file
-                    write_output_csv(output_file, data, headers)
-                    print(f"Generated CDM input parameters saved to {output_file}")
+                        # Generate disorder parameters directly
+                        num_points = len(x_base)
+                        disorder_data = generate_normal_values(distributions, num_points)
+                        
+                        # Create final data dictionary
+                        data = {}
+                        data['x'] = x_base + disorder_data['delta_x'][:num_points]
+                        data['y'] = y_base + disorder_data['delta_y'][:num_points]
+                        data['z'] = z_base
+                        
+                        # Create the eight resonator parameter columns from the loaded distributions
+                        for prefix in ['ee', 'em', 'me', 'mm']:
+                            data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
+                            data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
+                        
+                        # Copy all other parameters
+                        for key in disorder_data:
+                            if key not in ['delta_x', 'delta_y']:  # f0 and hw are already handled
+                                data[key] = disorder_data[key][:num_points]
+                        
+                        # Use explicit column order
+                        headers = ['x', 'y', 'z', 'theta',
+                                'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
+                                'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
+                                'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
+                                'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
+                        
+                        # Write the output file
+                        write_output_csv(output_file, data, headers)
+                        print(f"Generated CDM input parameters saved to {output_file}")
