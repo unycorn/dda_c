@@ -7,15 +7,17 @@ import re
 
 base_dir = "./csv_inputs"
 
-# Get all subdirectories and extract m values
+# Get all subdirectories and extract l and m values
+l_values = set()
 m_values = set()
-pattern = re.compile(r'p\d+_o\d+_m(\d+)')
+pattern = re.compile(r'l(\d+)_p\d+_o\d+_m(\d+)')
 for dirname in os.listdir(base_dir):
     match = pattern.match(dirname)
     if match:
-        m_values.add(int(match.group(1)))
+        l_values.add(int(match.group(1)))
+        m_values.add(int(match.group(2)))
 
-def process_m_value(m_val):
+def process_l_value(m_val, l_val):
     all_refls = []
     all_trans = []
     
@@ -25,13 +27,13 @@ def process_m_value(m_val):
     # First pass to collect all reflection and transmission values
     for p in range(5):
         for o in range(5):
-            folder_name = f"p{p}_o{o}_m{m_val}"
+            folder_name = f"l{l_val}_p{p}_o{o}_m{m_val}"
             folder_path = os.path.join(base_dir, folder_name)
             
             if not os.path.exists(folder_path):
                 continue
                 
-            for i in range(0, 20):
+            for i in range(0, 10):
                 subfolder = os.path.join(folder_path, f"cdm_input_{i}")
                 if not os.path.exists(subfolder):
                     continue
@@ -66,7 +68,7 @@ def process_m_value(m_val):
         
         for p in range(5):
             for o in range(5):
-                folder_name = f"p{p}_o{o}_m{m_val}"
+                folder_name = f"l{l_val}_p{p}_o{o}_m{m_val}"
                 folder_path = os.path.join(base_dir, folder_name)
                 ax = axes[4 - p, o]
                 ax.set_ylim(ymin, ymax)
@@ -74,7 +76,7 @@ def process_m_value(m_val):
                 if not os.path.exists(folder_path):
                     continue
                 
-                for i in range(0, 20):
+                for i in range(0, 10):
                     subfolder = os.path.join(folder_path, f"cdm_input_{i}")
                     if not os.path.exists(subfolder):
                         continue
@@ -106,12 +108,13 @@ def process_m_value(m_val):
                 if p == 4:
                     ax.set_xlabel(f'o={olist[o]}°')
         
-        plt.suptitle(f'M={m_val} {plot_type} Plot')
+        plt.suptitle(f'L={l_val} M={m_val} {plot_type} Plot')
         plt.tight_layout()
-        output_file = os.path.join(base_dir, f'm{m_val}_{plot_type.lower()}_plot.png')
+        output_file = os.path.join(base_dir, f'l{l_val}_m{m_val}_{plot_type.lower()}_plot.png')
         plt.savefig(output_file)
         plt.close()
 
-# Process each m value
-for m_val in sorted(m_values):
-    process_m_value(m_val)
+# Process each combination of l and m values
+for l_val in sorted(l_values):
+    for m_val in sorted(m_values):
+        process_l_value(m_val, l_val)

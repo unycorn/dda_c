@@ -82,27 +82,41 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     return new_regions, np.asarray(new_vertices)
 
 class VoronoiAnimation:
-    def __init__(self, positions, thetas, pols_files):
+    def __init__(self, positions, thetas, pols_files, global_normalize=True, show_arrows=True, show_colorbar=True, colormap='viridis'):
         self.positions = positions
+        self.positions_microns = positions * 1e6  # store micron positions
         self.thetas = thetas
         self.pols_files = pols_files
+        self.global_normalize = global_normalize
+        self.show_arrows = show_arrows
+        self.show_colorbar = show_colorbar
+        self.colormap = plt.get_cmap(colormap)
         self.vor = Voronoi(positions[:, :2])
         self.regions, self.vertices = voronoi_finite_polygons_2d(self.vor)
         
-        # Calculate arrow components
-        self.U = np.cos(thetas)
-        self.V = np.sin(thetas)
+        # Calculate arrow components if arrows are enabled
+        if self.show_arrows:
+            self.U = np.cos(thetas)
+            self.V = np.sin(thetas)
+        
+        # Load all polarization data up front
+        self.polarization_data = []
+        self.global_min = float('inf')
+        self.global_max = float('-inf')
+        for pols_file in pols_files:
+            N, freq, polarizations = read_polarizations_binary(pols_file)
+            self.polarization_data.append((freq, polarizations))
+            px_mag = np.abs(polarizations[:, 0])
+            self.global_min = min(self.global_min, px_mag.min())
+            self.global_max = max(self.global_max, px_mag.max())
         
         # Setup the figure
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
         
-        # Convert positions to microns for display
-        positions_microns = positions * 1e6  # assuming input is in meters
-        
-        # Set plot limits
-        margin = 0.1
-        x_min, x_max = positions_microns[:, 0].min(), positions_microns[:, 0].max()
-        y_min, y_max = positions_microns[:, 1].min(), positions_microns[:, 1].max()
+        # Set plot limits with tighter margins
+        margin = 0.01
+        x_min, x_max = self.positions_microns[:, 0].min(), self.positions_microns[:, 0].max()
+        y_min, y_max = self.positions_microns[:, 1].min(), self.positions_microns[:, 1].max()
         x_range = x_max - x_min
         y_range = y_max - y_min
         self.ax.set_xlim(x_min - margin * x_range, x_max + margin * x_range)
@@ -113,91 +127,123 @@ class VoronoiAnimation:
         self.ax.set_xlabel('X (µm)')
         self.ax.set_ylabel('Y (µm)')
         
-        # Initialize colorbar
-        self.smap = plt.cm.ScalarMappable(cmap=plt.cm.viridis)
-        self.cbar = self.fig.colorbar(self.smap, ax=self.ax, 
-                                    label='|px| (C⋅m)')  # dipole moment units
+        # Initialize colorbar only if enabled
+        self.smap = plt.cm.ScalarMappable(cmap=self.colormap,
+                                         norm=plt.Normalize(self.global_min, self.global_max))
+        if self.show_colorbar:
+            self.cbar = self.fig.colorbar(self.smap, ax=self.ax, 
+                                        label='|$p_x$| (C⋅m)')  # dipole moment units
         
         # Title for frequency display
         self.title = self.ax.set_title('')
 
+        # Pre-create all polygon patches and store them
+        self.patches = []
+        for region in self.regions:
+            polygon = self.vertices[region] * 1e6  # convert vertices to microns
+            patch = plt.Polygon(polygon, alpha=0.6, edgecolor='black', linewidth=0.5)
+            self.ax.add_patch(patch)
+            self.patches.append(patch)
+        
+        # Pre-create quiver if arrows are enabled
+        if self.show_arrows:
+            self.quiver = self.ax.quiver(self.positions_microns[:, 0], 
+                                       self.positions_microns[:, 1],
+                                       self.U, self.V, color='black',
+                                       scale=100, width=0.001,
+                                       headwidth=3, headlength=4,
+                                       headaxislength=3.5,
+                                       pivot='middle')
+        
+        # Set initial frame
+        freq, polarizations = self.polarization_data[0]
+        colors = np.abs(polarizations[:, 0])
+        normalized_colors = (colors - self.global_min) / (self.global_max - self.global_min)
+        for patch, color in zip(self.patches, normalized_colors):
+            patch.set_facecolor(plt.cm.viridis(color))
+        
+        freq_thz = freq / 1e12
+        self.title_text = self.ax.set_title(f'Frequency: {freq_thz:.2f} THz')
+
     def init_animation(self):
-        self.ax.cla()
-        return []
+        # Don't clear the axes, just return the artists we'll be animating
+        return self.patches + [self.title_text]
 
     def animate(self, i):
-        self.ax.cla()
+        print(f'Animating frame {i+1}/{len(self.polarization_data)}')
         
-        # Read polarization data for this frame
-        N, freq, polarizations = read_polarizations_binary(self.pols_files[i])
+        # Use pre-loaded polarization data
+        freq, polarizations = self.polarization_data[i]
         
-        # Calculate colors
+        # Calculate colors using actual magnitudes
         colors = np.abs(polarizations[:, 0])  # px component
-        colors = (colors - colors.min()) / (colors.max() - colors.min())
         
-        # Update colorbar
+        if self.global_normalize:
+            normalized_colors = (colors - self.global_min) / (self.global_max - self.global_min)
+            vmin, vmax = self.global_min, self.global_max
+        else:
+            vmin, vmax = colors.min(), colors.max()
+            normalized_colors = (colors - vmin) / (vmax - vmin)
+        
+        # Update colorbar array and limits
         self.smap.set_array(colors)
+        self.smap.set_clim(vmin, vmax)
         
-        # Convert positions to microns for display
-        positions_microns = self.positions * 1e6  # assuming input is in meters
+        # Update polygon colors without recreating them
+        for patch, color in zip(self.patches, normalized_colors):
+            patch.set_facecolor(self.colormap(color))
         
-        # Plot polygons
-        for region, color in zip(self.regions, colors):
-            polygon = self.vertices[region] * 1e6  # convert vertices to microns
-            self.ax.fill(*zip(*polygon), alpha=0.6, c=plt.cm.viridis(color))
-        
-        # Plot arrows
-        self.ax.quiver(positions_microns[:, 0], positions_microns[:, 1], 
-                      self.U, self.V, colors, cmap='viridis',
-                      scale=50, width=0.002, headwidth=4,
-                      headlength=5, headaxislength=4.5,
-                      pivot='middle')
-        
-        # Update title with frequency
+        # Update frequency title
         freq_thz = freq / 1e12
-        self.ax.set_title(f'Frequency: {freq_thz:.2f} THz')
+        self.title_text.set_text(f'Frequency: {freq_thz:.2f} THz')
         
-        # Maintain plot properties
+        # Maintain tight plot limits
         margin = 0.01
-        x_min, x_max = positions_microns[:, 0].min(), positions_microns[:, 0].max()
-        y_min, y_max = positions_microns[:, 1].min(), positions_microns[:, 1].max()
+        x_min, x_max = self.positions_microns[:, 0].min(), self.positions_microns[:, 0].max()
+        y_min, y_max = self.positions_microns[:, 1].min(), self.positions_microns[:, 1].max()
         x_range = x_max - x_min
         y_range = y_max - y_min
         self.ax.set_xlim(x_min - margin * x_range, x_max + margin * x_range)
         self.ax.set_ylim(y_min - margin * y_range, y_max + margin * y_range)
-        self.ax.set_aspect('equal')
-        self.ax.set_xlabel('X (µm)')
-        self.ax.set_ylabel('Y (µm)')
         
-        return []
+        # Return all artists that were modified
+        return self.patches + [self.title_text]
 
-def create_animation(positions, thetas, pols_folder, output_file):
-    # Get all .pols files and sort them by frequency
+def create_animation(positions, thetas, pols_folder, output_file, global_normalize=True, 
+                   show_arrows=True, show_colorbar=True, colormap='viridis'):
+    # Get all .pols files
     pols_files = glob.glob(os.path.join(pols_folder, '*.pols'))
     
-    # Read frequencies to sort files
-    freq_file_pairs = []
+    # Read frequencies and full data to sort files
+    data_pairs = []
     for file in pols_files:
-        with open(file, 'rb') as f:
-            N = np.fromfile(f, dtype=np.int32, count=1)[0]
-            freq = np.fromfile(f, dtype=np.float64, count=1)[0]
-            freq_file_pairs.append((freq, file))
+        N, freq, polarizations = read_polarizations_binary(file)
+        data_pairs.append((freq, file, N, polarizations))
     
     # Sort by frequency
-    freq_file_pairs.sort()
-    sorted_pols_files = [pair[1] for pair in freq_file_pairs]
+    data_pairs.sort()
+    sorted_pols_files = [pair[1] for pair in data_pairs]
     
-    # Create animation
-    anim = VoronoiAnimation(positions, thetas, sorted_pols_files)
+    # Create animation with pre-loaded data
+    anim = VoronoiAnimation(positions, thetas, sorted_pols_files, 
+                           global_normalize, show_arrows, show_colorbar, colormap)
     animation = FuncAnimation(anim.fig, anim.animate,
                             frames=len(sorted_pols_files),
                             init_func=anim.init_animation,
-                            interval=200,  # 200ms between frames
+                            interval=300,
                             blit=True)
     
-    # Save animation
-    writer = FFMpegWriter(fps=10, metadata=dict(artist='Me'),
-                         bitrate=2000)
+    # Save animation with more stable settings
+    writer = FFMpegWriter(fps=20,
+                         metadata=dict(artist='Me'),
+                         bitrate=2000,  # Reduced bitrate for stability
+                         codec='libx264',  # Explicitly use libx264 codec
+                         extra_args=['-preset', 'medium',  # Use medium preset instead of veryslow
+                                   '-crf', '23',  # Slightly reduced quality but more stable
+                                   '-pix_fmt', 'yuv420p',  # Ensure compatibility
+                                   '-movflags', '+faststart',  # Enable streaming-friendly format
+                                   '-profile:v', 'main',  # Use main profile for better compatibility
+                                   '-tune', 'animation'])  # Optimize for animated content
     animation.save(output_file, writer=writer)
     plt.close()
 
@@ -206,6 +252,14 @@ def main():
     parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
     parser.add_argument('-o', '--output', 
                        help='Output video file (default: same name as input CSV but with .mp4 extension)')
+    parser.add_argument('--per-frame-normalize', action='store_true',
+                       help='Normalize colors per frame instead of globally')
+    parser.add_argument('--no-arrows', action='store_true',
+                       help='Hide the orientation arrows in the plot')
+    parser.add_argument('--no-colorbar', action='store_true',
+                       help='Hide the colorbar in the plot')
+    parser.add_argument('--colormap', default='viridis',
+                       help='Matplotlib colormap to use (default: viridis)')
     
     args = parser.parse_args()
     
@@ -214,17 +268,41 @@ def main():
     positions = df[['x', 'y', 'z']].values
     thetas = df['theta'].values
     
-    # Get the pols folder path by removing .csv from the input file path
-    pols_folder = os.path.splitext(args.csv_file)[0]
+    # Get the pols folder path from the CSV path
+    csv_dir = os.path.dirname(args.csv_file)
+    csv_basename = os.path.basename(args.csv_file)
+    # Check if this is a cdm_input file in an l{l_val} directory
+    if csv_basename.startswith('cdm_input_') and os.path.basename(csv_dir).startswith('l'):
+        pols_folder = csv_dir
+    else:
+        # Fall back to old behavior of removing .csv extension
+        pols_folder = os.path.splitext(args.csv_file)[0]
+    
     if not os.path.isdir(pols_folder):
         raise ValueError(f"Could not find polarization data folder: {pols_folder}")
     
-    # Set default output filename to be the same as input but with .mp4 extension
+    # Set default output filename to be the same as input but with flags and .mp4 extension
     if args.output is None:
-        args.output = os.path.splitext(args.csv_file)[0] + '.mp4'
+        base_name = os.path.splitext(args.csv_file)[0]
+        flags = []
+        if args.per_frame_normalize:
+            flags.append('frame-norm')
+        if args.no_arrows:
+            flags.append('no-arrows')
+        if args.no_colorbar:
+            flags.append('no-cbar')
+        if args.colormap != 'viridis':
+            flags.append(f'cmap-{args.colormap}')
+        
+        flag_str = '_'.join(flags) if flags else 'default'
+        args.output = f"{base_name}_{flag_str}.mp4"
     
     # Create the animation
-    create_animation(positions, thetas, pols_folder, args.output)
+    create_animation(positions, thetas, pols_folder, args.output, 
+                    global_normalize=not args.per_frame_normalize,
+                    show_arrows=not args.no_arrows,
+                    show_colorbar=not args.no_colorbar,
+                    colormap=args.colormap)
 
 if __name__ == "__main__":
     main()
