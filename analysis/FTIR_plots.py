@@ -110,7 +110,7 @@ def process_l_value(m_val, l_val):
         
         plt.suptitle(f'L={l_val} M={m_val} {plot_type} Plot')
         plt.tight_layout()
-        output_file = os.path.join(base_dir, f'l{l_val}_m{m_val}_{plot_type.lower()}_plot.png')
+        output_file = os.path.join(base_dir, f'{plot_type.lower()}_l{l_val}_m{m_val}_plot.png')
         plt.savefig(output_file)
         plt.close()
 
