@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 
-base_dir = "./csv_inputs"
+base_dir = "../csv_inputs"
 
 # Get all subdirectories and extract l and m values
 l_values = set()
