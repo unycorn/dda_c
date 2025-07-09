@@ -87,8 +87,8 @@ def process_l_value(m_val, l_val, global_ranges):
     # Create three different plots with different y-axis limits based on global ranges
     ylims = [
         (-0.1, 1.1, 'RT'),  # Full range for both R and T
-        (max(0, refl_min - 0.05), min(1.0, refl_max + 0.05), 'R'),  # Range for reflectance
-        (max(0, trans_min - 0.05), min(1.0, trans_max + 0.05), 'T')  # Range for transmittance
+        (max(0, refl_min - 0.01), min(1.0, refl_max + 0.01), 'R'),  # Range for reflectance
+        (max(0, trans_min - 0.01), min(1.0, trans_max + 0.01), 'T')  # Range for transmittance
     ]
     
     for ymin, ymax, plot_type in ylims:
