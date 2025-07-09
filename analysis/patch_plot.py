@@ -235,17 +235,8 @@ def create_animation(positions, thetas, pols_folder, output_file, global_normali
                             interval=300,
                             blit=True)
     
-    # Save animation with more stable settings
-    writer = FFMpegWriter(fps=20,
-                         metadata=dict(artist='Me'),
-                         bitrate=2000,  # Reduced bitrate for stability
-                         codec='libx264',  # Explicitly use libx264 codec
-                         extra_args=['-preset', 'medium',  # Use medium preset instead of veryslow
-                                   '-crf', '23',  # Slightly reduced quality but more stable
-                                   '-pix_fmt', 'yuv420p',  # Ensure compatibility
-                                   '-movflags', '+faststart',  # Enable streaming-friendly format
-                                   '-profile:v', 'main',  # Use main profile for better compatibility
-                                   '-tune', 'animation'])  # Optimize for animated content
+    # Save animation with minimal FFmpeg settings
+    writer = FFMpegWriter(fps=20)
     animation.save(output_file, writer=writer)
     plt.close()
 
