@@ -212,7 +212,9 @@ class VoronoiAnimation:
 def create_animation(positions, thetas, pols_folder, output_file, global_normalize=True, 
                    show_arrows=True, show_colorbar=True, colormap='viridis'):
     # Get all .pols files
-    pols_files = glob.glob(os.path.join(pols_folder, '*.pols'))
+    pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
+    if not pols_files:
+        raise ValueError(f"No .pols files found in {pols_folder}")
     
     # Read frequencies and full data to sort files
     data_pairs = []
@@ -268,16 +270,8 @@ def main():
     positions = df[['x', 'y', 'z']].values
     thetas = df['theta'].values
     
-    # Get the pols folder path from the CSV path
-    csv_dir = os.path.dirname(args.csv_file)
-    csv_basename = os.path.basename(args.csv_file)
-    # Check if this is a cdm_input file in an l{l_val} directory
-    if csv_basename.startswith('cdm_input_') and os.path.basename(csv_dir).startswith('l'):
-        pols_folder = csv_dir
-    else:
-        # Fall back to old behavior of removing .csv extension
-        pols_folder = os.path.splitext(args.csv_file)[0]
-    
+    # Get the pols folder path by removing .csv from the input file path
+    pols_folder = os.path.splitext(args.csv_file)[0]
     if not os.path.isdir(pols_folder):
         raise ValueError(f"Could not find polarization data folder: {pols_folder}")
     
