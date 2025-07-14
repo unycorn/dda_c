@@ -23,8 +23,9 @@ def write_polarizations_csv(data, freq, outfile=sys.stdout):
     
     # Write data in scientific notation with 4 decimal places
     for ex, mz in data:
-        print(f"{ex.real:.4e},{ex.imag:.4e},{mz.real:.4e},{mz.imag:.4e}", 
-              file=outfile)
+        print(f"px: {ex:.4e}, mz: {mz:.4e}")
+        # print(f"{ex.real:.4e},{ex.imag:.4e},{mz.real:.4e},{mz.imag:.4e}", 
+        #       file=outfile)
 
 def main():
     if len(sys.argv) != 2:

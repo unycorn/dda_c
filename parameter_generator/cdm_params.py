@@ -126,7 +126,7 @@ def load_resonator_parameters(csv_file):
 if __name__ == "__main__":
     # First load Ammann-Beenker data to determine physical dimensions
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    ab_file_path = os.path.join(script_dir, "Iteration4_300nm.npy")
+    ab_file_path = os.path.join(script_dir, "Iteration4_300nm_density.npy")
     ab_xy_data = np.load(ab_file_path)
     ab_x = np.array([xyi.real for xyi in ab_xy_data])
     ab_y = np.array([xyi.imag for xyi in ab_xy_data])
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # Dictionary to store all lattice types
     lattices = {
         0: ('square', create_square_lattice(lattice_spacing, physical_size)),
-        1: ('triangular', create_triangular_lattice(lattice_spacing, physical_size)),
+        1: ('triangular', create_triangular_lattice(lattice_spacing/np.sqrt(np.sin(np.pi / 3)), physical_size)),
         2: ('ammann-beenker', (ab_x, ab_y))
     }
 
