@@ -2,7 +2,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
 
-# First dataset (100 nm displacement)
+# infinity by infinity COMSOL data, doubly perturbed lattice, 300nm spacing
 data1 = np.array([
     [250.00, 0.012442, 0.96285],
     [252.00, 0.013371, 0.95988],
@@ -57,58 +57,58 @@ data1 = np.array([
     [350.00, 0.012248, 0.94206],
 ])
 
-# Second dataset (ideal square lattice)
+# 50 by 50 DDA data, doubly perturbed lattice, 300nm spacing
 data2 = np.array([
-    [2.5e+14,0.00870698,0.97632],
-    [2.52041e+14,0.00933221,0.97441],
-    [2.54082e+14,0.0100189,0.972381],
-    [2.56122e+14,0.0107773,0.970182],
-    [2.58163e+14,0.0116202,0.967722],
-    [2.60204e+14,0.0125615,0.964894],
-    [2.62245e+14,0.0136161,0.961619],
-    [2.64286e+14,0.0147992,0.957865],
-    [2.66327e+14,0.0161286,0.953629],
-    [2.68367e+14,0.0176262,0.948896],
-    [2.70408e+14,0.0193213,0.943594],
-    [2.72449e+14,0.021252,0.937565],
-    [2.7449e+14,0.0234671,0.930565],
-    [2.76531e+14,0.026024,0.922329],
-    [2.78571e+14,0.028987,0.912647],
-    [2.80612e+14,0.032431,0.901342],
-    [2.82653e+14,0.0364497,0.888146],
-    [2.84694e+14,0.0411644,0.8726],
-    [2.86735e+14,0.046723,0.854074],
-    [2.88776e+14,0.0532887,0.83192],
-    [2.90816e+14,0.0610306,0.805552],
-    [2.92857e+14,0.0701139,0.774338],
-    [2.94898e+14,0.0806559,0.737713],
-    [2.96939e+14,0.0926393,0.695544],
-    [2.9898e+14,0.105781,0.648586],
-    [3.0102e+14,0.119357,0.599088],
-    [3.03061e+14,0.132062,0.551367],
-    [3.05102e+14,0.142046,0.51179],
-    [3.07143e+14,0.147343,0.487465],
-    [3.09184e+14,0.146645,0.483565],
-    [3.11224e+14,0.139976,0.50079],
-    [3.13265e+14,0.128706,0.535002],
-    [3.15306e+14,0.114882,0.579379],
-    [3.17347e+14,0.100412,0.627251],
-    [3.19388e+14,0.0866246,0.673795],
-    [3.21429e+14,0.0742251,0.716302],
-    [3.23469e+14,0.0634583,0.753685],
-    [3.2551e+14,0.0542984,0.785845],
-    [3.27551e+14,0.0465901,0.813185],
-    [3.29592e+14,0.0401339,0.8363],
-    [3.31633e+14,0.0347296,0.855819],
-    [3.33673e+14,0.0301965,0.872332],
-    [3.35714e+14,0.0263794,0.886354],
-    [3.37755e+14,0.0231491,0.898323],
-    [3.39796e+14,0.0204006,0.908599],
-    [3.41837e+14,0.0180491,0.917468],
-    [3.43878e+14,0.0160272,0.925158],
-    [3.45918e+14,0.0142805,0.93185],
-    [3.47959e+14,0.0127653,0.93769],
-    [3.5e+14,0.0114458,0.942802],
+    [2.500000e+14,1.300802e-02,9.612604e-01],
+    [2.520408e+14,1.399249e-02,9.582724e-01],
+    [2.540816e+14,1.508790e-02,9.549477e-01],
+    [2.561224e+14,1.631071e-02,9.512133e-01],
+    [2.581633e+14,1.767909e-02,9.469854e-01],
+    [2.602041e+14,1.921251e-02,9.421726e-01],
+    [2.622449e+14,2.093142e-02,9.366878e-01],
+    [2.642857e+14,2.285982e-02,9.304663e-01],
+    [2.663265e+14,2.503343e-02,9.234541e-01],
+    [2.683673e+14,2.750784e-02,9.155398e-01],
+    [2.704082e+14,3.035547e-02,9.064947e-01],
+    [2.724490e+14,3.365637e-02,8.959885e-01],
+    [2.744898e+14,3.749453e-02,8.836365e-01],
+    [2.765306e+14,4.195828e-02,8.690321e-01],
+    [2.785714e+14,4.714476e-02,8.517832e-01],
+    [2.806122e+14,5.318260e-02,8.315096e-01],
+    [2.826531e+14,6.027029e-02,8.076853e-01],
+    [2.846939e+14,6.867159e-02,7.794409e-01],
+    [2.867347e+14,7.864494e-02,7.456642e-01],
+    [2.887755e+14,9.037934e-02,7.053419e-01],
+    [2.908163e+14,1.039751e-01,6.578188e-01],
+    [2.928571e+14,1.193903e-01,6.029525e-01],
+    [2.948980e+14,1.362182e-01,5.416530e-01],
+    [2.969388e+14,1.533682e-01,4.769745e-01],
+    [2.989796e+14,1.688790e-01,4.150312e-01],
+    [3.010204e+14,1.801927e-01,3.645881e-01],
+    [3.030612e+14,1.853556e-01,3.338347e-01],
+    [3.051020e+14,1.845650e-01,3.254969e-01],
+    [3.071429e+14,1.795917e-01,3.369292e-01],
+    [3.091837e+14,1.710673e-01,3.661673e-01],
+    [3.112245e+14,1.585243e-01,4.120921e-01],
+    [3.132653e+14,1.426755e-01,4.698121e-01],
+    [3.153061e+14,1.254453e-01,5.317960e-01],
+    [3.173469e+14,1.086536e-01,5.917389e-01],
+    [3.193878e+14,9.338375e-02,6.460744e-01],
+    [3.214286e+14,8.005452e-02,6.934930e-01],
+    [3.234694e+14,6.868180e-02,7.340142e-01],
+    [3.255102e+14,5.909059e-02,7.682781e-01],
+    [3.275510e+14,5.104030e-02,7.971344e-01],
+    [3.295918e+14,4.428705e-02,8.214379e-01],
+    [3.316327e+14,3.860999e-02,8.419622e-01],
+    [3.336735e+14,3.381959e-02,8.593706e-01],
+    [3.357143e+14,2.975790e-02,8.742142e-01],
+    [3.377551e+14,2.629555e-02,8.869417e-01],
+    [3.397959e+14,2.332777e-02,8.979135e-01],
+    [3.418367e+14,2.077027e-02,9.074183e-01],
+    [3.438776e+14,1.855535e-02,9.156884e-01],
+    [3.459184e+14,1.662839e-02,9.229143e-01],
+    [3.479592e+14,1.494492e-02,9.292547e-01],
+    [3.500000e+14,1.346824e-02,9.348441e-01],
 ])
 
 # 50 by 50 DDA data, ideal square lattice, 300nm spacing
@@ -1258,17 +1258,17 @@ colors = ['blue', 'red', 'green', 'purple']
 # Plotting
 plt.figure(figsize=(10, 6))
 
-# # Plot first dataset (100 nm displacement)
-# plt.plot(frequency1, reflection1, 'o', color=colors[0], label='Reflection (100 nm displacement)', markersize=4)
-# plt.plot(frequency1, transmission1, 's', color=colors[0], label='Transmission (100 nm displacement)', markersize=4)
-# plt.plot(frequency_smooth1, reflection_smooth1, '-', color=colors[0], label='_nolegend_')
-# plt.plot(frequency_smooth1, transmission_smooth1, '--', color=colors[0], label='_nolegend_')
+# Plot first dataset (100 nm displacement)
+plt.plot(frequency1*1e12, reflection1, 'o', color=colors[0], label='Reflection COMSOL doubly perturbed', markersize=4)
+plt.plot(frequency1*1e12, transmission1, 's', color=colors[0], label='Transmission COMSOL doubly perturbed', markersize=4)
+plt.plot(frequency_smooth1*1e12, reflection_smooth1, '-', color=colors[0], label='_nolegend_')
+plt.plot(frequency_smooth1*1e12, transmission_smooth1, '--', color=colors[0], label='_nolegend_')
 
-# # Plot second dataset (ideal square lattice)
-# plt.plot(frequency2, reflection2, 'o', color=colors[1], label='Reflection (ideal square lattice)', markersize=4)
-# plt.plot(frequency2, transmission2, 's', color=colors[1], label='Transmission (ideal square lattice)', markersize=4)
-# plt.plot(frequency_smooth2, reflection_smooth2, '-', color=colors[1], label='_nolegend_')
-# plt.plot(frequency_smooth2, transmission_smooth2, '--', color=colors[1], label='_nolegend_')
+# Plot second dataset (ideal square lattice)
+plt.plot(frequency2, reflection2, 'o', color=colors[1], label='Reflection (DDA $50\\times 50$) doubly perturbed', markersize=4)
+plt.plot(frequency2, transmission2, 's', color=colors[1], label='Transmission (DDA $50\\times 50$) doubly perturbed', markersize=4)
+plt.plot(frequency_smooth2, reflection_smooth2, '-', color=colors[1], label='_nolegend_')
+plt.plot(frequency_smooth2, transmission_smooth2, '--', color=colors[1], label='_nolegend_')
 
 # Plot third dataset
 plt.plot(frequency3, reflection3, 'o', color=colors[2], label='Reflection (DDA $50\\times 50$)', markersize=4)
