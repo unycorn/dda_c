@@ -138,7 +138,7 @@ if __name__ == "__main__":
         os.chdir(output_folder)
         
         # Run the solver command
-        solver_cmd = f"~/dda_c/dharper/solver . 250e12 350e12 50"
+        solver_cmd = f"~/dda_c/solver . 250e12 350e12 50"
         os.system(solver_cmd)
         
         # Run the analytic sampler
