@@ -133,15 +133,18 @@ if __name__ == "__main__":
         plt.savefig(os.path.join(output_folder, "2x2_unit_cell_pattern.png"))
         plt.show()
         
-        # Change to the output folder and run solver and sampler
+        # Change to the output folder and run solver
         original_dir = os.getcwd()
         os.chdir(output_folder)
         
-        # Run the solver command
-        solver_cmd = f"~/dda_c/solver . 250e12 350e12 50"
+        # Run the solver command from output_folder
+        solver_cmd = f"~/dda_c/dharper/solver . 250e12 350e12 50"
         os.system(solver_cmd)
         
-        # Run the analytic sampler
+        # Change to cdm_input_0 directory for the sampler
+        os.chdir("cdm_input_0")
+        
+        # Run the analytic sampler from cdm_input_0
         sampler_cmd = f"python ~/dda_c/sampler/analytic_sampler/ana_sampler.py . {physical_size * physical_size}"
         os.system(sampler_cmd)
         
