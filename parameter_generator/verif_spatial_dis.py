@@ -39,96 +39,113 @@ def modify_2x2_unit_cell(x_coords, y_coords, shift):
     return x_grid.flatten(), y_grid.flatten()
 
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Set up basic parameters - using 300nm spacing as base
-    physical_size = 15e-6  # 15 µm size
-    lattice_spacing = 300e-9  # 300 nm spacing
-    
-    print(f"Using physical size of {physical_size*1e6:.1f} µm with {lattice_spacing*1e9:.0f} nm spacing")
+    for shift in [0, 100]:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Set up basic parameters - using 300nm spacing as base
+        physical_size = 15e-6  # 15 µm size
+        lattice_spacing = 300e-9  # 300 nm spacing
+        
+        print(f"Using physical size of {physical_size*1e6:.1f} µm with {lattice_spacing*1e9:.0f} nm spacing")
 
-    # Define output directory
-    base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
-    os.makedirs(base_output_dir, exist_ok=True)
+        # Define output directory
+        base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
+        os.makedirs(base_output_dir, exist_ok=True)
 
-    # Create square lattice
-    x_base, y_base = create_square_lattice(lattice_spacing, physical_size)
-    
-    shift = 0
+        # Create square lattice
+        x_base, y_base = create_square_lattice(lattice_spacing, physical_size)
 
-    # Modify the lattice to create 2x2 unit cells
-    x_base, y_base = modify_2x2_unit_cell(x_base, y_base, shift)
-    z_base = np.zeros_like(x_base)
-    
-    # Load u-shape-ideal parameters
-    param_file = os.path.join(script_dir, 'u-shape-ideal-cdm-param.csv')
-    
-    # Create output folder and file
-    output_folder = os.path.join(base_output_dir, f"square_shift_{shift}_nm")  # Changed folder name
-    os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(output_folder, "cdm_input_0.csv")
-    
-    # Set up distributions with no disorder
-    distributions = [
-        ("delta_x", 0, 0),
-        ("delta_y", 0, 0),
-        ("theta", 0, 0)
-    ]
-    
-    # Load parameters from CSV file
-    df = pd.read_csv(param_file)
-    for _, row in df.iterrows():
-        distributions.append((row['parameter'], row['mean'], row['std_dev']))
+        # Modify the lattice to create 2x2 unit cells
+        x_base, y_base = modify_2x2_unit_cell(x_base, y_base, shift)
+        z_base = np.zeros_like(x_base)
+        
+        # Load u-shape-ideal parameters
+        param_file = os.path.join(script_dir, 'u-shape-ideal-cdm-param.csv')
+        
+        # Create output folder and file
+        output_folder = os.path.join(base_output_dir, f"square_shift_{shift}_nm")  # Changed folder name
+        os.makedirs(output_folder, exist_ok=True)
+        output_file = os.path.join(output_folder, "cdm_input_0.csv")
+        
+        # Set up distributions with no disorder
+        distributions = [
+            ("delta_x", 0, 0),
+            ("delta_y", 0, 0),
+            ("theta", 0, 0)
+        ]
+        
+        # Load parameters from CSV file
+        df = pd.read_csv(param_file)
+        for _, row in df.iterrows():
+            distributions.append((row['parameter'], row['mean'], row['std_dev']))
 
-    # Generate parameters
-    num_points = len(x_base)
-    disorder_data = generate_normal_values(distributions, num_points)
-    
-    # Create final data dictionary
-    data = {}
-    data['x'] = x_base
-    data['y'] = y_base
-    data['z'] = z_base
-    
-    # Create the resonator parameter columns
-    for prefix in ['ee', 'em', 'me', 'mm']:
-        data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
-        data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
-    
-    # Copy other parameters
-    for key in disorder_data:
-        if key not in ['delta_x', 'delta_y']:  # f0 and hw already handled
-            data[key] = disorder_data[key][:num_points]
-    
-    # Use explicit column order
-    headers = ['x', 'y', 'z', 'theta',
-             'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
-             'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
-             'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
-             'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
-    
-    # Write the output file
-    write_output_csv(output_file, data, headers)
-    print(f"Generated CDM input parameters saved to {output_file}")
-    
-    # Visualize the lattice
-    plt.figure(figsize=(10, 10))
-    plt.scatter(x_base * 1e9, y_base * 1e9, s=50)  # Convert to nm for plotting
-    plt.grid(True)
-    plt.axis('equal')
-    plt.xlabel('X position (nm)')
-    plt.ylabel('Y position (nm)')
-    plt.title('2x2 Unit Cell Pattern')
-    
-    # Highlight the first unit cell
-    mask = (x_base < 400e-9) & (y_base < 400e-9)
-    plt.scatter(x_base[mask] * 1e9, y_base[mask] * 1e9, s=100, facecolors='none', 
-               edgecolors='r', linewidth=2, label='First unit cell')
-    
-    # Add annotations for the first unit cell coordinates
-    for x, y in zip(x_base[mask] * 1e9, y_base[mask] * 1e9):
-        plt.annotate(f'({int(x)},{int(y)})', (x, y), 
-                    xytext=(10, 10), textcoords='offset points')
-    
-    plt.legend()
-    plt.show()
+        # Generate parameters
+        num_points = len(x_base)
+        disorder_data = generate_normal_values(distributions, num_points)
+        
+        # Create final data dictionary
+        data = {}
+        data['x'] = x_base
+        data['y'] = y_base
+        data['z'] = z_base
+        
+        # Create the resonator parameter columns
+        for prefix in ['ee', 'em', 'me', 'mm']:
+            data[f'{prefix}_f0'] = disorder_data['f0'][:num_points]
+            data[f'{prefix}_hw'] = disorder_data['hw'][:num_points]
+        
+        # Copy other parameters
+        for key in disorder_data:
+            if key not in ['delta_x', 'delta_y']:  # f0 and hw already handled
+                data[key] = disorder_data[key][:num_points]
+        
+        # Use explicit column order
+        headers = ['x', 'y', 'z', 'theta',
+                'ee_f0', 'ee_hw', 'ee_A', 'ee_B', 'ee_C',
+                'em_f0', 'em_hw', 'em_A', 'em_B', 'em_C',
+                'me_f0', 'me_hw', 'me_A', 'me_B', 'me_C',
+                'mm_f0', 'mm_hw', 'mm_A', 'mm_B', 'mm_C']
+        
+        # Write the output file
+        write_output_csv(output_file, data, headers)
+        print(f"Generated CDM input parameters saved to {output_file}")
+        
+        # Visualize the lattice
+        plt.figure(figsize=(10, 10))
+        plt.scatter(x_base * 1e9, y_base * 1e9, s=50)  # Convert to nm for plotting
+        plt.grid(True)
+        plt.axis('equal')
+        plt.xlabel('X position (nm)')
+        plt.ylabel('Y position (nm)')
+        plt.title('2x2 Unit Cell Pattern')
+        
+        # Highlight the first unit cell
+        mask = (x_base < 400e-9) & (y_base < 400e-9)
+        plt.scatter(x_base[mask] * 1e9, y_base[mask] * 1e9, s=100, facecolors='none', 
+                edgecolors='r', linewidth=2, label='First unit cell')
+        
+        # Add annotations for the first unit cell coordinates
+        for x, y in zip(x_base[mask] * 1e9, y_base[mask] * 1e9):
+            plt.annotate(f'({int(x)},{int(y)})', (x, y), 
+                        xytext=(10, 10), textcoords='offset points')
+        
+        plt.legend()
+        plt.savefig(os.path.join(output_folder, "2x2_unit_cell_pattern.png"))
+        plt.show()
+        
+        # Change to the output folder and run solver and sampler
+        original_dir = os.getcwd()
+        os.chdir(output_folder)
+        
+        # Run the solver command
+        solver_cmd = f"~/dda_c/dharper/solver . 250e12 350e12 50"
+        os.system(solver_cmd)
+        
+        # Run the analytic sampler
+        sampler_cmd = f"python ~/dda_c/sampler/analytic_sampler/ana_sampler.py . {physical_size * physical_size}"
+        os.system(sampler_cmd)
+        
+        # Return to original directory
+        os.chdir(original_dir)
+
+
