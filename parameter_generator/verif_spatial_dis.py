@@ -2,7 +2,7 @@ from cdm_params import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-def modify_2x2_unit_cell(x_coords, y_coords):
+def modify_2x2_unit_cell(x_coords, y_coords, shift):
     """
     Modifies a square lattice to create 2x2 unit cells with coordinates:
     (0,0), (200,100), (100,200), (300,300) nm
@@ -22,8 +22,8 @@ def modify_2x2_unit_cell(x_coords, y_coords):
     y_grid = y_coords.reshape(ny, nx)
     
     # Unit cell shifts in nanometers converted to meters
-    dx = np.array([0, 200, 100, 300]) * 1e-9
-    dy = np.array([0, 100, 200, 300]) * 1e-9
+    dx = np.array([0, 300 - shift, 0 + shift, 300]) * 1e-9
+    dy = np.array([0, 0 + shift, 300 - shift, 300]) * 1e-9
     
     # For each 2x2 block
     for i in range(0, ny-1, 2):
@@ -54,15 +54,17 @@ if __name__ == "__main__":
     # Create square lattice
     x_base, y_base = create_square_lattice(lattice_spacing, physical_size)
     
+    shift = 0
+
     # Modify the lattice to create 2x2 unit cells
-    x_base, y_base = modify_2x2_unit_cell(x_base, y_base)
+    x_base, y_base = modify_2x2_unit_cell(x_base, y_base, shift)
     z_base = np.zeros_like(x_base)
     
     # Load u-shape-ideal parameters
     param_file = os.path.join(script_dir, 'u-shape-ideal-cdm-param.csv')
     
     # Create output folder and file
-    output_folder = os.path.join(base_output_dir, "square_ideal_2x2")  # Changed folder name
+    output_folder = os.path.join(base_output_dir, f"square_shift_{shift}_nm")  # Changed folder name
     os.makedirs(output_folder, exist_ok=True)
     output_file = os.path.join(output_folder, "cdm_input_0.csv")
     
