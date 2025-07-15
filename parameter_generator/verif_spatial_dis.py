@@ -84,7 +84,7 @@ def run_and_measure(is_double, name, shift):
     print(f"Using physical size of {physical_size*1e6:.1f} µm with {lattice_spacing*1e9:.0f} nm spacing")
 
     # Define output directory
-    base_output_dir = os.path.join("~", "dda_c", "csv_inputs")
+    base_output_dir = os.path.expanduser(os.path.join("~", "dda_c", "csv_inputs"))
     os.makedirs(base_output_dir, exist_ok=True)
 
     # Create square lattice
