@@ -1,10 +1,9 @@
 import numpy as np
 from scipy.interpolate import CubicSpline
-
 import matplotlib.pyplot as plt
 
-# Data points
-data = np.array([
+# First dataset (100 nm displacement)
+data1 = np.array([
     [2.5e+14, 0.00974144, 0.973304],
     [2.52041e+14, 0.0104801, 0.971116],
     [2.54082e+14, 0.011299, 0.968746],
@@ -57,26 +56,93 @@ data = np.array([
     [3.5e+14, 0.0102146, 0.948974],
 ])
 
-# Extract columns
-frequency = data[:, 0]
-reflection = data[:, 1]
-transmission = data[:, 2]
+# Second dataset (ideal square lattice)
+data2 = np.array([
+    [2.5e+14,0.00870698,0.97632],
+    [2.52041e+14,0.00933221,0.97441],
+    [2.54082e+14,0.0100189,0.972381],
+    [2.56122e+14,0.0107773,0.970182],
+    [2.58163e+14,0.0116202,0.967722],
+    [2.60204e+14,0.0125615,0.964894],
+    [2.62245e+14,0.0136161,0.961619],
+    [2.64286e+14,0.0147992,0.957865],
+    [2.66327e+14,0.0161286,0.953629],
+    [2.68367e+14,0.0176262,0.948896],
+    [2.70408e+14,0.0193213,0.943594],
+    [2.72449e+14,0.021252,0.937565],
+    [2.7449e+14,0.0234671,0.930565],
+    [2.76531e+14,0.026024,0.922329],
+    [2.78571e+14,0.028987,0.912647],
+    [2.80612e+14,0.032431,0.901342],
+    [2.82653e+14,0.0364497,0.888146],
+    [2.84694e+14,0.0411644,0.8726],
+    [2.86735e+14,0.046723,0.854074],
+    [2.88776e+14,0.0532887,0.83192],
+    [2.90816e+14,0.0610306,0.805552],
+    [2.92857e+14,0.0701139,0.774338],
+    [2.94898e+14,0.0806559,0.737713],
+    [2.96939e+14,0.0926393,0.695544],
+    [2.9898e+14,0.105781,0.648586],
+    [3.0102e+14,0.119357,0.599088],
+    [3.03061e+14,0.132062,0.551367],
+    [3.05102e+14,0.142046,0.51179],
+    [3.07143e+14,0.147343,0.487465],
+    [3.09184e+14,0.146645,0.483565],
+    [3.11224e+14,0.139976,0.50079],
+    [3.13265e+14,0.128706,0.535002],
+    [3.15306e+14,0.114882,0.579379],
+    [3.17347e+14,0.100412,0.627251],
+    [3.19388e+14,0.0866246,0.673795],
+    [3.21429e+14,0.0742251,0.716302],
+    [3.23469e+14,0.0634583,0.753685],
+    [3.2551e+14,0.0542984,0.785845],
+    [3.27551e+14,0.0465901,0.813185],
+    [3.29592e+14,0.0401339,0.8363],
+    [3.31633e+14,0.0347296,0.855819],
+    [3.33673e+14,0.0301965,0.872332],
+    [3.35714e+14,0.0263794,0.886354],
+    [3.37755e+14,0.0231491,0.898323],
+    [3.39796e+14,0.0204006,0.908599],
+    [3.41837e+14,0.0180491,0.917468],
+    [3.43878e+14,0.0160272,0.925158],
+    [3.45918e+14,0.0142805,0.93185],
+    [3.47959e+14,0.0127653,0.93769],
+    [3.5e+14,0.0114458,0.942802],
+])
 
-# Fit cubic Bézier curves
-reflection_spline = CubicSpline(frequency, reflection)
-transmission_spline = CubicSpline(frequency, transmission)
+# Process both datasets
+frequency1, reflection1, transmission1 = data1[:, 0], data1[:, 1], data1[:, 2]
+frequency2, reflection2, transmission2 = data2[:, 0], data2[:, 1], data2[:, 2]
+
+# Fit cubic Bézier curves for both datasets
+reflection_spline1 = CubicSpline(frequency1, reflection1)
+transmission_spline1 = CubicSpline(frequency1, transmission1)
+reflection_spline2 = CubicSpline(frequency2, reflection2)
+transmission_spline2 = CubicSpline(frequency2, transmission2)
 
 # Generate smooth data for plotting
-frequency_smooth = np.linspace(frequency.min(), frequency.max(), 500)
-reflection_smooth = reflection_spline(frequency_smooth)
-transmission_smooth = transmission_spline(frequency_smooth)
+frequency_smooth1 = np.linspace(frequency1.min(), frequency1.max(), 500)
+frequency_smooth2 = np.linspace(frequency2.min(), frequency2.max(), 500)
+reflection_smooth1 = reflection_spline1(frequency_smooth1)
+transmission_smooth1 = transmission_spline1(frequency_smooth1)
+reflection_smooth2 = reflection_spline2(frequency_smooth2)
+transmission_smooth2 = transmission_spline2(frequency_smooth2)
 
 # Plotting
 plt.figure(figsize=(10, 6))
-plt.plot(frequency, reflection, 'o', label='Reflection (Data)', markersize=4)
-plt.plot(frequency, transmission, 'o', label='Transmission (Data)', markersize=4)
-plt.plot(frequency_smooth, reflection_smooth, '-', label='Reflection (Cubic Bézier)')
-plt.plot(frequency_smooth, transmission_smooth, '-', label='Transmission (Cubic Bézier)')
+
+# Plot first dataset
+line1, = plt.plot(frequency1, reflection1, 'o', label='Reflection (100 nm displacement)', markersize=4)
+line2, = plt.plot(frequency1, transmission1, 'o', label='Transmission (100 nm displacement)', markersize=4)
+plt.plot(frequency_smooth1, reflection_smooth1, '-', color=line1.get_color(), label='_nolegend_')
+plt.plot(frequency_smooth1, transmission_smooth1, '-', color=line2.get_color(), label='_nolegend_')
+
+# Plot second dataset
+line3, = plt.plot(frequency2, reflection2, 'o', label='Reflection (ideal square lattice)', markersize=4)
+line4, = plt.plot(frequency2, transmission2, 'o', label='Transmission (ideal square lattice)', markersize=4)
+plt.plot(frequency_smooth2, reflection_smooth2, '-', color=line3.get_color(), label='_nolegend_')
+plt.plot(frequency_smooth2, transmission_smooth2, '-', color=line4.get_color(), label='_nolegend_')
+
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Amplitude')
 plt.title('Reflection and Transmission vs Frequency')
