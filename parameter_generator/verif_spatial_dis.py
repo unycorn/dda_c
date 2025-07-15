@@ -138,14 +138,11 @@ if __name__ == "__main__":
         os.chdir(output_folder)
         
         # Run the solver command from output_folder
-        solver_cmd = f"~/dda_c/dharper/solver . 250e12 350e12 50"
+        solver_cmd = f"~/dda_c/solver . 250e12 350e12 50"
         os.system(solver_cmd)
         
-        # Change to cdm_input_0 directory for the sampler
-        os.chdir("cdm_input_0")
-        
         # Run the analytic sampler from cdm_input_0
-        sampler_cmd = f"python ~/dda_c/sampler/analytic_sampler/ana_sampler.py . {physical_size * physical_size}"
+        sampler_cmd = f"python ~/dda_c/sampler/analytic_sampler/ana_sampler.py ./cdm_input_0/ {physical_size * physical_size}"
         os.system(sampler_cmd)
         
         # Return to original directory
