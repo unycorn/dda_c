@@ -182,7 +182,7 @@ def run_and_measure(is_double, name, shift):
     os.system(solver_cmd)
     
     # Change to cdm_input_0 directory for the sampler
-    os.chdir(os.path.join(output_folder, "cdm_input_0"))
+    os.chdir(os.path.expanduser(os.path.join(output_folder, "cdm_input_0")))
     
     # Run the analytic sampler from cdm_input_0 with expanded home path
     sampler_cmd = f"python {os.path.expanduser('~/dda_c/sampler/analytic_sampler/ana_sampler.py')} . {physical_size * physical_size}"
