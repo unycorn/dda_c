@@ -29,11 +29,15 @@ def calculate_r(freq, ex_sum, area):
     return r
 
 def calculate_R_T(r):
-    # Calculate reflection coefficient R = |r|²
-    R = np.abs(r) ** 2
-    # Calculate transmission coefficient T = |1 + r|²
-    T = np.abs(1 + r) ** 2
-    return R, T
+    # # Calculate reflection coefficient R = |r|²
+    # R = np.abs(r) ** 2
+    # # Calculate transmission coefficient T = |1 + r|²
+    # T = np.abs(1 + r) ** 2
+    # return R, T
+
+    r = r
+    t = 1 + r
+    return r, t
 
 def process_pols_folder(folder_path, area):
     # Store results as (frequency, R, T) tuples
@@ -69,12 +73,12 @@ def main():
             sys.exit(1)
         
         # Write results to CSV
-        output_file = os.path.join(folder_path, 'reflection_transmission.csv')
+        output_file = os.path.join(folder_path, 'reflection_transmission_complex.csv')
         with open(output_file, 'w') as f:
-            f.write("frequency,R,T\n")
-            for freq, R, T in results:
-                f.write(f"{freq:.6e},{R:.6e},{T:.6e}\n")
-                print(f"[{freq:.6e},{R:.6e},{T:.6e}],")
+            f.write("frequency,r,t\n")
+            for freq, r, t in results:
+                f.write(f"{freq:.6e},{r:.6e},{t:.6e}\n")
+                print(f"[{freq:.6e},{r:.6e},{t:.6e}],")
         
         print(f"Results written to {output_file}")
         
