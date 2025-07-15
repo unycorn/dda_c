@@ -74,6 +74,7 @@ def main():
             f.write("frequency,R,T\n")
             for freq, R, T in results:
                 f.write(f"{freq:.6e},{R:.6e},{T:.6e}\n")
+                print(f"[{freq:.6e},{R:.6e},{T:.6e}],")
         
         print(f"Results written to {output_file}")
         

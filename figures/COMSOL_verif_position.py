@@ -110,38 +110,177 @@ data2 = np.array([
     [3.5e+14,0.0114458,0.942802],
 ])
 
-# Process both datasets
+# Third dataset (newly added)
+data3 = np.array([
+    [2.500000e+14,1.300802e-02,9.612604e-01],
+    [2.520408e+14,1.399249e-02,9.582724e-01],
+    [2.540816e+14,1.508790e-02,9.549477e-01],
+    [2.561224e+14,1.631071e-02,9.512133e-01],
+    [2.581633e+14,1.767909e-02,9.469854e-01],
+    [2.602041e+14,1.921251e-02,9.421726e-01],
+    [2.622449e+14,2.093142e-02,9.366878e-01],
+    [2.642857e+14,2.285982e-02,9.304663e-01],
+    [2.663265e+14,2.503343e-02,9.234541e-01],
+    [2.683673e+14,2.750784e-02,9.155398e-01],
+    [2.704082e+14,3.035547e-02,9.064947e-01],
+    [2.724490e+14,3.365637e-02,8.959885e-01],
+    [2.744898e+14,3.749453e-02,8.836365e-01],
+    [2.765306e+14,4.195828e-02,8.690321e-01],
+    [2.785714e+14,4.714476e-02,8.517832e-01],
+    [2.806122e+14,5.318260e-02,8.315096e-01],
+    [2.826531e+14,6.027029e-02,8.076853e-01],
+    [2.846939e+14,6.867159e-02,7.794409e-01],
+    [2.867347e+14,7.864494e-02,7.456642e-01],
+    [2.887755e+14,9.037934e-02,7.053419e-01],
+    [2.908163e+14,1.039751e-01,6.578188e-01],
+    [2.928571e+14,1.193903e-01,6.029525e-01],
+    [2.948980e+14,1.362182e-01,5.416530e-01],
+    [2.969388e+14,1.533682e-01,4.769745e-01],
+    [2.989796e+14,1.688790e-01,4.150312e-01],
+    [3.010204e+14,1.801927e-01,3.645881e-01],
+    [3.030612e+14,1.853556e-01,3.338347e-01],
+    [3.051020e+14,1.845650e-01,3.254969e-01],
+    [3.071429e+14,1.795917e-01,3.369292e-01],
+    [3.091837e+14,1.710673e-01,3.661673e-01],
+    [3.112245e+14,1.585243e-01,4.120921e-01],
+    [3.132653e+14,1.426755e-01,4.698121e-01],
+    [3.153061e+14,1.254453e-01,5.317960e-01],
+    [3.173469e+14,1.086536e-01,5.917389e-01],
+    [3.193878e+14,9.338375e-02,6.460744e-01],
+    [3.214286e+14,8.005452e-02,6.934930e-01],
+    [3.234694e+14,6.868180e-02,7.340142e-01],
+    [3.255102e+14,5.909059e-02,7.682781e-01],
+    [3.275510e+14,5.104030e-02,7.971344e-01],
+    [3.295918e+14,4.428705e-02,8.214379e-01],
+    [3.316327e+14,3.860999e-02,8.419622e-01],
+    [3.336735e+14,3.381959e-02,8.593706e-01],
+    [3.357143e+14,2.975790e-02,8.742142e-01],
+    [3.377551e+14,2.629555e-02,8.869417e-01],
+    [3.397959e+14,2.332777e-02,8.979135e-01],
+    [3.418367e+14,2.077027e-02,9.074183e-01],
+    [3.438776e+14,1.855535e-02,9.156884e-01],
+    [3.459184e+14,1.662839e-02,9.229143e-01],
+    [3.479592e+14,1.494492e-02,9.292547e-01],
+    [3.500000e+14,1.346824e-02,9.348441e-01],
+])
+
+# Fourth dataset - convert THz to Hz
+data4_raw = np.array([
+    [2.500000e+14, 1.167336e-02, 9.654647e-01],
+    [2.520408e+14, 1.250947e-02, 9.629223e-01],
+    [2.540816e+14, 1.343360e-02, 9.601239e-01],
+    [2.561224e+14, 1.445926e-02, 9.570082e-01],
+    [2.581633e+14, 1.560011e-02, 9.535030e-01],
+    [2.602041e+14, 1.686964e-02, 9.495395e-01],
+    [2.622449e+14, 1.828273e-02, 9.450629e-01],
+    [2.642857e+14, 1.985883e-02, 9.400292e-01],
+    [2.663265e+14, 2.162528e-02, 9.343855e-01],
+    [2.683673e+14, 2.361955e-02, 9.280448e-01],
+    [2.704082e+14, 2.589012e-02, 9.208633e-01],
+    [2.724490e+14, 2.849487e-02, 9.126225e-01],
+    [2.744898e+14, 3.149560e-02, 9.030390e-01],
+    [2.765306e+14, 3.495308e-02, 8.918181e-01],
+    [2.785714e+14, 3.893530e-02, 8.787048e-01],
+    [2.806122e+14, 4.353953e-02, 8.634408e-01],
+    [2.826531e+14, 4.891020e-02, 8.456423e-01],
+    [2.846939e+14, 5.523833e-02, 8.246945e-01],
+    [2.867347e+14, 6.273290e-02, 7.997576e-01],
+    [2.887755e+14, 7.158560e-02, 7.699658e-01],
+    [2.908163e+14, 8.199795e-02, 7.345490e-01],
+    [2.928571e+14, 9.420452e-02, 6.926892e-01],
+    [2.948980e+14, 1.083742e-01, 6.436537e-01],
+    [2.969388e+14, 1.244737e-01, 5.873118e-01],
+    [2.989796e+14, 1.421092e-01, 5.247512e-01],
+    [3.010204e+14, 1.603002e-01, 4.590867e-01],
+    [3.030612e+14, 1.772907e-01, 3.961924e-01],
+    [3.051020e+14, 1.906085e-01, 3.446183e-01],
+    [3.071429e+14, 1.976218e-01, 3.137843e-01],
+    [3.091837e+14, 1.965756e-01, 3.104143e-01],
+    [3.112245e+14, 1.875051e-01, 3.351989e-01],
+    [3.132653e+14, 1.722673e-01, 3.823991e-01],
+    [3.153061e+14, 1.536309e-01, 4.427897e-01],
+    [3.173469e+14, 1.341718e-01, 5.074569e-01],
+    [3.193878e+14, 1.156691e-01, 5.700182e-01],
+    [3.214286e+14, 9.905704e-02, 6.269372e-01],
+    [3.234694e+14, 8.465174e-02, 6.768384e-01],
+    [3.255102e+14, 7.240843e-02, 7.196547e-01],
+    [3.275510e+14, 6.211188e-02, 7.559720e-01],
+    [3.295918e+14, 5.349040e-02, 7.866239e-01],
+    [3.316327e+14, 4.627431e-02, 8.124749e-01],
+    [3.336735e+14, 4.022145e-02, 8.343200e-01],
+    [3.357143e+14, 3.512520e-02, 8.528469e-01],
+    [3.377551e+14, 3.081423e-02, 8.686310e-01],
+    [3.397959e+14, 2.714878e-02, 8.821440e-01],
+    [3.418367e+14, 2.401582e-02, 8.937697e-01],
+    [3.438776e+14, 2.132424e-02, 9.038199e-01],
+    [3.459184e+14, 1.900044e-02, 9.125493e-01],
+    [3.479592e+14, 1.698468e-02, 9.201675e-01],
+    [3.500000e+14, 1.522815e-02, 9.268481e-01],
+])
+
+# Convert THz to Hz
+data4 = np.copy(data4_raw)
+data4[:, 0] *= 1e12
+
+# Process all datasets
 frequency1, reflection1, transmission1 = data1[:, 0], data1[:, 1], data1[:, 2]
 frequency2, reflection2, transmission2 = data2[:, 0], data2[:, 1], data2[:, 2]
+frequency3, reflection3, transmission3 = data3[:, 0], data3[:, 1], data3[:, 2]
+frequency4, reflection4, transmission4 = data4[:, 0], data4[:, 1], data4[:, 2]
 
-# Fit cubic Bézier curves for both datasets
+# Fit cubic Bézier curves for all datasets
 reflection_spline1 = CubicSpline(frequency1, reflection1)
 transmission_spline1 = CubicSpline(frequency1, transmission1)
 reflection_spline2 = CubicSpline(frequency2, reflection2)
 transmission_spline2 = CubicSpline(frequency2, transmission2)
+reflection_spline3 = CubicSpline(frequency3, reflection3)
+transmission_spline3 = CubicSpline(frequency3, transmission3)
+reflection_spline4 = CubicSpline(frequency4, reflection4)
+transmission_spline4 = CubicSpline(frequency4, transmission4)
 
 # Generate smooth data for plotting
 frequency_smooth1 = np.linspace(frequency1.min(), frequency1.max(), 500)
 frequency_smooth2 = np.linspace(frequency2.min(), frequency2.max(), 500)
+frequency_smooth3 = np.linspace(frequency3.min(), frequency3.max(), 500)
+frequency_smooth4 = np.linspace(frequency4.min(), frequency4.max(), 500)
 reflection_smooth1 = reflection_spline1(frequency_smooth1)
 transmission_smooth1 = transmission_spline1(frequency_smooth1)
 reflection_smooth2 = reflection_spline2(frequency_smooth2)
 transmission_smooth2 = transmission_spline2(frequency_smooth2)
+reflection_smooth3 = reflection_spline3(frequency_smooth3)
+transmission_smooth3 = transmission_spline3(frequency_smooth3)
+reflection_smooth4 = reflection_spline4(frequency_smooth4)
+transmission_smooth4 = transmission_spline4(frequency_smooth4)
+
+# Define colors for each dataset
+colors = ['blue', 'red', 'green', 'purple']
 
 # Plotting
 plt.figure(figsize=(10, 6))
 
-# Plot first dataset
-line1, = plt.plot(frequency1, reflection1, 'o', label='Reflection (100 nm displacement)', markersize=4)
-line2, = plt.plot(frequency1, transmission1, 'o', label='Transmission (100 nm displacement)', markersize=4)
-plt.plot(frequency_smooth1, reflection_smooth1, '-', color=line1.get_color(), label='_nolegend_')
-plt.plot(frequency_smooth1, transmission_smooth1, '-', color=line2.get_color(), label='_nolegend_')
+# Plot first dataset (100 nm displacement)
+plt.plot(frequency1, reflection1, 'o', color=colors[0], label='Reflection (100 nm displacement)', markersize=4)
+plt.plot(frequency1, transmission1, 's', color=colors[0], label='Transmission (100 nm displacement)', markersize=4)
+plt.plot(frequency_smooth1, reflection_smooth1, '-', color=colors[0], label='_nolegend_')
+plt.plot(frequency_smooth1, transmission_smooth1, '--', color=colors[0], label='_nolegend_')
 
-# Plot second dataset
-line3, = plt.plot(frequency2, reflection2, 'o', label='Reflection (ideal square lattice)', markersize=4)
-line4, = plt.plot(frequency2, transmission2, 'o', label='Transmission (ideal square lattice)', markersize=4)
-plt.plot(frequency_smooth2, reflection_smooth2, '-', color=line3.get_color(), label='_nolegend_')
-plt.plot(frequency_smooth2, transmission_smooth2, '-', color=line4.get_color(), label='_nolegend_')
+# Plot second dataset (ideal square lattice)
+plt.plot(frequency2, reflection2, 'o', color=colors[1], label='Reflection (ideal square lattice)', markersize=4)
+plt.plot(frequency2, transmission2, 's', color=colors[1], label='Transmission (ideal square lattice)', markersize=4)
+plt.plot(frequency_smooth2, reflection_smooth2, '-', color=colors[1], label='_nolegend_')
+plt.plot(frequency_smooth2, transmission_smooth2, '--', color=colors[1], label='_nolegend_')
+
+# Plot third dataset
+plt.plot(frequency3, reflection3, 'o', color=colors[2], label='Reflection (DDA 50by50)', markersize=4)
+plt.plot(frequency3, transmission3, 's', color=colors[2], label='Transmission (DDA 50by50)', markersize=4)
+plt.plot(frequency_smooth3, reflection_smooth3, '-', color=colors[2], label='_nolegend_')
+plt.plot(frequency_smooth3, transmission_smooth3, '--', color=colors[2], label='_nolegend_')
+
+# Plot fourth dataset
+plt.plot(frequency4, reflection4, 'o', color=colors[3], label='Reflection (COMSOL 300nm)', markersize=4)
+plt.plot(frequency4, transmission4, 's', color=colors[3], label='Transmission (COMSOL 300nm)', markersize=4)
+plt.plot(frequency_smooth4, reflection_smooth4, '-', color=colors[3], label='_nolegend_')
+plt.plot(frequency_smooth4, transmission_smooth4, '--', color=colors[3], label='_nolegend_')
 
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Amplitude')
