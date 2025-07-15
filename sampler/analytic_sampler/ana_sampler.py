@@ -28,8 +28,15 @@ def calculate_r(freq, ex_sum, area):
     r = 1j * k / (2 * EPSILON_0 * area) * ex_sum
     return r
 
+def calculate_R_T(r):
+    # Calculate reflection coefficient R = |r|²
+    R = np.abs(r) ** 2
+    # Calculate transmission coefficient T = |1 + r|²
+    T = np.abs(1 + r) ** 2
+    return R, T
+
 def process_pols_folder(folder_path, area):
-    # Store results as (frequency, r) pairs
+    # Store results as (frequency, R, T) tuples
     results = []
     
     # Process all .pols files in the folder
@@ -38,7 +45,8 @@ def process_pols_folder(folder_path, area):
             N, freq, data = read_polarizations_binary(str(file_path))
             ex_sum = np.sum(data[:, 0])
             r = calculate_r(freq, ex_sum, area)
-            results.append((freq, r))
+            R, T = calculate_R_T(r)
+            results.append((freq, R, T))
         except Exception as e:
             print(f"Error processing {file_path}: {e}", file=sys.stderr)
     
@@ -61,11 +69,11 @@ def main():
             sys.exit(1)
         
         # Write results to CSV
-        output_file = os.path.join(folder_path, 'reflection_coefficients.csv')
+        output_file = os.path.join(folder_path, 'reflection_transmission.csv')
         with open(output_file, 'w') as f:
-            f.write("frequency,r_real,r_imag\n")
-            for freq, r in results:
-                f.write(f"{freq:.6e},{r.real:.6e},{r.imag:.6e}\n")
+            f.write("frequency,R,T\n")
+            for freq, R, T in results:
+                f.write(f"{freq:.6e},{R:.6e},{T:.6e}\n")
         
         print(f"Results written to {output_file}")
         
