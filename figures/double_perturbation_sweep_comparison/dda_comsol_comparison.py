@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 Z0 = 376.730313668  # Ohms, characteristic impedance of free space
+I = 1j
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 DDA_folder = os.path.join(script_path, 'DDA_double_perturbation_sweep')
@@ -68,20 +69,22 @@ for i, folder in enumerate(DDA_folder_list):
     # plt.plot(COMSOL_data_0['frequency']*1e12, np.angle(COMSOL_data_0['reflection']), label=f'R, Spacing {spacing_nm} nm', color=f"red")
     # plt.plot(COMSOL_data_0['frequency']*1e12, np.angle(COMSOL_data_0['transmission']), label=f'T, Spacing {spacing_nm} nm', color=f"blue")
 
+    plt.figure(figsize=(10, 6))
     plt.plot(data['frequency'], np.real(data['r']), label=f'Re[r] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='-')
     plt.plot(data['frequency'], np.imag(data['r']), label=f'Im[r] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='--')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.real(COMSOL_data_0['reflection']), label=f'Re[r] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='-')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.imag(COMSOL_data_0['reflection']), label=f'Im[r] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='--')
     plt.legend()
-    plt.savefig(f"reflection_comparison_spacing_{spacing_nm}nm.png")
+    plt.savefig(f"/Users/dharper/Documents/DDA_C/figures/double_perturbation_sweep_comparison/reflection_comparison_spacing_{spacing_nm}nm.pdf")
     plt.show()
 
+    plt.figure(figsize=(10, 6))
     plt.plot(data['frequency'], np.real(data['t']), label=f'Re[t] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='-')
     plt.plot(data['frequency'], np.imag(data['t']), label=f'Im[t] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='--')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.real(COMSOL_data_0['transmission']), label=f'Re[t] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='-')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.imag(COMSOL_data_0['transmission']), label=f'Im[t] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='--')
     plt.legend()
-    plt.savefig(f"transmission_comparison_spacing_{spacing_nm}nm.png")
+    plt.savefig(f"/Users/dharper/Documents/DDA_C/figures/double_perturbation_sweep_comparison/transmission_comparison_spacing_{spacing_nm}nm.pdf")
     plt.show()
 
     DDA_sigma_se = (2/Z0) * (1 - data['r'] - data['t']) / (1 + data['r'] + data['t'])
@@ -90,16 +93,39 @@ for i, folder in enumerate(DDA_folder_list):
     COMSOL_sigma_se = (2/Z0) * (1 - COMSOL_data_0['reflection'] - COMSOL_data_0['transmission']) / (1 + COMSOL_data_0['reflection'] + COMSOL_data_0['transmission'])
     COMSOL_sigma_sm = (2*Z0) * (1 + COMSOL_data_0['reflection'] - COMSOL_data_0['transmission']) / (1 - COMSOL_data_0['reflection'] + COMSOL_data_0['transmission'])
 
+    DDA_chi_se = DDA_sigma_se / (-I * 2 * np.pi * data['frequency'])
+    DDA_chi_sm = DDA_sigma_sm / (-I * 2 * np.pi * data['frequency'])
+    COMSOL_chi_se = COMSOL_sigma_se / (-I * 2 * np.pi * COMSOL_data_0['frequency']*1e12)
+    COMSOL_chi_sm = COMSOL_sigma_sm / (-I * 2 * np.pi * COMSOL_data_0['frequency']*1e12)
+
     print(data['r'], COMSOL_data_0['reflection'], COMSOL_sigma_se, DDA_sigma_se)
 
+    plt.figure(figsize=(10, 6))
     plt.plot(data['frequency'], np.real(DDA_sigma_se), label=f'Re[$\\sigma_{{se}}$] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='-')
     plt.plot(data['frequency'], np.imag(DDA_sigma_se), label=f'Im[$\\sigma_{{se}}$] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='--')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.real(COMSOL_sigma_se), label=f'Re[$\\sigma_{{se}}$] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='-')
     plt.plot(COMSOL_data_0['frequency']*1e12, np.imag(COMSOL_sigma_se), label=f'Re[$\\sigma_{{se}}$] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='--')
     plt.legend()
-    plt.savefig(f"sigma_se_comparison_spacing_{spacing_nm}nm.png")
+    plt.savefig(f"/Users/dharper/Documents/DDA_C/figures/double_perturbation_sweep_comparison/sigma_se_comparison_spacing_{spacing_nm}nm.pdf")
     plt.show()
 
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['frequency'], np.real(DDA_chi_se), label=f'Re[$\\chi_{{se}}$] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='-')
+    plt.plot(data['frequency'], np.imag(DDA_chi_se), label=f'Im[$\\chi_{{se}}$] DDA, Spacing {spacing_nm} nm', color=f"red", linestyle='--')
+    plt.plot(COMSOL_data_0['frequency']*1e12, np.real(COMSOL_chi_se), label=f'Re[$\\chi_{{se}}$] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='-')
+    plt.plot(COMSOL_data_0['frequency']*1e12, np.imag(COMSOL_chi_se), label=f'Re[$\\chi_{{se}}$] COMSOL, Spacing {spacing_nm} nm', color=f"blue", linestyle='--')
+    plt.legend()
+    plt.savefig(f"/Users/dharper/Documents/DDA_C/figures/double_perturbation_sweep_comparison/chi_se_comparison_spacing_{spacing_nm}nm.pdf")
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['frequency'], np.abs(data['r'])**2, label=f'R DDA, Spacing {spacing_nm} nm', color=f"red")
+    plt.plot(data['frequency'], np.abs(data['t'])**2, label=f'T DDA, Spacing {spacing_nm} nm', color=f"red")
+    plt.plot(COMSOL_data_0['frequency']*1e12, np.abs(COMSOL_data_0['reflection'])**2, label=f'R COMSOL, Spacing {spacing_nm} nm', color=f"blue")
+    plt.plot(COMSOL_data_0['frequency']*1e12, np.abs(COMSOL_data_0['transmission'])**2, label=f'T COMSOL, Spacing {spacing_nm} nm', color=f"blue")
+    plt.legend()
+    plt.savefig(f"/Users/dharper/Documents/DDA_C/figures/double_perturbation_sweep_comparison/RT_comparison_spacing_{spacing_nm}nm.pdf")
+    plt.show()
 
     # plt.plot(COMSOL_data_0['frequency']*1e12, np.angle(COMSOL_data_0['reflection']), label=f'R, Spacing {spacing_nm} nm', color=f"red")
     # plt.plot(COMSOL_data_0['frequency']*1e12, np.angle(COMSOL_data_0['transmission']), label=f'T, Spacing {spacing_nm} nm', color=f"blue")
