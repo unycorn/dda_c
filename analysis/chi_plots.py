@@ -13,7 +13,8 @@ def parse_args():
     parser.add_argument('base_dir', help='Base directory containing the csv input folders')
     return parser.parse_args()
 
-base_dir = "./csv_inputs"
+args = parse_args()
+base_dir = args.base_dir
 
 # Get all subdirectories and extract l and m values
 l_values = set()
