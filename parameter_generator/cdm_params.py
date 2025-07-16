@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
 
-    seed_count = 1  # Number of seeds to generate
+    seed_count = 2  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
@@ -228,3 +228,5 @@ if __name__ == "__main__":
                         # Write the output file
                         write_output_csv(output_file, data, headers)
                         print(f"Generated CDM input parameters saved to {output_file}")
+                    
+                    
