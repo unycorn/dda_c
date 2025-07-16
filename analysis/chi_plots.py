@@ -5,7 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import re
+import argparse
 from collections import defaultdict
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate chi plots from reflection/transmission data')
+    parser.add_argument('base_dir', help='Base directory containing the csv input folders')
+    return parser.parse_args()
 
 base_dir = "./csv_inputs"
 
@@ -144,13 +150,30 @@ def process_l_value(m_val, l_val, global_ranges):
         plt.savefig(output_file)
         plt.close()
 
-# First compute global ranges from all averaged curves
-print("Computing global ranges from averaged curves...")
-global_ranges = compute_global_ranges()
-print(f"Global ranges (R_min, R_max, T_min, T_max): {global_ranges}")
+def main():
+    args = parse_args()
+    base_dir = args.base_dir
 
-# Then process each combination of l and m values using these ranges
-for l_val in sorted(l_values):
-    for m_val in sorted(m_values):
-        print(f"Processing L={l_val} M={m_val}")
-        process_l_value(m_val, l_val, global_ranges)
+    # Get all subdirectories and extract l and m values
+    l_values = set()
+    m_values = set()
+    pattern = re.compile(r'l(\d+)_p\d+_o\d+_m(\d+)')
+    for dirname in os.listdir(base_dir):
+        match = pattern.match(dirname)
+        if match:
+            l_values.add(int(match.group(1)))
+            m_values.add(int(match.group(2)))
+
+    # First compute global ranges from all averaged curves
+    print("Computing global ranges from averaged curves...")
+    global_ranges = compute_global_ranges()
+    print(f"Global ranges (R_min, R_max, T_min, T_max): {global_ranges}")
+
+    # Then process each combination of l and m values using these ranges
+    for l_val in sorted(l_values):
+        for m_val in sorted(m_values):
+            print(f"Processing L={l_val} M={m_val}")
+            process_l_value(m_val, l_val, global_ranges)
+
+if __name__ == '__main__':
+    main()
