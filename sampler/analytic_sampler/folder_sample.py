@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+import sys
+import numpy as np
+import os
+from pathlib import Path
+import csv
+
+# Physical constants
+EPSILON_0 = 8.8541878128e-12  # vacuum permittivity in F/m
+SPEED_OF_LIGHT = 299792458.0  # speed of light in m/s
+
+def read_polarizations_binary(filename):
+    with open(filename, 'rb') as f:
+        # Read N (4-byte integer)
+        N = np.fromfile(f, dtype=np.int32, count=1)[0]
+        
+        # Read frequency (8-byte double)
+        freq = np.fromfile(f, dtype=np.float64, count=1)[0]
+        
+        # Read complex doubles (2 components per point: Ex and Mz)
+        data = np.fromfile(f, dtype=np.complex128, count=2*N)
+        
+        return N, freq, data.reshape(-1, 2)  # reshape to (N, 2) array
+
+def calculate_r(freq, ex_sum, area):
+    # Calculate vacuum wavenumber k = 2π/λ = 2πf/c
+    k = 2 * np.pi * freq / SPEED_OF_LIGHT
+    # Calculate r using the provided formula
+    r = 1j * k / (2 * EPSILON_0 * area) * ex_sum
+    return r
+
+def calculate_R_T(r):
+    # Calculate reflection coefficient R = |r|²
+    R = np.abs(r) ** 2
+    # Calculate transmission coefficient T = |1 + r|²
+    T = np.abs(1 + r) ** 2
+    return R, T
+
+def process_pols_folder(folder_path, area):
+    # Store results as (frequency, R, T) tuples
+    results_x = []
+    results_y = []
+
+    csv_file_path = folder_path + '.csv'
+    if os.path.exists(csv_file_path):
+        thetas = []
+        with open(csv_file_path, 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                thetas.append(float(row['theta']))
+        thetas = np.array(thetas)
+    else:
+        print(f"CSV file {csv_file_path} not found. Exiting.", file=sys.stderr)
+        sys.exit(1)
+    
+    # Process all .pols files in the folder
+    for file_path in sorted(Path(folder_path).glob('*.pols')):
+        try:
+            N, freq, data = read_polarizations_binary(str(file_path))
+
+            e_localx_pol = data[:, 0] # electric polarization x-component in SRR's local frame
+            e_globalx_pol = e_localx_pol * np.cos(thetas)
+            e_globaly_pol = e_localx_pol * np.sin(thetas)
+
+            ex_sum = np.sum(e_globalx_pol)
+            ey_sum = np.sum(e_globaly_pol)
+
+            r_x = calculate_r(freq, ex_sum, area)
+            r_y = calculate_r(freq, ey_sum, area)
+            # R, T = calculate_R_T(r_x)
+            results_x.append((freq, r_x, 1 + r_x))
+            results_y.append((freq, r_y, 1 + r_y))
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)
+
+    return sorted(results_x), sorted(results_y)  # Sort by frequency
+
+def main():
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <pols_folder> <area>", file=sys.stderr)
+        sys.exit(1)
+    
+    root_folder_path = sys.argv[1]
+    area = float(sys.argv[2])
+
+    folder_data = []  # Move this outside the loop
+    
+    for folder_path in Path(root_folder_path).glob('*/*/'):
+        folder_path = str(folder_path)
+        print(f"Processing folder: {folder_path}")
+        try:
+            # Process all files and get results
+            results_x, results_y = process_pols_folder(folder_path, area)
+            folder_data.append((folder_path, results_x, results_y))
+
+            if not results_x or not results_y:
+                print("No .pols files found or all files failed to process", file=sys.stderr)
+                continue  # Skip this folder instead of exiting
+            
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            continue  # Skip this folder instead of exiting
+
+    # Save folder_data as NPZ file
+    if folder_data:
+        # Convert to structured format for better NPZ storage
+        folder_paths = []
+        all_results_x = []
+        all_results_y = []
+        
+        for folder_path, results_x, results_y in folder_data:
+            folder_paths.append(folder_path)
+            all_results_x.append(results_x)
+            all_results_y.append(results_y)
+        
+        output_npz = os.path.join(root_folder_path, 'folder_data.npz')
+        np.savez_compressed(output_npz, 
+                          folder_paths=np.array(folder_paths, dtype=object),
+                          results_x=np.array(all_results_x, dtype=object),
+                          results_y=np.array(all_results_y, dtype=object))
+        
+        print(f"Folder data saved to {output_npz}")
+    else:
+        print("No data to save")
+
+if __name__ == "__main__":
+    main()

@@ -163,6 +163,54 @@ void write_polarizations_binary(
     out.close();
 }
 
+void write_PW_sweep_polarization_binary(
+    const char* filename,
+    const std::vector<std::complex<double>>& polarizations,
+    const std::vector<vec3>& positions,
+    const std::vector<std::complex<double>[2][2]>& alpha,
+    const std::vector<double>& kx_values,
+    const std::vector<double>& ky_values,
+    const std::vector<std::string>& polarization_types,
+    int N,
+    double frequency
+) {
+    std::ofstream out(filename, std::ios::binary);
+    if (!out) {
+        std::cerr << "Error: could not open " << filename << " for writing.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Write metadata
+    int num_k_points = kx_values.size();
+    int num_polarizations = polarization_types.size();
+    
+    out.write(reinterpret_cast<const char*>(&N), sizeof(int));
+    out.write(reinterpret_cast<const char*>(&frequency), sizeof(double));
+    out.write(reinterpret_cast<const char*>(&num_k_points), sizeof(int));
+    out.write(reinterpret_cast<const char*>(&num_polarizations), sizeof(int));
+    
+    // Write k-vector data
+    for (int i = 0; i < num_k_points; ++i) {
+        out.write(reinterpret_cast<const char*>(&kx_values[i]), sizeof(double));
+        out.write(reinterpret_cast<const char*>(&ky_values[i]), sizeof(double));
+    }
+    
+    // Write polarization type strings
+    for (int i = 0; i < num_polarizations; ++i) {
+        int str_len = polarization_types[i].length();
+        out.write(reinterpret_cast<const char*>(&str_len), sizeof(int));
+        out.write(polarization_types[i].c_str(), str_len);
+    }
+    
+    // Write polarization data: [N_dipoles * 2 * N_k_points * N_polarizations]
+    int total_elements = 2 * N * num_k_points * num_polarizations;
+    for (int i = 0; i < total_elements; ++i) {
+        out.write(reinterpret_cast<const char*>(&polarizations[i]), sizeof(std::complex<double>));
+    }
+
+    out.close();
+}
+
 std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N, double& frequency) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) {

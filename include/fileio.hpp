@@ -42,6 +42,19 @@ void write_polarizations_binary(
     double frequency
 );
 
+// Writes polarizations for plane wave sweep with multiple k-vectors and polarizations
+void write_PW_sweep_polarization_binary(
+    const char* filename,
+    const std::vector<std::complex<double>>& polarizations,  // All polarizations [N_dipoles * 2 * N_k_points * N_polarizations]
+    const std::vector<vec3>& positions,
+    const std::vector<std::complex<double>[2][2]>& alpha,
+    const std::vector<double>& kx_values,
+    const std::vector<double>& ky_values,
+    const std::vector<std::string>& polarization_types,  // "TE" or "TM"
+    int N,
+    double frequency
+);
+
 // Reads polarizations from a binary file. Returns vector of complex doubles and sets N.
 std::vector<std::complex<double>> read_polarizations_binary(const char* filename, int& N, double& frequency);
 
