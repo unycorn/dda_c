@@ -74,12 +74,6 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
     // Initialize CUDA device first
     init_cuda_device();
 
-    std::cout << "Starting linear system solve for N = " << N << "\n";
-
-    // Calculate memory requirements
-    size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
-    size_t pivot_size = (size_t)N * sizeof(int);
-
     // Get workspace size
     cusolverDnHandle_t handle = nullptr;
     CHECK_CUSOLVER(cusolverDnCreate(&handle));
@@ -87,14 +81,12 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
     int work_size = 0;
     CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_device, N, &work_size));
 
-    // Print memory requirements
+    // Calculate memory requirements
+    size_t vector_size = (size_t)N * sizeof(cuDoubleComplex);
+    size_t pivot_size = (size_t)N * sizeof(int);
     size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
-    std::cout << "Memory requirements:\n";
-    std::cout << "- Solution vector: " << vector_size/(1024.0*1024.0*1024.0) << " GB\n";
-    std::cout << "- Pivot array: " << pivot_size/(1024.0*1024.0*1024.0) << " GB\n";
-    std::cout << "- Solver workspace: " << workspace_size/(1024.0*1024.0*1024.0) << " GB\n";
 
-    // Allocate minimum required memory
+    // Allocate memory
     cuDoubleComplex* b_dev = nullptr;
     int* pivot_dev = nullptr;
     int* info_dev = nullptr;
