@@ -82,7 +82,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     return new_regions, np.asarray(new_vertices)
 
 class VoronoiAnimation:
-    def __init__(self, positions, thetas, pols_files, global_normalize=True, show_arrows=True, show_colorbar=True, colormap='viridis'):
+    def __init__(self, positions, thetas, pols_files, global_normalize=True, show_arrows=True, show_colorbar=True, colormap='viridis', plot_phase=False):
         self.positions = positions
         self.positions_microns = positions * 1e6  # store micron positions
         self.thetas = thetas
@@ -90,6 +90,7 @@ class VoronoiAnimation:
         self.global_normalize = global_normalize
         self.show_arrows = show_arrows
         self.show_colorbar = show_colorbar
+        self.plot_phase = plot_phase
         self.colormap = plt.get_cmap(colormap)
         self.vor = Voronoi(positions[:, :2])
         self.regions, self.vertices = voronoi_finite_polygons_2d(self.vor)
@@ -101,14 +102,23 @@ class VoronoiAnimation:
         
         # Load all polarization data up front
         self.polarization_data = []
-        self.global_min = float('inf')
-        self.global_max = float('-inf')
+        if self.plot_phase:
+            # For phase, always use the fixed range -π to π
+            self.global_min = -np.pi
+            self.global_max = np.pi
+        else:
+            # For magnitude, calculate actual min/max from data
+            self.global_min = float('inf')
+            self.global_max = float('-inf')
+            
         for pols_file in pols_files:
             N, freq, polarizations = read_polarizations_binary(pols_file)
             self.polarization_data.append((freq, polarizations))
-            px_mag = np.abs(polarizations[:, 0])
-            self.global_min = min(self.global_min, px_mag.min())
-            self.global_max = max(self.global_max, px_mag.max())
+            if not self.plot_phase:
+                # Only calculate min/max for magnitude plotting
+                px_mag = np.abs(polarizations[:, 0])
+                self.global_min = min(self.global_min, px_mag.min())
+                self.global_max = max(self.global_max, px_mag.max())
         
         # Setup the figure
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
@@ -131,8 +141,11 @@ class VoronoiAnimation:
         self.smap = plt.cm.ScalarMappable(cmap=self.colormap,
                                          norm=plt.Normalize(self.global_min, self.global_max))
         if self.show_colorbar:
-            self.cbar = self.fig.colorbar(self.smap, ax=self.ax, 
-                                        label='|$p_x$| (C⋅m)')  # dipole moment units
+            if self.plot_phase:
+                label = 'Phase of $p_x$ (radians)'
+            else:
+                label = '|$p_x$| (C⋅m)'  # dipole moment units
+            self.cbar = self.fig.colorbar(self.smap, ax=self.ax, label=label)
         
         # Title for frequency display
         self.title = self.ax.set_title('')
@@ -157,10 +170,13 @@ class VoronoiAnimation:
         
         # Set initial frame
         freq, polarizations = self.polarization_data[0]
-        colors = np.abs(polarizations[:, 0])
+        if self.plot_phase:
+            colors = np.angle(polarizations[:, 0])
+        else:
+            colors = np.abs(polarizations[:, 0])
         normalized_colors = (colors - self.global_min) / (self.global_max - self.global_min)
         for patch, color in zip(self.patches, normalized_colors):
-            patch.set_facecolor(plt.cm.viridis(color))
+            patch.set_facecolor(self.colormap(color))
         
         freq_thz = freq / 1e12
         self.title_text = self.ax.set_title(f'Frequency: {freq_thz:.2f} THz')
@@ -175,10 +191,14 @@ class VoronoiAnimation:
         # Use pre-loaded polarization data
         freq, polarizations = self.polarization_data[i]
         
-        # Calculate colors using actual magnitudes
-        colors = np.abs(polarizations[:, 0])  # px component
+        # Calculate colors using magnitude or phase
+        if self.plot_phase:
+            colors = np.angle(polarizations[:, 0])  # phase of px component
+        else:
+            colors = np.abs(polarizations[:, 0])    # magnitude of px component
         
-        if self.global_normalize:
+        if self.global_normalize or self.plot_phase:
+            # Always use global normalization for phase to maintain -π to π range
             normalized_colors = (colors - self.global_min) / (self.global_max - self.global_min)
             vmin, vmax = self.global_min, self.global_max
         else:
@@ -210,7 +230,7 @@ class VoronoiAnimation:
         return self.patches + [self.title_text]
 
 def create_animation(positions, thetas, pols_folder, output_file, global_normalize=True, 
-                   show_arrows=True, show_colorbar=True, colormap='viridis'):
+                   show_arrows=True, show_colorbar=True, colormap='viridis', plot_phase=False):
     # Get all .pols files
     pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
     if not pols_files:
@@ -228,7 +248,7 @@ def create_animation(positions, thetas, pols_folder, output_file, global_normali
     
     # Create animation with pre-loaded data
     anim = VoronoiAnimation(positions, thetas, sorted_pols_files, 
-                           global_normalize, show_arrows, show_colorbar, colormap)
+                           global_normalize, show_arrows, show_colorbar, colormap, plot_phase)
     animation = FuncAnimation(anim.fig, anim.animate,
                             frames=len(sorted_pols_files),
                             init_func=anim.init_animation,
@@ -260,10 +280,19 @@ def main():
                        help='Hide the orientation arrows in the plot')
     parser.add_argument('--no-colorbar', action='store_true',
                        help='Hide the colorbar in the plot')
-    parser.add_argument('--colormap', default='viridis',
-                       help='Matplotlib colormap to use (default: viridis)')
+    parser.add_argument('--plot-phase', action='store_true',
+                       help='Plot phase of polarization instead of magnitude')
+    parser.add_argument('--colormap', default=None,
+                       help='Matplotlib colormap to use (default: viridis for magnitude, hsv for phase)')
     
     args = parser.parse_args()
+    
+    # Set default colormap based on whether plotting phase or magnitude
+    if args.colormap is None:
+        if args.plot_phase:
+            args.colormap = 'hsv'
+        else:
+            args.colormap = 'viridis'
     
     # Read position data
     df = pd.read_csv(args.csv_file)
@@ -285,7 +314,9 @@ def main():
             flags.append('no-arrows')
         if args.no_colorbar:
             flags.append('no-cbar')
-        if args.colormap != 'viridis':
+        if args.plot_phase:
+            flags.append('phase')
+        if (args.plot_phase and args.colormap != 'hsv') or (not args.plot_phase and args.colormap != 'viridis'):
             flags.append(f'cmap-{args.colormap}')
         
         flag_str = '_'.join(flags) if flags else 'default'
@@ -296,7 +327,8 @@ def main():
                     global_normalize=not args.per_frame_normalize,
                     show_arrows=not args.no_arrows,
                     show_colorbar=not args.no_colorbar,
-                    colormap=args.colormap)
+                    colormap=args.colormap,
+                    plot_phase=args.plot_phase)
 
 if __name__ == "__main__":
     main()

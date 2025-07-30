@@ -57,6 +57,10 @@ void run_simulation(
         double wavelength = C_LIGHT / freq;
         double k = 2.0 * M_PI / wavelength;
 
+        // double kx = 0;
+        // double ky = 0;
+        // double kz = sqrt(k * k - kx * kx - ky * ky);
+
         std::vector<mat2x2> alpha(N);
         
         // Generate polarizability matrix using the provided parameters for each dipole
@@ -73,30 +77,39 @@ void run_simulation(
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
         try {
-            // Initialize incident field (2N components - one electric and one magnetic scalar per dipole)
-            std::vector<std::complex<double>> inc_field(2 * N, std::complex<double>(0.0, 0.0));
+            // Initialize incident field matrix (2N x 2 - two polarizations)
+            std::vector<std::complex<double>> inc_field_matrix(2 * N * 2, std::complex<double>(0.0, 0.0));
+            
             for (int j = 0; j < N; ++j) {
-                // Calculate phase at dipole position (these should all be identity)
+                // Calculate phase at dipole position
                 double phase = k * positions[j].z;
                 std::complex<double> phase_factor = std::exp(I * phase);
-                
-                // Create complex vectors for E and H fields
-                vec3 E_inc_real = {1.0, 0.0, 0.0};  // Real part of E-field (x-component)
-                vec3 H_inc_real = {0.0, 1.0/Z_0, 0.0};  // Real part of H-field (y-component)
                 
                 // Create projection vectors
                 vec3 u_e = {cos(angles[j]), sin(angles[j]), 0.0}; // Electric projection vector
                 vec3 u_h = {0.0, 0.0, 1.0}; // Magnetic projection vector (assumed along z-axis)
                 
-                // Calculate projections and multiply by phase factor
-                inc_field[2 * j + 0] = phase_factor * vec3_dot(E_inc_real, u_e);     // Electric projection
-                inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
+                // First polarization: x-polarized plane wave
+                vec3 E_inc_x = {1.0, 0.0, 0.0};  // E-field along x
+                vec3 H_inc_x = {0.0, 1.0/Z_0, 0.0};  // H-field along y
+                
+                // Second polarization: y-polarized plane wave
+                vec3 E_inc_y = {0.0, 1.0, 0.0};  // E-field along y
+                vec3 H_inc_y = {-1.0/Z_0, 0.0, 0.0};  // H-field along -x
+                
+                // Column 0: x-polarized incident field
+                inc_field_matrix[2 * j + 0 + 0 * 2 * N] = phase_factor * vec3_dot(E_inc_x, u_e);     // Electric projection
+                inc_field_matrix[2 * j + 1 + 0 * 2 * N] = phase_factor * vec3_dot(H_inc_x, u_h);     // Magnetic projection
+                
+                // Column 1: y-polarized incident field
+                inc_field_matrix[2 * j + 0 + 1 * 2 * N] = phase_factor * vec3_dot(E_inc_y, u_e);     // Electric projection
+                inc_field_matrix[2 * j + 1 + 1 * 2 * N] = phase_factor * vec3_dot(H_inc_y, u_h);     // Magnetic projection
             }
 
-            // Convert incident field to cuDoubleComplex for GPU
-            std::vector<cuDoubleComplex> b_cuda(2 * N);
-            for (int i = 0; i < 2 * N; ++i) {
-                b_cuda[i] = make_cuDoubleComplex(std::real(inc_field[i]), std::imag(inc_field[i]));
+            // Convert incident field matrix to cuDoubleComplex for GPU
+            std::vector<cuDoubleComplex> B_cuda(2 * N * 2);
+            for (int i = 0; i < 2 * N * 2; ++i) {
+                B_cuda[i] = make_cuDoubleComplex(std::real(inc_field_matrix[i]), std::imag(inc_field_matrix[i]));
             }
 
             // Transpose matrix for GPU solver (expects column-major format)
@@ -110,15 +123,15 @@ void run_simulation(
                 }
             }
             
-            // print_complex_matrix("Transposed Interaction Matrix", A_transposed.data(), 2 * N);
-
             cudaMemcpy(A_device, A_transposed.data(), sizeof(cuDoubleComplex) * 2 * N * 2 * N, cudaMemcpyHostToDevice);
             
-            solve_gpu(A_device, b_cuda.data(), 2 * N);
+            // Solve for both polarizations simultaneously
+            solve_gpu_multiple_rhs(A_device, B_cuda.data(), 2 * N, 2);
 
-            std::vector<std::complex<double>> b(2 * N);
-            for (int i = 0; i < 2 * N; ++i) {
-                b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
+            // Convert solutions back to std::complex
+            std::vector<std::complex<double>> solutions(2 * N * 2);
+            for (int i = 0; i < 2 * N * 2; ++i) {
+                solutions[i] = std::complex<double>(cuCreal(B_cuda[i]), cuCimag(B_cuda[i]));
             }
 
             if (A_device != nullptr) {
@@ -126,8 +139,23 @@ void run_simulation(
                 A_device = nullptr;
             }
 
-            // write_polarizations(csvfilename.str().c_str(), b.data(), positions, alpha, N);  // Original plaintext writer
-            write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N, freq);  // New binary writer with frequency
+            // Extract solutions for each polarization
+            std::vector<std::complex<double>> b_x_pol(2 * N);
+            std::vector<std::complex<double>> b_y_pol(2 * N);
+            
+            for (int i = 0; i < 2 * N; ++i) {
+                b_x_pol[i] = solutions[i + 0 * 2 * N];  // First column (x-polarized)
+                b_y_pol[i] = solutions[i + 1 * 2 * N];  // Second column (y-polarized)
+            }
+
+            // Create filenames for both polarizations
+            std::ostringstream filename_x, filename_y;
+            filename_x << output_dir << "/output_freq_" << std::scientific << std::setprecision(5) << freq << "_x_pol.pols";
+            filename_y << output_dir << "/output_freq_" << std::scientific << std::setprecision(5) << freq << "_y_pol.pols";
+
+            // Write polarizations for both incident polarizations
+            write_polarizations_binary(filename_x.str().c_str(), b_x_pol.data(), positions, alpha, N, freq);
+            write_polarizations_binary(filename_y.str().c_str(), b_y_pol.data(), positions, alpha, N, freq);
 
             auto end_time = std::chrono::high_resolution_clock::now();
             auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

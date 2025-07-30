@@ -137,6 +137,65 @@ void solve_gpu(cuDoubleComplex* A_device, cuDoubleComplex* b_host, int N) {
     cleanup_gpu_resources(&handle, nullptr, nullptr, b_dev, work_dev, pivot_dev, info_dev);
 }
 
+void solve_gpu_multiple_rhs(cuDoubleComplex* A_device, cuDoubleComplex* B_host, int N, int nrhs) {
+    // Initialize CUDA device first
+    init_cuda_device();
+
+    // Get workspace size
+    cusolverDnHandle_t handle = nullptr;
+    CHECK_CUSOLVER(cusolverDnCreate(&handle));
+    
+    int work_size = 0;
+    CHECK_CUSOLVER(cusolverDnZgetrf_bufferSize(handle, N, N, A_device, N, &work_size));
+
+    // Calculate memory requirements
+    size_t matrix_size = (size_t)N * nrhs * sizeof(cuDoubleComplex);
+    size_t pivot_size = (size_t)N * sizeof(int);
+    size_t workspace_size = (size_t)work_size * sizeof(cuDoubleComplex);
+
+    // Allocate memory
+    cuDoubleComplex* B_dev = nullptr;
+    int* pivot_dev = nullptr;
+    int* info_dev = nullptr;
+    cuDoubleComplex* work_dev = nullptr;
+    int info_host = 0;
+
+    try {
+        CHECK_CUDA(cudaMalloc(&B_dev, matrix_size));
+        CHECK_CUDA(cudaMalloc(&pivot_dev, pivot_size));
+        CHECK_CUDA(cudaMalloc(&info_dev, sizeof(int)));
+        CHECK_CUDA(cudaMalloc(&work_dev, workspace_size));
+        
+        // Copy right-hand side matrix to device
+        CHECK_CUDA(cudaMemcpy(B_dev, B_host, matrix_size, cudaMemcpyHostToDevice));
+
+        // LU factorization (modifies A_device in-place)
+        CHECK_CUSOLVER(cusolverDnZgetrf(handle, N, N, A_device, N, work_dev, pivot_dev, info_dev));
+        CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
+        if (info_host != 0) {
+            std::cerr << "LU factorization failed with error " << info_host << std::endl;
+            throw std::runtime_error("LU factorization failed");
+        }
+
+        // Solve system using factored matrix for multiple RHS
+        CHECK_CUSOLVER(cusolverDnZgetrs(handle, CUBLAS_OP_N, N, nrhs, A_device, N, pivot_dev, B_dev, N, info_dev));
+        CHECK_CUDA(cudaMemcpy(&info_host, info_dev, sizeof(int), cudaMemcpyDeviceToHost));
+        if (info_host != 0) {
+            std::cerr << "Back substitution failed with error " << info_host << std::endl;
+            throw std::runtime_error("Back substitution failed");
+        }
+
+        // Copy solution matrix back to host
+        CHECK_CUDA(cudaMemcpy(B_host, B_dev, matrix_size, cudaMemcpyDeviceToHost));
+
+    } catch (...) {
+        cleanup_gpu_resources(&handle, nullptr, nullptr, B_dev, work_dev, pivot_dev, info_dev);
+        throw;
+    }
+
+    cleanup_gpu_resources(&handle, nullptr, nullptr, B_dev, work_dev, pivot_dev, info_dev);
+}
+
 void invert_6x6_matrix_lapack(cuDoubleComplex* matrix) {
     const int N = 6;
     std::vector<std::complex<double>> A(N * N);
