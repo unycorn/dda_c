@@ -138,6 +138,8 @@ if __name__ == "__main__":
     )
     lattice_spacing = 300e-9  # 300 nm spacing
     
+    print("area m^2", physical_size**2)
+    input()
     print(f"Using physical size of {physical_size*1e6:.1f} µm based on Ammann-Beenker tiling")
 
     # Define base directory and check if it exists
