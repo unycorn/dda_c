@@ -321,34 +321,34 @@ Global Arrays:
 - area_parameter: Area parameter used for reflection/transmission calculations
 - documentation: This explanatory text
 
-Individual Simulation Data (prefix: sim_XXX_):
+Individual Simulation Data (prefix: sim_XXXXX_):
 --------------------------------------------
-For each simulation XXX (000, 001, 002, ...):
+For each simulation XXXXX (00000, 00001, 00002, ...):
 
 Coordinate and Orientation Data:
-- sim_XXX_x_positions: X coordinates of dipoles (meters) from CSV
-- sim_XXX_y_positions: Y coordinates of dipoles (meters) from CSV  
-- sim_XXX_z_positions: Z coordinates of dipoles (meters) from CSV
-- sim_XXX_theta_orientations: Dipole orientations (radians) from CSV
+- sim_XXXXX_x_positions: X coordinates of dipoles (meters) from CSV
+- sim_XXXXX_y_positions: Y coordinates of dipoles (meters) from CSV  
+- sim_XXXXX_z_positions: Z coordinates of dipoles (meters) from CSV
+- sim_XXXXX_theta_orientations: Dipole orientations (radians) from CSV
 
 Frequency and Polarization Data:
-- sim_XXX_frequencies: Frequency array (Hz) for this simulation
-- sim_XXX_polarizations_ex: Complex electric field Ex component (local frame)
+- sim_XXXXX_frequencies: Frequency array (Hz) for this simulation
+- sim_XXXXX_polarizations_ex: Complex electric field Ex component (local frame)
   Shape: (n_frequencies, n_dipoles)
-- sim_XXX_polarizations_mz: Complex magnetic field Mz component (local frame)
+- sim_XXXXX_polarizations_mz: Complex magnetic field Mz component (local frame)
   Shape: (n_frequencies, n_dipoles)
 
 Optical Properties (calculated from polarization data):
-- sim_XXX_reflection_x: Reflection coefficient R = |r|² for x-polarization
-- sim_XXX_transmission_x: Transmission coefficient T = |1+r|² for x-polarization
-- sim_XXX_reflection_y: Reflection coefficient R = |r|² for y-polarization  
-- sim_XXX_transmission_y: Transmission coefficient T = |1+r|² for y-polarization
-- sim_XXX_r_complex_x: Complex reflection coefficient r for x-polarization
-- sim_XXX_r_complex_y: Complex reflection coefficient r for y-polarization
+- sim_XXXXX_reflection_x: Reflection coefficient R = |r|² for x-polarization
+- sim_XXXXX_transmission_x: Transmission coefficient T = |1+r|² for x-polarization
+- sim_XXXXX_reflection_y: Reflection coefficient R = |r|² for y-polarization  
+- sim_XXXXX_transmission_y: Transmission coefficient T = |1+r|² for y-polarization
+- sim_XXXXX_r_complex_x: Complex reflection coefficient r for x-polarization
+- sim_XXXXX_r_complex_y: Complex reflection coefficient r for y-polarization
 
 Metadata:
-- sim_XXX_n_frequencies: Number of frequency points in this simulation
-- sim_XXX_n_dipoles: Number of dipoles in this simulation
+- sim_XXXXX_n_frequencies: Number of frequency points in this simulation
+- sim_XXXXX_n_dipoles: Number of dipoles in this simulation
 
 CALCULATION DETAILS:
 ===================
@@ -362,6 +362,8 @@ Reflection Coefficient:
 - where k = 2π * frequency / c (vacuum wavenumber)
 - ε₀ = 8.854 × 10⁻¹² F/m (vacuum permittivity)
 - c = 2.998 × 10⁸ m/s (speed of light)
+This is derived from the normal plane wave component radiated by a
+super cell of dipoles with periodicity determined by the area parameter.
 
 Optical Coefficients:
 - Reflection: R = |r|²
@@ -378,15 +380,15 @@ data = np.load('DDA_simulation_data.npz', allow_pickle=True)
 print(data['documentation'].item())
 
 # Access simulation 0 data
-frequencies = data['sim_000_frequencies']
-x_pos = data['sim_000_x_positions'] 
-reflection_x = data['sim_000_reflection_x']
+frequencies = data['sim_00000_frequencies']
+x_pos = data['sim_00000_x_positions'] 
+reflection_x = data['sim_00000_reflection_x']
 
 # List all simulations
 n_sims = data['n_simulations'].item()
 folder_names = data['folder_names']
 for i in range(n_sims):
-    print(f"Simulation {{i:03d}}: {{folder_names[i]}}")
+    print(f"Simulation {{i:05d}}: {{folder_names[i]}}")
 """
 
     # Create structured arrays for storage
@@ -401,7 +403,7 @@ for i in range(n_sims):
     
     # Store individual simulation data
     for i, sim_data in enumerate(all_simulation_data):
-        prefix = f'sim_{i:03d}'
+        prefix = f'sim_{i:05d}'
         npz_data[f'{prefix}_frequencies'] = sim_data['frequencies']
         npz_data[f'{prefix}_x_positions'] = sim_data['x_positions']
         npz_data[f'{prefix}_y_positions'] = sim_data['y_positions']
@@ -448,15 +450,15 @@ for i in range(n_sims):
     print(f"  - csv_file_paths: Array of CSV file paths with dipole data")
     print(f"  - n_simulations: Total number of simulations")
     print(f"  - area_parameter: Area parameter used")
-    print(f"  - sim_XXX_*: Individual simulation data with prefix sim_XXX")
-    print(f"    * frequencies: Frequency array for simulation XXX")
-    print(f"    * x/y/z_positions: Dipole coordinates from CSV for simulation XXX")
-    print(f"    * theta_orientations: Dipole orientations from CSV for simulation XXX")
-    print(f"    * polarizations_ex/mz: Polarization data for simulation XXX")
+    print(f"  - sim_XXXXX_*: Individual simulation data with prefix sim_XXXXX")
+    print(f"    * frequencies: Frequency array for simulation XXXXX")
+    print(f"    * x/y/z_positions: Dipole coordinates from CSV for simulation XXXXX")
+    print(f"    * theta_orientations: Dipole orientations from CSV for simulation XXXXX")
+    print(f"    * polarizations_ex/mz: Polarization data for simulation XXXXX")
     print(f"    * reflection_x/y: Reflection coefficients R = |r|² for x/y polarizations")
     print(f"    * transmission_x/y: Transmission coefficients T = |1+r|² for x/y polarizations")
     print(f"    * r_complex_x/y: Complex reflection coefficients for x/y polarizations")
-    print(f"    * n_frequencies/n_dipoles: Counts for simulation XXX")
+    print(f"    * n_frequencies/n_dipoles: Counts for simulation XXXXX")
 
 if __name__ == "__main__":
     main()
