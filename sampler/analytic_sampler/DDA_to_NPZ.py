@@ -276,7 +276,7 @@ def main():
     
     # Process each subfolder
     for folder_path in Path(root_folder_path).glob('*/*/'):
-        folder_path_str = str(folder_path.rstrip('/'))
+        folder_path_str = str(folder_path).rstrip('/')
         
         simulation_data = process_simulation_folder(folder_path_str, area)
         
