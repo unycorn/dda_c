@@ -136,11 +136,8 @@ if __name__ == "__main__":
     ab_x = np.array([xyi.real for xyi in ab_xy_data])
     ab_y = np.array([xyi.imag for xyi in ab_xy_data])
     
-    # Calculate physical size from Ammann-Beenker data
-    physical_size = max(
-        ab_x.max() - ab_x.min(),
-        ab_y.max() - ab_y.min()
-    )
+    
+    physical_size = 80e-6  # 80 µm
     lattice_spacing = 1365e-9  # 1365 nm spacing (roughly the resonance wavelength of the SRR to get hybridization)
 
     print("area m^2", physical_size**2)
@@ -172,8 +169,8 @@ if __name__ == "__main__":
     M_OFFSET = 0
 
     # Disorder parameters
-    spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9]  # meters
-    orientational_disorder_degrees = [0, np.deg2rad(10), np.deg2rad(20), np.deg2rad(50), np.deg2rad(1_000_000)]  # radians
+    spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9, 200e-9, 300e-9, 400e-9, 500e-9]  # meters
+    orientational_disorder_degrees = [0]  # radians
 
     # Iterate through resonator types, spatial and orientational disorder, and lattice types
     for m, (resonator_type, resonator_filename) in enumerate(resonator_files.items()):
