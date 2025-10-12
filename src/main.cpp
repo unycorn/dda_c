@@ -69,7 +69,8 @@ void run_simulation(
         }
 
         std::vector<std::complex<double>> A_host(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
-        cuDoubleComplex* A_device = get_full_interaction_matrix_scalar(A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
+        // cuDoubleComplex* A_device = get_full_interaction_matrix_scalar(A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
+        cuDoubleComplex* A_device = get_full_interaction_matrix_scalar_1Dperiodic(A_host.data(), positions.data(), alpha.data(), angles.data(), N, k, vec3{0.0, 300.0e-9, 0.0}, 200);
         std::cout << "freq " << freq << ": Finished Computing Interaction Matrix!\n";
 
         try {

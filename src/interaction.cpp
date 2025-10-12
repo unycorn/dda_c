@@ -248,39 +248,6 @@ void biani_green_matrix_scalar(std::complex<double>* out, vec3 r_j, vec3 r_k, do
         }
     }
 
-    // Print all four matrices
-    // std::cout << "\nElectric-Electric (EE) Green's function:\n";
-    // for(int i = 0; i < 3; i++) {
-    //     for(int j = 0; j < 3; j++) {
-    //         std::cout << "(" << EE[i][j].real() << "," << EE[i][j].imag() << ")\t";
-    //     }
-    //     std::cout << "\n";
-    // }
-
-    // std::cout << "\nMagnetic-Electric (HE) Green's function:\n";
-    // for(int i = 0; i < 3; i++) {
-    //     for(int j = 0; j < 3; j++) {
-    //         std::cout << "(" << HE[i][j].real() << "," << HE[i][j].imag() << ")\t";
-    //     }
-    //     std::cout << "\n";
-    // }
-
-    // std::cout << "\nElectric-Magnetic (EM) Green's function:\n";
-    // for(int i = 0; i < 3; i++) {
-    //     for(int j = 0; j < 3; j++) {
-    //         std::cout << "(" << EM[i][j].real() << "," << EM[i][j].imag() << ")\t";
-    //     }
-    //     std::cout << "\n";
-    // }
-
-    // std::cout << "\nMagnetic-Magnetic (HM) Green's function:\n";
-    // for(int i = 0; i < 3; i++) {
-    //     for(int j = 0; j < 3; j++) {
-    //         std::cout << "(" << HM[i][j].real() << "," << HM[i][j].imag() << ")\t";
-    //     }
-    //     std::cout << "\n";
-    // }
-
     // Define the unit vectors
     vec3 u_e_j = {cos(theta_j), sin(theta_j), 0.0};
     vec3 u_e_k = {cos(theta_k), sin(theta_k), 0.0};
@@ -420,7 +387,7 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     int last_percent = -1;
 
     // Allocate CPU buffer for matrix construction
-    std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N);
+    std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N, make_cuDoubleComplex(0.0, 0.0));
 
     // Main construction loop
     #pragma omp parallel
@@ -468,6 +435,117 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
                                 -std::imag(block[i*2 + m])
                             );
                         }
+                    }
+                }
+
+                // Print progress every 10% for each thread
+                // if (thread_elements % (N/10) == 0) {
+                //     print_progress(tid, thread_elements, N);
+                // }
+            }
+        }
+    }
+
+    std::cout << "Matrix construction complete.\n";
+
+    // Allocate and transfer matrix to GPU
+    cuDoubleComplex* A_dev = nullptr;
+    CHECK_CUDA(cudaMalloc(&A_dev, matrix_size));
+    CHECK_CUDA(cudaMemcpy(A_dev, A_cpu.data(), matrix_size, cudaMemcpyHostToDevice));
+    
+    // Copy to host buffer if provided
+    if (A_host != nullptr) {
+        size_t total_elements = static_cast<size_t>(2 * N) * static_cast<size_t>(2 * N);
+        for (size_t i = 0; i < total_elements; ++i) {
+            A_host[i] = std::complex<double>(A_cpu[i].x, A_cpu[i].y);
+        }
+    }
+
+    std::cout << "Matrix transferred to GPU successfully\n";
+    return A_dev;
+}
+
+// Builds the full 2N x 2N interaction matrix
+cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
+    std::complex<double>* A_host,
+    const vec3* positions,
+    const std::complex<double> (*pol_2x2)[2][2],
+    const double* thetas,
+    int N,
+    double k,
+    vec3 lattice_vector,
+    int chain_length
+) {
+    size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
+    
+    // Progress tracking
+    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
+    size_t elements_processed = 0;
+    int last_percent = -1;
+
+    // Allocate CPU buffer for matrix construction
+    std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N, make_cuDoubleComplex(0.0, 0.0));
+
+    // Main construction loop
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int last_percent = -1;
+        
+        #pragma omp for schedule(dynamic)
+        for (int j = 0; j < N; ++j) {
+            size_t thread_elements = 0;
+            for (int k_idx = 0; k_idx < N; ++k_idx) {
+                thread_elements++;
+                int row_offset = j * 2;
+                int col_offset = k_idx * 2;
+
+                if (j == k_idx) {
+                    // Invert the 2x2 matrix
+                    std::complex<double> det = pol_2x2[j][0][0] * pol_2x2[j][1][1] - pol_2x2[j][0][1] * pol_2x2[j][1][0];
+                    std::complex<double> inv_2x2[4];
+                    inv_2x2[0] = pol_2x2[j][1][1] / det;
+                    inv_2x2[1] = -pol_2x2[j][0][1] / det;
+                    inv_2x2[2] = -pol_2x2[j][1][0] / det;
+                    inv_2x2[3] = pol_2x2[j][0][0] / det;
+
+                    // Copy inverted 2x2 matrix to interaction matrix
+                    for (int i = 0; i < 2; ++i) {
+                        for (int m = 0; m < 2; ++m) {
+                            A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] += make_cuDoubleComplex(
+                                std::real(inv_2x2[i*2 + m]),
+                                std::imag(inv_2x2[i*2 + m])
+                            );
+                        }
+                    }
+                }
+
+                // Get 2x2 Green's function using scalar version
+                std::complex<double> block[4] = {0.0, 0.0, 0.0, 0.0};
+
+                std::complex<double> summand_block[4];
+                for (int chain_itr = -chain_length; chain_itr <= chain_length; ++chain_itr) { // Sum over lattice translations
+                    if (j == k_idx) {
+                        if (chain_itr == 0) continue; // Skip self-interaction term
+                    }
+                    vec3 translation = vec3_scale(lattice_vector, chain_itr);
+                    biani_green_matrix_scalar(summand_block, 
+                        vec3_add(positions[j], translation), positions[k_idx], 
+                        thetas[j], thetas[k_idx], k);
+                    
+                    for (int idx = 0; idx < 4; ++idx) {
+                        block[idx] += summand_block[idx];
+                    }
+                }
+                
+                
+                // Copy 2x2 block to interaction matrix -- and NEGATE it!!
+                for (int i = 0; i < 2; ++i) {
+                    for (int m = 0; m < 2; ++m) {
+                        A_cpu[(col_offset + i) * 2 * N + (row_offset + m)] += make_cuDoubleComplex(
+                            -std::real(block[i*2 + m]),
+                            -std::imag(block[i*2 + m])
+                        );
                     }
                 }
 

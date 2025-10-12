@@ -27,7 +27,10 @@ lst = data.files
 folder_paths = data["folder_paths"].tolist()
 results_x = data["results_x"]
 
-colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+# colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+colors = plt.cm.viridis(np.linspace(0, 1, 9))  # Use a colormap for distinct
+p_dis_levels = [0, 25e-9, 50e-9, 75e-9, 100e-9, 200e-9, 300e-9, 400e-9, 500e-9]
+seen_p = []
 for i, folder_path in enumerate(folder_paths):
     # Extract parameters
     l_val, p_val, o_val, m_val = extract_parameters(folder_path)
@@ -44,7 +47,12 @@ for i, folder_path in enumerate(folder_paths):
         A = 1 - R - T
 
         # plt.plot(freq_list, T, label=folder_path.split("/")[-2], color=colors[p_val % 5])
-        plt.plot(freq_list, np.real(r), label=folder_path.split("/")[-2], color=colors[p_val % 5])
-        plt.plot(freq_list, np.imag(r), label=folder_path.split("/")[-2], color=colors[p_val % 5], linestyle='dashed')
-# plt.legend()
+        label = None
+        if p_val not in seen_p:
+            seen_p.append(p_val)
+            label = f"p={p_dis_levels[p_val]*1e9:.0f}nm"
+
+        plt.plot(freq_list, np.real(r), color=colors[p_val % len(colors)], label=label)
+        plt.plot(freq_list, np.imag(r), color=colors[p_val % len(colors)], linestyle='dashed')
+plt.legend()
 plt.show()
