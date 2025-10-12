@@ -478,25 +478,15 @@ cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
 ) {
     size_t matrix_size = (size_t)(2 * N) * (size_t)(2 * N) * sizeof(cuDoubleComplex);
     
-    // Progress tracking
-    size_t total_elements = static_cast<size_t>(N) * static_cast<size_t>(N);
-    size_t elements_processed = 0;
-    int last_percent = -1;
-
     // Allocate CPU buffer for matrix construction
     std::vector<cuDoubleComplex> A_cpu(2 * N * 2 * N, make_cuDoubleComplex(0.0, 0.0));
 
     // Main construction loop
     #pragma omp parallel
     {
-        int tid = omp_get_thread_num();
-        int last_percent = -1;
-        
         #pragma omp for schedule(dynamic)
         for (int j = 0; j < N; ++j) {
-            size_t thread_elements = 0;
             for (int k_idx = 0; k_idx < N; ++k_idx) {
-                thread_elements++;
                 int row_offset = j * 2;
                 int col_offset = k_idx * 2;
 
@@ -512,10 +502,11 @@ cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
                     // Copy inverted 2x2 matrix to interaction matrix
                     for (int i = 0; i < 2; ++i) {
                         for (int m = 0; m < 2; ++m) {
-                            A_cpu[(row_offset + i) * 2 * N + (col_offset + m)] += make_cuDoubleComplex(
+                            int idx = (row_offset + i) * 2 * N + (col_offset + m);
+                            A_cpu[idx] = cuCadd(A_cpu[idx], make_cuDoubleComplex(
                                 std::real(inv_2x2[i*2 + m]),
                                 std::imag(inv_2x2[i*2 + m])
-                            );
+                            ));
                         }
                     }
                 }
@@ -528,9 +519,16 @@ cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
                     if (j == k_idx) {
                         if (chain_itr == 0) continue; // Skip self-interaction term
                     }
-                    vec3 translation = vec3_scale(lattice_vector, chain_itr);
+                    
+                    // Create translated position
+                    vec3 r_j_translated = {
+                        positions[j].x + chain_itr * lattice_vector.x,
+                        positions[j].y + chain_itr * lattice_vector.y,
+                        positions[j].z + chain_itr * lattice_vector.z
+                    };
+                    
                     biani_green_matrix_scalar(summand_block, 
-                        vec3_add(positions[j], translation), positions[k_idx], 
+                        r_j_translated, positions[k_idx], 
                         thetas[j], thetas[k_idx], k);
                     
                     for (int idx = 0; idx < 4; ++idx) {
@@ -538,21 +536,16 @@ cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
                     }
                 }
                 
-                
                 // Copy 2x2 block to interaction matrix -- and NEGATE it!!
                 for (int i = 0; i < 2; ++i) {
                     for (int m = 0; m < 2; ++m) {
-                        A_cpu[(col_offset + i) * 2 * N + (row_offset + m)] += make_cuDoubleComplex(
+                        int idx = (col_offset + i) * 2 * N + (row_offset + m);
+                        A_cpu[idx] = cuCadd(A_cpu[idx], make_cuDoubleComplex(
                             -std::real(block[i*2 + m]),
                             -std::imag(block[i*2 + m])
-                        );
+                        ));
                     }
                 }
-
-                // Print progress every 10% for each thread
-                // if (thread_elements % (N/10) == 0) {
-                //     print_progress(tid, thread_elements, N);
-                // }
             }
         }
     }
