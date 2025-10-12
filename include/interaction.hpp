@@ -46,3 +46,14 @@ cuDoubleComplex* get_full_interaction_matrix_scalar(
     int N,                                            // Number of dipoles
     double k                                          // Wavenumber
 );
+
+cuDoubleComplex* get_full_interaction_matrix_scalar_1Dperiodic(
+    std::complex<double>* A_host,
+    const vec3* positions,
+    const std::complex<double> (*pol_2x2)[2][2],
+    const double* thetas,
+    int N,
+    double k,
+    vec3 lattice_vector,
+    int chain_length
+);
