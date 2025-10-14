@@ -137,12 +137,12 @@ if __name__ == "__main__":
     ab_y = np.array([xyi.imag for xyi in ab_xy_data])
 
 
-    physical_size = 5e-6  # 5 µm
+    start_physical_size = 5e-6  # 5 µm
     lattice_spacing = 100e-9  # 100nm -- get them really close to make plasmons easier to excite
 
-    print("area m^2", physical_size**2)
-    input()
-    print(f"Using physical size of {physical_size*1e6:.1f} µm based on Ammann-Beenker tiling")
+    print("area m^2", start_physical_size**2)
+    # input()
+    # print(f"Using physical size of {start_physical_size*1e6:.1f} µm based on Ammann-Beenker tiling")
 
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
@@ -161,7 +161,29 @@ if __name__ == "__main__":
 
     # Dictionary to store all lattice types
     lattices = {
-        0: ('square', create_square_lattice(lattice_spacing, physical_size)),
+        0: ('square', create_square_lattice(lattice_spacing, 1.0 * start_physical_size)),
+        1: ('square', create_square_lattice(lattice_spacing, 1.1 * start_physical_size)),
+        2: ('square', create_square_lattice(lattice_spacing, 1.2 * start_physical_size)),
+        3: ('square', create_square_lattice(lattice_spacing, 1.3 * start_physical_size)),
+        4: ('square', create_square_lattice(lattice_spacing, 1.4 * start_physical_size)),
+        5: ('square', create_square_lattice(lattice_spacing, 1.5 * start_physical_size)),
+        6: ('square', create_square_lattice(lattice_spacing, 1.6 * start_physical_size)),
+        7: ('square', create_square_lattice(lattice_spacing, 1.7 * start_physical_size)),
+        8: ('square', create_square_lattice(lattice_spacing, 1.8 * start_physical_size)),
+        9: ('square', create_square_lattice(lattice_spacing, 1.9 * start_physical_size)),
+        10: ('square', create_square_lattice(lattice_spacing, 2.0 * start_physical_size)),
+
+        11: ('square', create_square_lattice(3*lattice_spacing, 1.0 * start_physical_size)),
+        12: ('square', create_square_lattice(3*lattice_spacing, 1.1 * start_physical_size)),
+        13: ('square', create_square_lattice(3*lattice_spacing, 1.2 * start_physical_size)),
+        14: ('square', create_square_lattice(3*lattice_spacing, 1.3 * start_physical_size)),
+        15: ('square', create_square_lattice(3*lattice_spacing, 1.4 * start_physical_size)),
+        16: ('square', create_square_lattice(3*lattice_spacing, 1.5 * start_physical_size)),
+        17: ('square', create_square_lattice(3*lattice_spacing, 1.6 * start_physical_size)),
+        18: ('square', create_square_lattice(3*lattice_spacing, 1.7 * start_physical_size)),
+        19: ('square', create_square_lattice(3*lattice_spacing, 1.8 * start_physical_size)),
+        20: ('square', create_square_lattice(3*lattice_spacing, 1.9 * start_physical_size)),
+        21: ('square', create_square_lattice(3*lattice_spacing, 2.0 * start_physical_size)),
         # 1: ('triangular', create_triangular_lattice(lattice_spacing/np.sqrt(np.sin(np.pi / 3)), physical_size)),
         # 2: ('ammann-beenker', (ab_x, ab_y))
     }

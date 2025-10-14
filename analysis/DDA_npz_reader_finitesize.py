@@ -3,6 +3,17 @@ import matplotlib.pyplot as plt
 import re
 
 Z0 = 376.730313668  # Impedance of free space in ohms
+eps0 = 8.854187817e-12  # Permittivity of free space in F/m
+
+def alpha_func_U(freq):
+    f0 = 3.055409e+14
+    hw = 2.002573e+13
+    ee_A = 1.057429e+08
+    ee_B = 1.816242e-23
+    ee_C = 1.856486e-36
+
+    alpha_scaled = ee_A / (f0**2 - freq**2 - 1j * freq * hw) + ee_B + ee_C * freq
+    return alpha_scaled * eps0
 
 def extract_parameters(folder_path):
     """
@@ -24,6 +35,7 @@ def extract_parameters(folder_path):
 
 
 npz_file = "/Users/dharper/DDA_simulation_data.npz"
+# npz_file = "/Users/dharper/DDA_simulation_data_1DperidoicPC.npz"
 data = np.load(npz_file, allow_pickle=True)
 lst = data.files
 print("data folders", lst)
@@ -35,17 +47,11 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 # colors = plt.cm.viridis(np.linspace(0, 1, 9))  # Use a colormap for distinct
 
 
-
-full_periodic = np.load("full_periodic_absorption_Cshape1365nmspacing.npy")
-
 p_dis_levels = [0, 100e-9, 200e-9, 300e-9, 400e-9]
 seen_p = []
 for i, folder_path in enumerate(folder_paths):
-    # Create figure with subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-    # Plot full periodic on left subplot
-    ax1.plot(full_periodic[0], full_periodic[1], color='k', label="Full periodic", linestyle='solid')
+    # Create single figure
+    fig, ax1 = plt.subplots(1, 1, figsize=(8, 6))
 
     i_5digits = f"{i:05d}"
 
@@ -57,25 +63,25 @@ for i, folder_path in enumerate(folder_paths):
 
         dipole_count = data[f"sim_{i_5digits}_x_positions"].shape[0]
         print(f"  Dipole count: {dipole_count}")
-        area = dipole_count * (1365e-9)**2
+        spacing = 100e-9
+        area = dipole_count * (spacing)**2
         print(area, f"  Area: {area*1e12:.2f} um^2")
 
-        # Visualize dipole positions on right subplot
-        ax2.scatter(data[f"sim_{i_5digits}_x_positions"], data[f"sim_{i_5digits}_y_positions"])
-        for j in range(1, 7):
-            ax2.scatter(data[f"sim_{i_5digits}_x_positions"] + 1365e-9 * j, data[f"sim_{i_5digits}_y_positions"], marker='x', color='gray')
-            ax2.scatter(data[f"sim_{i_5digits}_x_positions"] - 1365e-9 * j, data[f"sim_{i_5digits}_y_positions"], marker='x', color='gray')
+
 
         freq_list = data[f"sim_{i_5digits}_frequencies"]
-        # r = data[f"sim_{i_5digits}_r_complex_x"].astype(np.complex128) / area
-        # t = 1 + r
+        r = data[f"sim_{i_5digits}_r_complex_x"].astype(np.complex128) / area
+        t = 1 + r
 
-        # R = np.abs(r)**2
-        # T = np.abs(t)**2
-        # A = 1 - R - T
+        R = np.abs(r)**2
+        T = np.abs(t)**2
+        A = 1 - R - T
 
-        ppP = 1/(2*Z0) * area
-        A = np.pi * freq_list * np.imag(data[f"sim_{i_5digits}_polarizations_ex"]).sum(axis=1) / ppP
+        ppP = 1/(2*Z0)
+        A2 = -np.pi * freq_list * np.imag(1/alpha_func_U(freq_list)) * (np.abs(data[f"sim_{i_5digits}_polarizations_ex"])**2).sum(axis=1) / ppP
+
+        Cext = np.pi * freq_list * np.imag(data[f"sim_{i_5digits}_polarizations_ex"]).sum(axis=1) / ppP
+
 
         label = None
         if p_val not in seen_p:
@@ -85,18 +91,16 @@ for i, folder_path in enumerate(folder_paths):
         # Plot absorption on left subplot
         ax1.plot(freq_list, A, color=colors[p_val % len(colors)], label=label, marker='o', markersize=4, linestyle='-')
 
-        # Configure subplots
+        ax1.plot(freq_list, np.real(r), color=colors[p_val % len(colors)], label=label, marker='.', markersize=4, linestyle='-')
+        # ax1.plot(freq_list, np.imag(r), color=colors[p_val % len(colors)], label=label, marker='.', markersize=4, linestyle='--')
+
+        # ax1.plot(freq_list, Cext, color=colors[p_val % len(colors)], linestyle='--', alpha=0.5)
+
+        # Configure plot
         ax1.legend()
         ax1.set_xlabel('Frequency')
         ax1.set_ylabel('Absorption')
         ax1.set_title('Absorption Spectra')
-
-        ax2.set_xlim(-20e-6, 20e-6)
-        ax2.set_ylim(-20e-6, 20e-6)
-        ax2.set_xlabel('X Position (m)')
-        ax2.set_ylabel('Y Position (m)')
-        ax2.set_title('Dipole Positions')
-        ax2.set_aspect('equal')
 
         plt.tight_layout()
         plt.savefig(f"absorption_and_dipoles_{i_5digits}_p{p_val}.png", dpi=500)
