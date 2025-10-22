@@ -34,8 +34,8 @@ def extract_parameters(folder_path):
         return None, None, None, None
 
 
-npz_file = "/Users/dharper/DDA_simulation_data.npz"
-# npz_file = "/Users/dharper/DDA_simulation_data_1DperidoicPC.npz"
+#npz_file = "/Users/dharper/DDA_simulation_data.npz"
+npz_file = "/Users/dharper/DDA_simulation_data_1DperidoicPC.npz"
 data = np.load(npz_file, allow_pickle=True)
 lst = data.files
 print("data folders", lst)
@@ -77,10 +77,10 @@ for i, folder_path in enumerate(folder_paths):
         T = np.abs(t)**2
         A = 1 - R - T
 
-        ppP = 1/(2*Z0)
-        A2 = -np.pi * freq_list * np.imag(1/alpha_func_U(freq_list)) * (np.abs(data[f"sim_{i_5digits}_polarizations_ex"])**2).sum(axis=1) / ppP
+        # ppP = 1/(2*Z0)
+        # A2 = -np.pi * freq_list * np.imag(1/alpha_func_U(freq_list)) * (np.abs(data[f"sim_{i_5digits}_polarizations_ex"])**2).sum(axis=1) / ppP
 
-        Cext = np.pi * freq_list * np.imag(data[f"sim_{i_5digits}_polarizations_ex"]).sum(axis=1) / ppP
+        # Cext = np.pi * freq_list * np.imag(data[f"sim_{i_5digits}_polarizations_ex"]).sum(axis=1) / ppP
 
 
         label = None
@@ -89,9 +89,9 @@ for i, folder_path in enumerate(folder_paths):
             label = f"p={p_dis_levels[p_val]*1e9:.0f}nm"
 
         # Plot absorption on left subplot
-        ax1.plot(freq_list, A, color=colors[p_val % len(colors)], label=label, marker='o', markersize=4, linestyle='-')
+        ax1.plot(freq_list, -A, color=colors[p_val % len(colors)], label=label, marker='o', markersize=4, linestyle='-')
 
-        ax1.plot(freq_list, np.real(r), color=colors[p_val % len(colors)], label=label, marker='.', markersize=4, linestyle='-')
+        # ax1.plot(freq_list, np.real(r), color=colors[p_val % len(colors)], label=label, marker='.', markersize=4, linestyle='-')
         # ax1.plot(freq_list, np.imag(r), color=colors[p_val % len(colors)], label=label, marker='.', markersize=4, linestyle='--')
 
         # ax1.plot(freq_list, Cext, color=colors[p_val % len(colors)], linestyle='--', alpha=0.5)
