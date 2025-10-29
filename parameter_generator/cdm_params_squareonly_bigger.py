@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
 
-    seed_count = 1  # Number of seeds to generate
+    seed_count = 10  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
