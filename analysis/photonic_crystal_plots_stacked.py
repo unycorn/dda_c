@@ -21,7 +21,8 @@ def extract_parameters(folder_path):
         return None, None, None, None
 
 
-npz_file = "/Users/dharper/DDA_simulation_data.npz"
+# npz_file = "/Users/dharper/DDA_simulation_data.npz"
+npz_file = "/Users/dharper/DDA_simulation_data_1DperidoicPC.npz"
 data = np.load(npz_file, allow_pickle=True)
 lst = data.files
 # print("data folders", lst)
@@ -49,8 +50,8 @@ for i, folder_path in enumerate(folder_paths):
 
     # Extract parameters
     l_val, p_val, o_val, m_val = extract_parameters(folder_path)
-    
-    if o_val == 0 and p_val >= 0:
+    print(l_val, p_val, o_val, m_val)
+    if o_val == 0:
         print(f"Folder {i}: {folder_path}")
 
         dipole_count = data[f"sim_{i_5digits}_x_positions"].shape[0]
