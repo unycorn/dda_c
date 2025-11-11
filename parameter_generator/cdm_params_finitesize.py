@@ -36,6 +36,41 @@ def create_square_lattice(spacing, physical_size):
     xx, yy = np.meshgrid(x, y)
     return xx.flatten(), yy.flatten()
 
+def create_centered_square_lattice(spacing, physical_size):
+    """
+    Create a square lattice with given spacing that fits within a physical size,
+    perfectly centered around (0,0).
+    
+    :param spacing: Spacing between points in meters (e.g., 300e-9 for 300nm)
+    :param physical_size: Physical size of the lattice in meters (e.g., 15e-6 for 15µm)
+    :return: Arrays of x and y coordinates in meters
+    :raises ValueError: If physical_size is not significantly larger than spacing
+    """
+    if physical_size < spacing * 2:
+        raise ValueError(f"Physical size ({physical_size*1e9:.1f}nm) must be at least twice the spacing ({spacing*1e9:.1f}nm)")
+    
+    # Calculate number of points that fit within physical size
+    num_points = int(np.floor(physical_size / spacing))
+    
+    if num_points < 2:
+        raise ValueError(f"Physical size too small to fit multiple points with given spacing")
+    
+    # Create arrays centered around 0
+    # For even number of points: range from -(n/2-0.5) to (n/2-0.5)
+    # For odd number of points: range from -(n-1)/2 to (n-1)/2
+    if num_points % 2 == 0:
+        # Even number of points
+        indices = np.arange(num_points) - num_points/2 + 0.5
+    else:
+        # Odd number of points
+        indices = np.arange(num_points) - (num_points-1)/2
+    
+    x = indices * spacing
+    y = indices * spacing
+    
+    xx, yy = np.meshgrid(x, y)
+    return xx.flatten(), yy.flatten()
+
 def create_triangular_lattice(spacing, physical_size):
     """
     Create a triangular lattice with given spacing that fits within a physical size.
@@ -162,7 +197,7 @@ if __name__ == "__main__":
 
     # Dictionary to store all lattice types
     lattices = {
-        i: ('square', create_square_lattice(lattice_spacing, size))
+        i: ('square', create_centered_square_lattice(lattice_spacing, size))
         for i, size in enumerate(lattice_sizes)
     }
     M_OFFSET = 0
@@ -231,5 +266,5 @@ if __name__ == "__main__":
                         # Write the output file
                         write_output_csv(output_file, data, headers)
                         print(f"Generated CDM input parameters saved to {output_file}")
-                    
-                    
+
+
