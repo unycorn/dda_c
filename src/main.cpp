@@ -77,21 +77,28 @@ void run_simulation(
             // Initialize incident field (2N components - one electric and one magnetic scalar per dipole)
             std::vector<std::complex<double>> inc_field(2 * N, std::complex<double>(0.0, 0.0));
             for (int j = 0; j < N; ++j) {
-                // Calculate phase at dipole position (these should all be identity)
-                double phase = k * positions[j].z;
-                std::complex<double> phase_factor = std::exp(I * phase);
+                // // Calculate phase at dipole position (these should all be identity)
+                // double phase = k * positions[j].z;
+                // std::complex<double> phase_factor = std::exp(I * phase);
                 
-                // Create complex vectors for E and H fields
-                vec3 E_inc_real = {1.0, 0.0, 0.0};  // Real part of E-field (x-component)
-                vec3 H_inc_real = {0.0, 1.0/Z_0, 0.0};  // Real part of H-field (y-component)
+                // // Create complex vectors for E and H fields
+                // vec3 E_inc_real = {1.0, 0.0, 0.0};  // Real part of E-field (x-component)
+                // vec3 H_inc_real = {0.0, 1.0/Z_0, 0.0};  // Real part of H-field (y-component)
                 
-                // Create projection vectors
-                vec3 u_e = {cos(angles[j]), sin(angles[j]), 0.0}; // Electric projection vector
-                vec3 u_h = {0.0, 0.0, 1.0}; // Magnetic projection vector (assumed along z-axis)
-                
-                // Calculate projections and multiply by phase factor
-                inc_field[2 * j + 0] = phase_factor * vec3_dot(E_inc_real, u_e);     // Electric projection
-                inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
+                // // Create projection vectors
+                // vec3 u_e = {cos(angles[j]), sin(angles[j]), 0.0}; // Electric projection vector
+                // vec3 u_h = {0.0, 0.0, 1.0}; // Magnetic projection vector (assumed along z-axis)
+
+                // // Calculate projections and multiply by phase factor
+                // inc_field[2 * j + 0] = phase_factor * vec3_dot(E_inc_real, u_e);     // Electric projection
+                // inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
+
+                // Gaussian beam profile
+                double w0 = 5e-9; // Beam waist
+                double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
+                inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
+                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
+
             }
 
             // Convert incident field to cuDoubleComplex for GPU
