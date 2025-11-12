@@ -62,3 +62,6 @@ def main():
     data_pairs.sort()
     for d in data_pairs:
         print(d[1])
+
+if __name__ == "__main__":
+    main()
