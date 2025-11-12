@@ -93,11 +93,11 @@ def main():
                 r_p = positions[i]
                 px, mz = polarizations[i]
                 
-                E, H = dipole.calculate_both_dipole_fields(r_p, r_s, [px, 0, 0, 0, 0, mz], 2*pi*freq)
-                Ex = Ex + E[0]
-                Ey = Ey + E[1]
-                Bx = Bx + mu_0 * H[0]
-                By = By + mu_0 * H[1]
+                EH = dipole.calculate_both_dipole_fields(r_p, r_s, [px, 0, 0, 0, 0, mz], 2*pi*freq)
+                Ex = Ex + EH[0]
+                Ey = Ey + EH[1]
+                Bx = Bx + mu_0 * EH[0 + 3]
+                By = By + mu_0 * EH[1 + 3]
 
             Pt += (Ex * By - Ey * Bx) / mu_0
         print(f"{freq*1e-12:.0f} THz", P0, Pt)
