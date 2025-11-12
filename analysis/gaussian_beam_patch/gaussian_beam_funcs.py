@@ -219,6 +219,10 @@ def main():
             sample_locations[idx] = [x, y, z]
             idx += 1
 
+    freq_list = []
+    P0_list = []
+    Pt_list = []
+
     # Process each frequency
     for d in data_pairs:
         freq, file, N, polarizations = d
@@ -229,10 +233,15 @@ def main():
         
         # Use JIT-optimized function
         P0, Pt = calculate_power_at_samples(sample_locations, positions_array, polarizations_array, freq, A)
-        
+        freq_list.append(freq)
+        P0_list.append(P0)
+        Pt_list.append(Pt)
+
         print(f"{freq*1e-12:.0f} THz", P0, Pt)
             
-
+    plt.plot(freq_list, P0, "incident power")
+    plt.plot(freq_list, Pt, "transmitted power")
+    plt.savefig("powerplot.png")
 
 if __name__ == "__main__":
     main()
