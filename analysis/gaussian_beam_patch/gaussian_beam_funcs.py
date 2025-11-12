@@ -239,8 +239,8 @@ def main():
 
         print(f"{freq*1e-12:.0f} THz", P0, Pt)
             
-    plt.plot(freq_list, P0_list, "incident power")
-    plt.plot(freq_list, Pt_list, "transmitted power")
+    plt.plot(freq_list, P0_list, 'b')
+    plt.plot(freq_list, Pt_list, 'r')
     plt.savefig("powerplot.png")
 
 if __name__ == "__main__":
