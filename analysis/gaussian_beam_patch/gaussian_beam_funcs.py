@@ -1,6 +1,11 @@
+import os
+import glob
+import argparse
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import c, mu_0, epsilon_0, pi
+import read_polarizations
 # from numba import jit
 
 def gaussian_beam(x, y, z, w0, freq):
@@ -30,3 +35,30 @@ def gaussian_beam_downward(x,y,z,w0,freq):
 
 z = -0.25e-6
 print(gaussian_beam_downward(0, 0, z, 5e-6, 300e12))
+
+def main():
+    parser = argparse.ArgumentParser(description='Create animated Voronoi diagram of polarization data')
+    parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
+    args = parser.parse_args()
+
+    # Read position data
+    df = pd.read_csv(args.csv_file)
+    positions = df[['x', 'y', 'z']].values
+    thetas = df['theta'].values
+
+    # Get the pols folder path by removing .csv from the input file path
+    pols_folder = os.path.splitext(args.csv_file)[0]
+    if not os.path.isdir(pols_folder):
+        raise ValueError(f"Could not find polarization data folder: {pols_folder}")
+    
+    pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
+    # Read frequencies and full data to sort files
+    data_pairs = []
+    for file in pols_files:
+        N, freq, polarizations = read_polarizations.read_polarizations_binary(file)
+        data_pairs.append((freq, file, N, polarizations))
+    
+    # Sort by frequency
+    data_pairs.sort()
+    for d in data_pairs:
+        print(d[1])

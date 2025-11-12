@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # Dictionary to store all lattice types
     lattices = {
         i: ('square', create_centered_square_lattice(lattice_spacing, size))
-        for i, size in enumerate(lattice_sizes)
+    for i, size in enumerate(lattice_sizes)1 1
     }
     M_OFFSET = 0
 
