@@ -234,6 +234,7 @@ def main():
 
         print(f"{freq*1e-12:.0f} THz", P0, Pt)
             
+    np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, P0_list, Pt_list]))
     plt.plot(freq_list, P0_list, 'b')
     plt.plot(freq_list, Pt_list, 'r')
     plt.savefig("powerplot.png")
