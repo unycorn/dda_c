@@ -85,8 +85,9 @@ def main():
         freq, file, N, polarizations = d
         
         for r_s in sample_locations:
+            print(r_s)
             Ex, By = gaussian_beam_downward(r_s[0], r_s[1], r_s[2], 5e-6, freq)
-            P0 += Ex * By / mu_0
+            P0 += (Ex * By / mu_0) * A 
 
             Ey = Bx = 0
             for i in range(N):
@@ -99,7 +100,7 @@ def main():
                 Bx = Bx + mu_0 * EH[0 + 3]
                 By = By + mu_0 * EH[1 + 3]
 
-            Pt += (Ex * By - Ey * Bx) / mu_0
+            Pt += ((Ex * By - Ey * Bx) / mu_0) * A
         print(f"{freq*1e-12:.0f} THz", P0, Pt)
             
 
