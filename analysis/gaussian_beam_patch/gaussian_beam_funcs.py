@@ -171,9 +171,6 @@ def gaussian_beam_downward(x,y,z,w0,freq):
     Ex, By = gaussian_beam(x, y, -z, w0, freq)
     return Ex, -By
 
-z = -0.25e-6
-print(gaussian_beam_downward(0, 0, z, 5e-6, 300e12))
-
 def main():
     parser = argparse.ArgumentParser(description='Create animated Voronoi diagram of polarization data')
     parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
