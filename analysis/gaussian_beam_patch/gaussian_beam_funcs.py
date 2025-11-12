@@ -85,7 +85,7 @@ def main():
         freq, file, N, polarizations = d
         
         for r_s in sample_locations:
-            print(r_s)
+            # print(r_s)
             Ex, By = gaussian_beam_downward(r_s[0], r_s[1], r_s[2], 5e-6, freq)
             P0 += 0.5 * np.real(  (np.conj(Ex) * By / mu_0) * A  )
 
