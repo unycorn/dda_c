@@ -19,7 +19,6 @@ def gaussian_beam_jit(x, y, z, w0, freq):
     wvl = c / freq
     k = 2 * np.pi / wvl
 
-    w0 = 10e-6
     f = 1 / (k * w0)
     l = k * w0**2
 
@@ -155,7 +154,6 @@ def gaussian_beam(x, y, z, w0, freq):
     k = 2 * np.pi / wvl
     omega = c * k
 
-    w0 = 10e-6
     f = 1 / (k * w0)
     l = k * w0**2
 
