@@ -61,7 +61,7 @@ def main():
     # Sort by frequency
     data_pairs.sort()
     for d in data_pairs:
-        print(d[1])
+        print(d[0])
 
 if __name__ == "__main__":
     main()
