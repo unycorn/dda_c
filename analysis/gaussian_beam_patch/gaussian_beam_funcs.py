@@ -45,10 +45,10 @@ def main():
     parser.add_argument('density', help='number of sampling sites by length')
     args = parser.parse_args()
 
-    width = args.width
+    width = float(args.width)
     wover2 = width/2
-    z = -args.distance
-    sample_N = args.density
+    z = -float(args.distance)
+    sample_N = int(args.density)
 
     A = width**2 / sample_N**2
 
