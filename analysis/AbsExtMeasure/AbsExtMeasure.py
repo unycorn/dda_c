@@ -255,7 +255,7 @@ def main():
             extinguished_power += pi*freq*np.imag( np.dot(np.conj(E_inc), p_vec) )
             absorbed_power += pi*freq*np.imag( np.dot(np.conj(E_loc), p_vec) )
 
-        print(f"{freq*1e-12:.0f} THz", extinguished_power, absorbed_power)
+        print(f"{freq*1e-12:.0f} THz", incident_power, extinguished_power, absorbed_power)
             
     np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power, extinguished_power, absorbed_power]))
     plt.plot(freq_list, absorbed_power, 'b')
