@@ -293,12 +293,14 @@ def main():
     plt.plot(freq_list, R, 'r', label = 'reflection')
     plt.legend()
     plt.savefig("ATRplot.png")
+    plt.close()
 
     # plt.plot(freq_list, A, 'k', label = "absorption")
     plt.plot(freq_list, T, 'b', label = 'transmission')
     # plt.plot(freq_list, R, 'r', label = 'reflection')
     plt.legend()
     plt.savefig("Tplot.png")
+    plt.close()
 
 if __name__ == "__main__":
     main()
