@@ -194,9 +194,7 @@ def calculate_power_at_samples(sample_locations, positions, polarizations, freq,
 def main():
     parser = argparse.ArgumentParser(description='Create animated Voronoi diagram of polarization data')
     parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
-    parser.add_argument('distance', help='sampling distance')
-    parser.add_argument('width', help='width of sampling region')
-    parser.add_argument('density', help='number of sampling sites by length')
+
     args = parser.parse_args()
 
     # Read position data
