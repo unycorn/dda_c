@@ -239,7 +239,8 @@ def main():
         for r1_i in range(N):
             
             sample_location = positions[r1_i]
-            p = polarizations_array[r1_i]
+            px, mz = polarizations_array[r1_i]
+            p_vec = np.array([px, 0, 0])
             #contribution from each dipole
             EB_loc = calculate_radiated_field_jit(sample_location, positions_array, polarizations_array, freq)
             
@@ -251,8 +252,8 @@ def main():
             E_loc = EB_loc[:3]
             E_inc = np.array([Einc_x, 0, 0])
         
-            extinguished_power += pi*freq*np.imag( np.dot(np.conj(E_inc), p) )
-            absorbed_power += pi*freq*np.imag( np.dot(np.conj(E_loc), p) )
+            extinguished_power += pi*freq*np.imag( np.dot(np.conj(E_inc), p_vec) )
+            absorbed_power += pi*freq*np.imag( np.dot(np.conj(E_loc), p_vec) )
 
         print(f"{freq*1e-12:.0f} THz", extinguished_power, absorbed_power)
             
