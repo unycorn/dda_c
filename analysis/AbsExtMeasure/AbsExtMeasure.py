@@ -280,5 +280,18 @@ def main():
     plt.plot(freq_list, incident_power*np.ones_like(freq_list), 'k')
     plt.savefig("powerplot.png")
 
+    absorbed_power_list = np.array(absorbed_power_list)
+    extinguished_power_list = np.array(extinguished_power_list)
+    incident_power_list = incident_power * np.ones_like(freq_list)
+
+    A = absorbed_power_list / incident_power_list
+    T = 1 - (extinguished_power/incident_power)
+    R = 1 - A - T
+
+    plt.plot(freq_list, A, 'k', label = "absorption")
+    plt.plot(freq_list, T, 'b', label = 'transmission')
+    plt.plot(freq_list, R, 'r', label = 'reflection')
+    plt.savefig("ATRplot.png")
+
 if __name__ == "__main__":
     main()
