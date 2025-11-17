@@ -274,6 +274,7 @@ def main():
             
     print(freq_list)
     np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power*np.ones_like(freq_list), extinguished_power_list, absorbed_power_list]))
+    print("saved data to ", os.path.join(pols_folder, "power.npy"))
     plt.plot(freq_list, absorbed_power_list, 'b')
     plt.plot(freq_list, extinguished_power_list, 'r')
     plt.plot(freq_list, incident_power*np.ones_like(freq_list), 'k')
