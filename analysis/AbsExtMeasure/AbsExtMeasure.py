@@ -142,7 +142,8 @@ def calculate_radiated_field_jit(sample_location, positions, polarizations, freq
         r_p = positions[j]
         px, mz = polarizations[j]
 
-        if r_p != r_s:
+        # If we are closer than 0.1 nm we just skip it
+        if np.max(np.abs(r_p - r_s)) > 1e-10:
         
             # Calculate dipole fields
             EH = calculate_dipole_fields_jit(r_p, r_s, px, mz, 2*np.pi*freq)
