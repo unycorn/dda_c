@@ -307,8 +307,15 @@ def main():
         T = 1 - (extinguished_power_list/incident_power_list)
         R = 1 - A - T
         
-        # Store results for plotting
-        file_label = os.path.basename(csv_file).replace('.csv', '')
+        # Store results for plotting - use parent directory name for unique labels
+        parent_dir = os.path.basename(os.path.dirname(csv_file))
+        file_basename = os.path.basename(csv_file).replace('.csv', '')
+        file_label = f"{parent_dir}_{file_basename}" if parent_dir else file_basename
+        
+        # If still not unique, use more of the path
+        if file_label in all_results:
+            file_label = csv_file.replace('/', '_').replace('.csv', '')
+        
         all_results[file_label] = {
             'freq_list': np.array(freq_list),
             'A': A,
