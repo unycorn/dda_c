@@ -169,7 +169,8 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, fr
         p_vec = np.array([px, 0.0 + 0.0j, 0.0 + 0.0j])
         
         # Contribution from each dipole
-        EB_loc = calculate_radiated_field_jit(sample_location, positions_array, polarizations_array, freq)
+        # EB_loc = calculate_radiated_field_jit(sample_location, positions_array, polarizations_array, freq)
+        EB_loc = np.array([0,0,0,0,0,0], dtype=np.complex128)
         
         # Contribution from incident beam
         Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], 5e-6, freq)
