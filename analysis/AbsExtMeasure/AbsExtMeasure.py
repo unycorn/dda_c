@@ -229,6 +229,8 @@ def main():
     for d in data_pairs:
         freq, file, N, polarizations = d
         
+        freq_list.append(freq)
+
         # Convert data to numpy arrays for JIT optimization
         positions_array = np.array(positions)
         polarizations_array = np.array(polarizations)
