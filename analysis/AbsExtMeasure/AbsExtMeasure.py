@@ -151,7 +151,7 @@ def calculate_radiated_field_jit(sample_location, positions, polarizations, freq
             Ez_total += EH[2]
             Bx_total += MU_0 * EH[3]
             By_total += MU_0 * EH[4]
-            BZ_total += MU_0 * EH[5]
+            Bz_total += MU_0 * EH[5]
     
     return np.array([Ex_total, Ey_total, Ez_total, Bx_total, By_total, Bz_total])
 
