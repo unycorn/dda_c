@@ -222,86 +222,166 @@ def calculate_power_at_samples(sample_locations, positions, polarizations, beam_
     return P0, Pt
 
 def main():
-    parser = argparse.ArgumentParser(description='Create animated Voronoi diagram of polarization data')
-    parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
+    parser = argparse.ArgumentParser(description='Calculate absorption, transmission, and reflection for multiple CSV files')
+    parser.add_argument('csv_pattern', help='CSV file pattern (e.g., "data/*.csv" or single file path)')
 
     args = parser.parse_args()
-
-    # Read position data
-    df = pd.read_csv(args.csv_file)
-    positions = df[['x', 'y', 'z']].values
-    thetas = df['theta'].values
-    print(df)
+    
+    # Get list of CSV files matching the pattern
+    csv_files = glob.glob(args.csv_pattern)
+    if not csv_files:
+        raise ValueError(f"No files found matching pattern: {args.csv_pattern}")
+    
+    csv_files.sort()  # Sort for consistent ordering
+    print(f"Found {len(csv_files)} files to process:")
+    for file in csv_files:
+        print(f"  {file}")
 
     beam_waist = 5e-6
     incident_power = pi * beam_waist**2 / ( 2 * Z_0 ) # With a center amplitude of 1 V/m
 
-    # Get the pols folder path by removing .csv from the input file path
-    pols_folder = os.path.splitext(args.csv_file)[0]
-    if not os.path.isdir(pols_folder):
-        raise ValueError(f"Could not find polarization data folder: {pols_folder}")
+    # Store results for all files
+    all_results = {}
     
-    pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
-    # Read frequencies and full data to sort files
-    data_pairs = []
-    for file in pols_files:
-        N, freq, polarizations = read_polarizations.read_polarizations_binary(file)
-        data_pairs.append((freq, file, N, polarizations))
-    
-    # Sort by frequency
-    data_pairs.sort()
-
-    freq_list = []
-    absorbed_power_list = []
-    extinguished_power_list = []
-
-    # Process each frequency
-    for d in data_pairs:
-        freq, file, N, polarizations = d
+    # Process each CSV file
+    for csv_file in csv_files:
+        print(f"\nProcessing: {csv_file}")
         
-        freq_list.append(freq)
-
-        # Convert data to numpy arrays for JIT optimization
-        positions_array = np.array(positions)
-        polarizations_array = np.array(polarizations)
+        # Read position data
+        df = pd.read_csv(csv_file)
+        positions = df[['x', 'y', 'z']].values
+        thetas = df['theta'].values
         
-        # Calculate absorbed and extinguished power using JIT-compiled function
-        absorbed_power, extinguished_power = calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq)
+        # Get the pols folder path by removing .csv from the input file path
+        pols_folder = os.path.splitext(csv_file)[0]
+        if not os.path.isdir(pols_folder):
+            print(f"Warning: Could not find polarization data folder: {pols_folder}")
+            continue
         
-        absorbed_power_list.append(absorbed_power)
-        extinguished_power_list.append(extinguished_power)
-
-        print(f"{freq*1e-12:.0f} THz", incident_power, extinguished_power, absorbed_power)
+        pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
+        if not pols_files:
+            print(f"Warning: No .pols files found in {pols_folder}")
+            continue
             
-    # print(freq_list)
-    np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power*np.ones_like(freq_list), extinguished_power_list, absorbed_power_list]))
-    print("saved data to ", os.path.join(pols_folder, "power.npy"))
-    plt.plot(freq_list, absorbed_power_list, 'b')
-    plt.plot(freq_list, extinguished_power_list, 'r')
-    plt.plot(freq_list, incident_power*np.ones_like(freq_list), 'k')
-    plt.savefig("powerplot.png")
+        # Read frequencies and full data to sort files
+        data_pairs = []
+        for file in pols_files:
+            N, freq, polarizations = read_polarizations.read_polarizations_binary(file)
+            data_pairs.append((freq, file, N, polarizations))
+        
+        # Sort by frequency
+        data_pairs.sort()
 
-    absorbed_power_list = np.array(absorbed_power_list)
-    extinguished_power_list = np.array(extinguished_power_list)
-    incident_power_list = incident_power * np.ones_like(freq_list)
+        freq_list = []
+        absorbed_power_list = []
+        extinguished_power_list = []
 
-    A = absorbed_power_list / incident_power_list
-    T = 1 - (extinguished_power_list/incident_power_list)
-    R = 1 - A - T
+        # Process each frequency
+        for d in data_pairs:
+            freq, file, N, polarizations = d
+            
+            freq_list.append(freq)
 
-    plt.plot(freq_list, A, 'k', label = "absorption")
-    plt.plot(freq_list, T, 'b', label = 'transmission')
-    plt.plot(freq_list, R, 'r', label = 'reflection')
+            # Convert data to numpy arrays for JIT optimization
+            positions_array = np.array(positions)
+            polarizations_array = np.array(polarizations)
+            
+            # Calculate absorbed and extinguished power using JIT-compiled function
+            absorbed_power, extinguished_power = calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq)
+            
+            absorbed_power_list.append(absorbed_power)
+            extinguished_power_list.append(extinguished_power)
+
+        print(f"  Processed {len(freq_list)} frequencies")
+        
+        # Save individual file data
+        np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power*np.ones_like(freq_list), extinguished_power_list, absorbed_power_list]))
+        print(f"  Saved data to {os.path.join(pols_folder, 'power.npy')}")
+
+        # Convert to numpy arrays and calculate A, T, R
+        absorbed_power_list = np.array(absorbed_power_list)
+        extinguished_power_list = np.array(extinguished_power_list)
+        incident_power_list = incident_power * np.ones_like(freq_list)
+
+        A = absorbed_power_list / incident_power_list
+        T = 1 - (extinguished_power_list/incident_power_list)
+        R = 1 - A - T
+        
+        # Store results for plotting
+        file_label = os.path.basename(csv_file).replace('.csv', '')
+        all_results[file_label] = {
+            'freq_list': np.array(freq_list),
+            'A': A,
+            'T': T,
+            'R': R
+        }
+    
+    # Create combined plots
+    plt.figure(figsize=(12, 8))
+    
+    # Plot transmission for all files
+    plt.subplot(2, 2, 1)
+    for label, data in all_results.items():
+        plt.plot(np.array(data['freq_list'])*1e-12, data['T'], label=f'{label} - T')
+    plt.xlabel('Frequency (THz)')
+    plt.ylabel('Transmission')
+    plt.title('Transmission vs Frequency')
     plt.legend()
-    plt.savefig("ATRplot.png")
-    plt.close()
-
-    # plt.plot(freq_list, A, 'k', label = "absorption")
-    plt.plot(freq_list, T, 'b', label = 'transmission')
-    # plt.plot(freq_list, R, 'r', label = 'reflection')
+    plt.grid(True, alpha=0.3)
+    
+    # Plot absorption for all files
+    plt.subplot(2, 2, 2)
+    for label, data in all_results.items():
+        plt.plot(np.array(data['freq_list'])*1e-12, data['A'], label=f'{label} - A')
+    plt.xlabel('Frequency (THz)')
+    plt.ylabel('Absorption')
+    plt.title('Absorption vs Frequency')
     plt.legend()
-    plt.savefig("Tplot.png")
+    plt.grid(True, alpha=0.3)
+    
+    # Plot reflection for all files
+    plt.subplot(2, 2, 3)
+    for label, data in all_results.items():
+        plt.plot(np.array(data['freq_list'])*1e-12, data['R'], label=f'{label} - R')
+    plt.xlabel('Frequency (THz)')
+    plt.ylabel('Reflection')
+    plt.title('Reflection vs Frequency')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot all three for comparison (first file only, or you can modify this)
+    plt.subplot(2, 2, 4)
+    if all_results:
+        first_label = next(iter(all_results))
+        first_data = all_results[first_label]
+        plt.plot(np.array(first_data['freq_list'])*1e-12, first_data['A'], 'k-', label='Absorption')
+        plt.plot(np.array(first_data['freq_list'])*1e-12, first_data['T'], 'b-', label='Transmission')
+        plt.plot(np.array(first_data['freq_list'])*1e-12, first_data['R'], 'r-', label='Reflection')
+        plt.xlabel('Frequency (THz)')
+        plt.ylabel('Coefficient')
+        plt.title(f'A/T/R - {first_label}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig("combined_ATR_plot.png", dpi=300, bbox_inches='tight')
     plt.close()
+    
+    # Also create individual transmission plot as before
+    plt.figure(figsize=(10, 6))
+    for label, data in all_results.items():
+        plt.plot(np.array(data['freq_list'])*1e-12, data['T'], label=f'{label}')
+    plt.xlabel('Frequency (THz)')
+    plt.ylabel('Transmission')
+    plt.title('Transmission Comparison')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig("Tplot_combined.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"\nProcessing complete. Generated plots:")
+    print("  - combined_ATR_plot.png (4-panel comparison)")
+    print("  - Tplot_combined.png (transmission comparison)")
 
 if __name__ == "__main__":
     main()
