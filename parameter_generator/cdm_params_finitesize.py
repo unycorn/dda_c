@@ -172,7 +172,7 @@ if __name__ == "__main__":
     ab_y = np.array([xyi.imag for xyi in ab_xy_data])
 
 
-    lattice_spacing = 300e-9  # 300nm 
+    lattice_spacing = 200e-9  # 300nm 
 
     # print("area m^2", start_physical_size**2)
     # input()
@@ -193,12 +193,11 @@ if __name__ == "__main__":
         # 'u-shape-29': 'u-shape-29-cdm-param.csv'
     }
 
-    lattice_sizes = np.arange(5, 31) * 1e-6  # in meters
+    lattice_sizes = np.arange(5, 20, 2) * 1e-6  # in meters
 
     # Dictionary to store all lattice types
     lattices = {
-        i: ('square', create_centered_square_lattice(lattice_spacing, size))
-    for i, size in enumerate(lattice_sizes)1 1
+        i: ('square', create_centered_square_lattice(lattice_spacing, size)) for i, size in enumerate(lattice_sizes)
     }
     M_OFFSET = 0
 
