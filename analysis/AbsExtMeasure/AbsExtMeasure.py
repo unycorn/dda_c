@@ -315,19 +315,29 @@ def main():
             'T': T,
             'R': R
         }
+        print(f"  Added {file_label} to results with {len(freq_list)} frequency points")
+    
+    # Debug: Print what we have for plotting
+    print(f"\nPreparing to plot {len(all_results)} datasets:")
+    for label, data in all_results.items():
+        print(f"  {label}: {len(data['freq_list'])} frequencies, T range: {data['T'].min():.6f} to {data['T'].max():.6f}")
     
     # Create combined plots
     plt.figure(figsize=(12, 8))
     
     # Plot transmission for all files
     plt.subplot(2, 2, 1)
+    plot_count = 0
     for label, data in all_results.items():
         plt.plot(np.array(data['freq_list'])*1e-12, data['T'], label=f'{label} - T')
+        plot_count += 1
+        print(f"    Plotted transmission for {label}")
     plt.xlabel('Frequency (THz)')
     plt.ylabel('Transmission')
     plt.title('Transmission vs Frequency')
     plt.legend()
     plt.grid(True, alpha=0.3)
+    print(f"  Transmission subplot: plotted {plot_count} curves")
     
     # Plot absorption for all files
     plt.subplot(2, 2, 2)
@@ -369,8 +379,11 @@ def main():
     
     # Also create individual transmission plot as before
     plt.figure(figsize=(10, 6))
+    plot_count = 0
     for label, data in all_results.items():
         plt.plot(np.array(data['freq_list'])*1e-12, data['T'], label=f'{label}')
+        plot_count += 1
+        print(f"    Plotted transmission comparison for {label}")
     plt.xlabel('Frequency (THz)')
     plt.ylabel('Transmission')
     plt.title('Transmission Comparison')
@@ -378,6 +391,7 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.savefig("Tplot_combined.png", dpi=300, bbox_inches='tight')
     plt.close()
+    print(f"  Transmission comparison plot: plotted {plot_count} curves")
     
     print(f"\nProcessing complete. Generated plots:")
     print("  - combined_ATR_plot.png (4-panel comparison)")
