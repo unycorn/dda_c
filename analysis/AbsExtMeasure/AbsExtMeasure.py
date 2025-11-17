@@ -257,7 +257,8 @@ def main():
 
         print(f"{freq*1e-12:.0f} THz", incident_power, extinguished_power, absorbed_power)
             
-    np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power, extinguished_power, absorbed_power]))
+    print(freq_list)
+    np.save(os.path.join(pols_folder, "power.npy"), np.array([freq_list, incident_power*np.ones_like(freq_list), extinguished_power, absorbed_power]))
     plt.plot(freq_list, absorbed_power, 'b')
     plt.plot(freq_list, extinguished_power, 'r')
     plt.plot(freq_list, incident_power, 'k')
