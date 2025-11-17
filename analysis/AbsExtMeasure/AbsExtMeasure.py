@@ -157,7 +157,7 @@ def calculate_radiated_field_jit(sample_location, positions, polarizations, freq
     return np.array([Ex_total, Ey_total, Ez_total, Bx_total, By_total, Bz_total])
 
 @jit(nopython=True)
-def calculate_absorption_extinction_jit(positions_array, polarizations_array, freq):
+def calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq):
     """Calculate absorbed and extinguished power for all dipoles - JIT optimized"""
     N = len(positions_array)
     absorbed_power = 0.0
@@ -173,7 +173,7 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, fr
         EB_loc = np.array([0,0,0,0,0,0], dtype=np.complex128)
         
         # Contribution from incident beam
-        Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], 5e-6, freq)
+        Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], beam_waist, freq)
         EB_loc[0] += Einc_x
         EB_loc[4] += Binc_y
 
@@ -186,7 +186,7 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, fr
     return absorbed_power, extinguished_power
 
 @jit(nopython=True)
-def calculate_power_at_samples(sample_locations, positions, polarizations, freq, A):
+def calculate_power_at_samples(sample_locations, positions, polarizations, beam_waist, freq, A):
     """Calculate power for all sample locations - JIT optimized"""
     P0 = 0.0
     Pt = 0.0
@@ -196,7 +196,7 @@ def calculate_power_at_samples(sample_locations, positions, polarizations, freq,
         r_s = sample_locations[i]
         
         # Calculate incident beam
-        Ex, By = gaussian_beam_downward_jit(r_s[0], r_s[1], r_s[2], 5e-6, freq)
+        Ex, By = gaussian_beam_downward_jit(r_s[0], r_s[1], r_s[2], beam_waist, freq)
         P0 += 0.5 * np.real((np.conj(Ex) * By / MU_0) * (-A))
         
         # Initialize total fields with incident beam
@@ -266,7 +266,7 @@ def main():
         polarizations_array = np.array(polarizations)
         
         # Calculate absorbed and extinguished power using JIT-compiled function
-        absorbed_power, extinguished_power = calculate_absorption_extinction_jit(positions_array, polarizations_array, freq)
+        absorbed_power, extinguished_power = calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq)
         
         absorbed_power_list.append(absorbed_power)
         extinguished_power_list.append(extinguished_power)
