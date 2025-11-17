@@ -12,7 +12,7 @@ from numba import jit
 # Constants for JIT functions
 MU_0 = 1.25663706127e-6
 EPSILON_0 = 8.8541878188e-12
-Z_0 = 1 / (c * mu_0)
+Z_0 = c * mu_0
 
 @jit(nopython=True)
 def gaussian_beam_jit(x, y, z, w0, freq):
