@@ -285,7 +285,7 @@ def main():
     incident_power_list = incident_power * np.ones_like(freq_list)
 
     A = absorbed_power_list / incident_power_list
-    T = 1 - (extinguished_power/incident_power)
+    T = 1 - (extinguished_power_list)/incident_power_list)
     R = 1 - A - T
 
     plt.plot(freq_list, A, 'k', label = "absorption")
