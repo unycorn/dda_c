@@ -239,6 +239,7 @@ def main():
 
     beam_waist = 5e-6
     incident_power = pi * beam_waist**2 / ( 2 * Z_0 ) # With a center amplitude of 1 V/m
+    print("incident power", incident_power)
 
     # Store results for all files
     all_results = {}
