@@ -97,7 +97,7 @@ void run_simulation(
                 double w0 = 5e-6; // Beam waist
                 double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
                 inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
-                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
+                inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); //positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
 
             }
 
@@ -134,6 +134,7 @@ void run_simulation(
             std::complex<double> power_sum(0.0, 0.0);
             for (int i = 0; i < 2 * N; ++i) {
                 power_sum += b[i] * std::conj(inc_field[i]);
+                std::cout << 1.0/alpha[i][0][0] << " " << -k*k*k / (6 * 3.1415926535 * EPSILON_0);
             }
             double extinguished_power = (omega / 2.0) * std::imag(power_sum);
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
