@@ -129,6 +129,15 @@ void run_simulation(
                 b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
             }
 
+            // Compute extinguished power: omega/2 * imag(sum(polarization * conj(incident_field)))
+            double omega = 2.0 * M_PI * freq;
+            std::complex<double> power_sum(0.0, 0.0);
+            for (int i = 0; i < 2 * N; ++i) {
+                power_sum += b[i] * std::conj(inc_field[i]);
+            }
+            double extinguished_power = (omega / 2.0) * std::imag(power_sum);
+            std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
+
             if (A_device != nullptr) {
                 cudaFree(A_device);
                 A_device = nullptr;
