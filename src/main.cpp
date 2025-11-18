@@ -131,20 +131,39 @@ void run_simulation(
 
             // Compute extinguished power: omega/2 * imag(sum(polarization * conj(incident_field)))
             double omega = 2.0 * M_PI * freq;
-            std::complex<double> power_sum(0.0, 0.0);
+            std::complex<double> extinguished_power_sum(0.0, 0.0);
+            double absorbed_power_total = 0.0;
+            
             for (int i = 0; i < 2 * N; ++i) {
-                power_sum += b[i] * std::conj(inc_field[i]);
-
-                // if (i == 0) { // Only for the first electric dipole (index 0)
-                //     std::cout << "First dipole 2x2 alpha matrix:" << std::endl;
-                //     std::cout << "  [" << std::real(alpha[0][0][0]) << " + " << std::imag(alpha[0][0][0]) << "i, "
-                //               << std::real(alpha[0][0][1]) << " + " << std::imag(alpha[0][0][1]) << "i]" << std::endl;
-                //     std::cout << "  [" << std::real(alpha[0][1][0]) << " + " << std::imag(alpha[0][1][0]) << "i, "
-                //               << std::real(alpha[0][1][1]) << " + " << std::imag(alpha[0][1][1]) << "i]" << std::endl;
-                // }
+                extinguished_power_sum += b[i] * std::conj(inc_field[i]);
             }
-            double extinguished_power = (omega / 2.0) * std::imag(power_sum);
-            std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
+            
+            // Compute absorbed power: sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j)
+            for (int j = 0; j < N; ++j) {
+                std::complex<double> px = b[2 * j + 0];     // Electric polarization for dipole j
+                std::complex<double> mz = b[2 * j + 1];     // Magnetic polarization for dipole j
+                
+                // Invert 2x2 alpha matrix for dipole j using determinant method
+                std::complex<double> det = alpha[j][0][0] * alpha[j][1][1] - alpha[j][0][1] * alpha[j][1][0];
+                std::complex<double> alpha_inv[2][2];
+                alpha_inv[0][0] = alpha[j][1][1] / det;
+                alpha_inv[0][1] = -alpha[j][0][1] / det;
+                alpha_inv[1][0] = -alpha[j][1][0] / det;
+                alpha_inv[1][1] = alpha[j][0][0] / det;
+                
+                // Calculate (px*, mz*) * alpha_inv * (px; mz) for dipole j
+                std::complex<double> temp1 = std::conj(px) * alpha_inv[0][0] + std::conj(mz) * alpha_inv[1][0];
+                std::complex<double> temp2 = std::conj(px) * alpha_inv[0][1] + std::conj(mz) * alpha_inv[1][1];
+                std::complex<double> absorbed_power_complex = temp1 * px + temp2 * mz;
+                
+                absorbed_power_total += std::imag(absorbed_power_complex);
+            }
+            
+            absorbed_power_total *= (omega / 2.0);
+            double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
+            
+            std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
+            std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
 
             if (A_device != nullptr) {
                 cudaFree(A_device);
