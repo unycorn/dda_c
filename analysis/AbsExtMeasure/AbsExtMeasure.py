@@ -176,13 +176,13 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, be
         
         # Contribution from incident beam
         Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], beam_waist, freq)
-        incident_power_estimate += 0.5 * np.real(Einc_x * np.conj(Binc_y)) * (200e-9)**2
+        incident_power_estimate += 0.5 * np.real(Einc_x * np.conj(Binc_y/mu_0)) * (200e-9)**2
         EB_loc[0] += Einc_x
         EB_loc[4] += Binc_y
 
         E_loc = EB_loc[:3]
         E_inc = np.array([Einc_x, 0.0 + 0.0j, 0.0 + 0.0j])
-    
+
         extinguished_power += np.pi * freq * np.imag(np.conj(E_inc[0]) * p_vec[0] + np.conj(E_inc[1]) * p_vec[1] + np.conj(E_inc[2]) * p_vec[2])
         absorbed_power += np.pi * freq * np.imag(np.conj(E_loc[0]) * p_vec[0] + np.conj(E_loc[1]) * p_vec[1] + np.conj(E_loc[2]) * p_vec[2])
     print(incident_power_estimate)
