@@ -152,6 +152,13 @@ void run_simulation(
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
                 if (j == 0) {
+                    // Print the 2x2 alpha matrix for j=0 dipole
+                    std::cout << "Alpha matrix for j=0 dipole at " << freq << " Hz:" << std::endl;
+                    std::cout << "  [" << std::real(alpha[j][0][0]) << " + " << std::imag(alpha[j][0][0]) << "i, "
+                              << std::real(alpha[j][0][1]) << " + " << std::imag(alpha[j][0][1]) << "i]" << std::endl;
+                    std::cout << "  [" << std::real(alpha[j][1][0]) << " + " << std::imag(alpha[j][1][0]) << "i, "
+                              << std::real(alpha[j][1][1]) << " + " << std::imag(alpha[j][1][1]) << "i]" << std::endl;
+                    
                     // Calculate local field for j = 0 dipole: E_loc = alpha_inv * (px, mz)
                     std::complex<double> E_loc_x = alpha_inv[0][0] * px + alpha_inv[0][1] * mz;
                     std::complex<double> E_loc_z = alpha_inv[1][0] * px + alpha_inv[1][1] * mz;
