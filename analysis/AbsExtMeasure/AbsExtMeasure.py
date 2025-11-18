@@ -114,27 +114,17 @@ def calculate_dipole_fields_jit(r_dipole, r_obs, px, mz, omega):
 
 @jit(nopython=True)
 def calculate_radiated_field_jit(sample_location, positions, polarizations, freq):
-    """Calculate power for all sample locations - JIT optimized"""
-    P0 = 0.0
-    Pt = 0.0
     N = len(positions)
     
     r_s = sample_location
     
-    # # Calculate incident beam
-    # Ex, By = gaussian_beam_downward_jit(r_s[0], r_s[1], r_s[2], 5e-6, freq)
-    # P0 += 0.5 * np.real((np.conj(Ex) * By / MU_0) * (-A))
-    
-    Ex = 0
-    By = 0
-    
     # Initialize total fields with incident beam
-    Ex_total = Ex
+    Ex_total = 0.0 + 0.0j
     Ey_total = 0.0 + 0.0j
     Ez_total = 0.0 + 0.0j
 
     Bx_total = 0.0 + 0.0j
-    By_total = By
+    By_total = 0.0 + 0.0j
     Bz_total = 0.0 + 0.0j
     
     # Add dipole contributions
@@ -145,8 +135,8 @@ def calculate_radiated_field_jit(sample_location, positions, polarizations, freq
         # If we are closer than 0.1 nm we just skip it
         if np.max(np.abs(r_p - r_s)) > 1e-10:
         
-            # Calculate dipole fields
-            EH = calculate_dipole_fields_jit(r_p, r_s, px, mz, 2*np.pi*freq)
+            # Calculate dipole fields using correct Green's functions
+            EH = calculate_dipole_fields_correct(r_p, r_s, px, mz, 2*np.pi*freq)
             Ex_total += EH[0]
             Ey_total += EH[1]
             Ez_total += EH[2]
@@ -217,8 +207,8 @@ def calculate_power_at_samples(sample_locations, positions, polarizations, beam_
             r_p = positions[j]
             px, mz = polarizations[j]
             
-            # Calculate dipole fields
-            EH = calculate_dipole_fields_jit(r_p, r_s, px, mz, 2*np.pi*freq)
+            # Calculate dipole fields using correct Green's functions
+            EH = calculate_dipole_fields_correct(r_p, r_s, px, mz, 2*np.pi*freq)
             Ex_total += EH[0]
             Ey_total += EH[1]
             Bx_total += MU_0 * EH[3]
@@ -227,6 +217,154 @@ def calculate_power_at_samples(sample_locations, positions, polarizations, beam_
         Pt += 0.5 * np.real(((np.conj(Ex_total) * By_total - np.conj(Ey_total) * Bx_total) / MU_0) * (-A))
     
     return P0, Pt
+
+# Add these functions here
+@jit(nopython=True)
+def green_E_E_dipole(r_j, r_k, k):
+    """Electric field from electric dipole - returns 3x3 Green's tensor"""
+    r = r_j - r_k
+    r_len = np.sqrt(np.sum(r**2))
+    
+    if r_len == 0:
+        return np.zeros((3, 3), dtype=np.complex128)
+    
+    r_hat = r / r_len
+    expikr = np.exp(1j * k * r_len)
+    prefac = 1.0 / (4 * np.pi * EPSILON_0) * expikr / r_len
+    
+    term1 = k * k
+    term2 = (1.0 - 1j * k * r_len) / (r_len * r_len)
+    
+    # Outer product r_hat ⊗ r_hat
+    dyad = np.outer(r_hat, r_hat)
+    
+    # Identity matrix
+    identity = np.eye(3)
+    
+    out = np.zeros((3, 3), dtype=np.complex128)
+    for i in range(3):
+        for j in range(3):
+            out[i, j] = prefac * (term2 * (3.0 * dyad[i, j] - identity[i, j]) + 
+                                 term1 * (identity[i, j] - dyad[i, j]))
+    
+    return out
+
+@jit(nopython=True)
+def green_H_E_dipole(r_j, r_k, k):
+    """Magnetic field from electric dipole - returns 3x3 Green's tensor"""
+    r = r_j - r_k
+    r_len = np.sqrt(np.sum(r**2))
+    
+    if r_len == 0:
+        return np.zeros((3, 3), dtype=np.complex128)
+    
+    expikr = np.exp(1j * k * r_len)
+    c = 1 / np.sqrt(EPSILON_0 * MU_0)
+    omega = k * c
+    prefac = -1j * omega * expikr / (4 * np.pi * r_len * r_len)
+    term = (1.0 / r_len - 1j * k)
+    
+    # Cross product matrix [r×] where [r×]v = r × v
+    cross_matrix = np.array([
+        [0.0, -r[2], r[1]],
+        [r[2], 0.0, -r[0]], 
+        [-r[1], r[0], 0.0]
+    ], dtype=np.complex128)
+    
+    out = np.zeros((3, 3), dtype=np.complex128)
+    for i in range(3):
+        for j in range(3):
+            out[i, j] = -prefac * term * cross_matrix[i, j]
+    
+    return out
+
+@jit(nopython=True)
+def green_E_M_dipole(r_j, r_k, k):
+    """Electric field from magnetic dipole - returns 3x3 Green's tensor"""
+    r = r_j - r_k
+    r_len = np.sqrt(np.sum(r**2))
+    
+    if r_len == 0:
+        return np.zeros((3, 3), dtype=np.complex128)
+    
+    expikr = np.exp(1j * k * r_len)
+    c = 1 / np.sqrt(EPSILON_0 * MU_0)
+    omega = k * c
+    prefac = 1j * omega * MU_0 * expikr / (4 * np.pi * r_len * r_len)
+    term = (1.0 / r_len - 1j * k)
+    
+    # Cross product matrix [r×] where [r×]v = r × v
+    cross_matrix = np.array([
+        [0.0, -r[2], r[1]],
+        [r[2], 0.0, -r[0]],
+        [-r[1], r[0], 0.0]
+    ], dtype=np.complex128)
+    
+    out = np.zeros((3, 3), dtype=np.complex128)
+    for i in range(3):
+        for j in range(3):
+            out[i, j] = -prefac * term * cross_matrix[i, j]
+    
+    return out
+
+@jit(nopython=True)
+def green_H_M_dipole(r_j, r_k, k):
+    """Magnetic field from magnetic dipole - returns 3x3 Green's tensor"""
+    r = r_j - r_k
+    r_len = np.sqrt(np.sum(r**2))
+    
+    if r_len == 0:
+        return np.zeros((3, 3), dtype=np.complex128)
+    
+    r_hat = r / r_len
+    expikr = np.exp(1j * k * r_len)
+    prefac = 1.0 / (4 * np.pi) * expikr / r_len
+    
+    term1 = k * k
+    term2 = (1.0 - 1j * k * r_len) / (r_len * r_len)
+    
+    # Outer product r_hat ⊗ r_hat
+    dyad = np.outer(r_hat, r_hat)
+    
+    # Identity matrix
+    identity = np.eye(3)
+    
+    out = np.zeros((3, 3), dtype=np.complex128)
+    for i in range(3):
+        for j in range(3):
+            out[i, j] = prefac * (term2 * (3.0 * dyad[i, j] - identity[i, j]) + 
+                                 term1 * (identity[i, j] - dyad[i, j]))
+    
+    return out
+
+@jit(nopython=True)
+def calculate_dipole_fields_correct(r_dipole, r_obs, px, mz, omega):
+    """Calculate fields using the correct Green's functions"""
+    c = 1 / np.sqrt(EPSILON_0 * MU_0)
+    k = omega / c
+    
+    # Electric dipole moment (px, 0, 0)
+    p = np.array([px, 0.0+0.0j, 0.0+0.0j])
+    
+    # Magnetic dipole moment (0, 0, mz)
+    m = np.array([0.0+0.0j, 0.0+0.0j, mz])
+    
+    # Get Green's function matrices
+    G_EE = green_E_E_dipole(r_obs, r_dipole, k)
+    G_HE = green_H_E_dipole(r_obs, r_dipole, k)
+    G_EM = green_E_M_dipole(r_obs, r_dipole, k)
+    G_HM = green_H_M_dipole(r_obs, r_dipole, k)
+    
+    # Calculate fields: E = G_EE·p + G_EM·m, H = G_HE·p + G_HM·m
+    E_total = np.zeros(3, dtype=np.complex128)
+    H_total = np.zeros(3, dtype=np.complex128)
+    
+    for i in range(3):
+        for j in range(3):
+            E_total[i] += G_EE[i, j] * p[j] + G_EM[i, j] * m[j]
+            H_total[i] += G_HE[i, j] * p[j] + G_HM[i, j] * m[j]
+    
+    return np.array([E_total[0], E_total[1], E_total[2], H_total[0], H_total[1], H_total[2]])
 
 def main():
     parser = argparse.ArgumentParser(description='Calculate absorption, transmission, and reflection for multiple CSV files')
