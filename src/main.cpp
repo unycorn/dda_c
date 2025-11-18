@@ -151,6 +151,16 @@ void run_simulation(
                 alpha_inv[1][0] = -alpha[j][1][0] / det;
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
+                if (j == 0) {
+                    // Calculate local field for j = 0 dipole: E_loc = alpha_inv * (px, mz)
+                    std::complex<double> E_loc_x = alpha_inv[0][0] * px + alpha_inv[0][1] * mz;
+                    std::complex<double> E_loc_z = alpha_inv[1][0] * px + alpha_inv[1][1] * mz;
+                    
+                    std::cout << "Local field for j=0 dipole at " << freq << " Hz:" << std::endl;
+                    std::cout << "  E_loc_x = " << std::real(E_loc_x) << " + " << std::imag(E_loc_x) << "i" << std::endl;
+                    std::cout << "  E_loc_z = " << std::real(E_loc_z) << " + " << std::imag(E_loc_z) << "i" << std::endl;
+                }
+
                 // Take Hermitian conjugate (dagger) of alpha_inv
                 std::complex<double> alpha_inv_dagger[2][2];
                 alpha_inv_dagger[0][0] = std::conj(alpha_inv[0][0]);
