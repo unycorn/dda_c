@@ -176,7 +176,7 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, be
         
         # Contribution from incident beam
         Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], beam_waist, freq)
-        incident_power_estimate += 0.5 * np.real(Einc_x * np.conj(Binc_y/mu_0)) * (200e-9)**2
+        incident_power_estimate += -0.5 * np.real(Einc_x * np.conj(Binc_y/mu_0)) * (200e-9)**2
         EB_loc[0] += Einc_x
         EB_loc[4] += Binc_y
 
