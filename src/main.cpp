@@ -134,7 +134,13 @@ void run_simulation(
             std::complex<double> power_sum(0.0, 0.0);
             for (int i = 0; i < 2 * N; ++i) {
                 power_sum += b[i] * std::conj(inc_field[i]);
-                std::cout << 1.0/alpha[i][0][0] << " " << -k*k*k / (6 * 3.1415926535 * EPSILON_0);
+                if (i % 2 == 0) { // Only check electric components (even indices)
+                    int dipole_idx = i / 2;
+                    std::complex<double> alpha_inv = 1.0 / alpha[dipole_idx][0][0];
+                    double radiation_limit = -k*k*k / (6.0 * M_PI * EPSILON_0);
+                    std::cout << "Dipole " << dipole_idx << ": imag(1/alpha_ee) = " << std::imag(alpha_inv) 
+                              << ", radiation limit = " << radiation_limit << std::endl;
+                }
             }
             double extinguished_power = (omega / 2.0) * std::imag(power_sum);
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
