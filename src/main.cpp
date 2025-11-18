@@ -63,9 +63,9 @@ void run_simulation(
         // This is 2x2 and scalar because it couples only e"x" and m"z" dipoles to fields
         for (int j = 0; j < N; ++j) {
             alpha[j][0][0] = lorentz_alpha_params(freq, params_00[j]);
-            alpha[j][0][1] = lorentz_alpha_params(freq, params_05[j]);
-            alpha[j][1][0] = lorentz_alpha_params(freq, params_50[j]);
-            alpha[j][1][1] = lorentz_alpha_params(freq, params_55[j]);
+            alpha[j][0][1] = 0.000001 * lorentz_alpha_params(freq, params_05[j]);
+            alpha[j][1][0] = 0.000001 * lorentz_alpha_params(freq, params_50[j]);
+            alpha[j][1][1] = 0.000001 * lorentz_alpha_params(freq, params_55[j]);
         }
 
         std::vector<std::complex<double>> A_host(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
@@ -97,7 +97,7 @@ void run_simulation(
                 double w0 = 5e-6; // Beam waist
                 double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
                 inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
-                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
+                inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); //positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
 
             }
 
