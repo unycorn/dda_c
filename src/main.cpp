@@ -152,6 +152,11 @@ void run_simulation(
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
                 if (j == 0) {
+                    // Print the polarizations for j=0 dipole
+                    std::cout << "Polarizations for j=0 dipole at " << freq << " Hz:" << std::endl;
+                    std::cout << "  px = " << std::real(px) << " + " << std::imag(px) << "i" << std::endl;
+                    std::cout << "  mz = " << std::real(mz) << " + " << std::imag(mz) << "i" << std::endl;
+                    
                     // Print the 2x2 alpha matrix for j=0 dipole
                     std::cout << "Alpha matrix for j=0 dipole at " << freq << " Hz:" << std::endl;
                     std::cout << "  [" << std::real(alpha[j][0][0]) << " + " << std::imag(alpha[j][0][0]) << "i, "
