@@ -14,7 +14,7 @@ MU_0 = 1.25663706127e-6
 EPSILON_0 = 8.8541878188e-12
 Z_0 = c * mu_0
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def gaussian_beam_jit(x, y, z, w0, freq):
     """Gaussian beam of radius w0 and propagating along the positive x-direction - JIT optimized"""
     wvl = c / freq
@@ -32,13 +32,13 @@ def gaussian_beam_jit(x, y, z, w0, freq):
     By = Ex / c
     return Ex, By
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def gaussian_beam_downward_jit(x, y, z, w0, freq):
     """Gives the z-mirrored beam by making the transformations z -> -z and B -> -B - JIT optimized"""
     Ex, By = gaussian_beam_jit(x, y, -z, w0, freq)
     return Ex, -By
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def calculate_dipole_fields_jit(r_dipole, r_obs, px, mz, omega):
     """JIT-optimized dipole field calculation for both electric and magnetic dipoles"""
     # Use global constants
@@ -112,7 +112,7 @@ def calculate_dipole_fields_jit(r_dipole, r_obs, px, mz, omega):
     
     return np.array([E_total[0], E_total[1], E_total[2], H_total[0], H_total[1], H_total[2]])
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def calculate_radiated_field_jit(sample_location, positions, polarizations, freq):
     """Calculate power for all sample locations - JIT optimized"""
     P0 = 0.0
@@ -156,7 +156,7 @@ def calculate_radiated_field_jit(sample_location, positions, polarizations, freq
     
     return np.array([Ex_total, Ey_total, Ez_total, Bx_total, By_total, Bz_total])
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq):
     """Calculate absorbed and extinguished power for all dipoles - JIT optimized"""
     N = len(positions_array)
@@ -185,7 +185,7 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, be
     
     return absorbed_power, extinguished_power
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def calculate_power_at_samples(sample_locations, positions, polarizations, beam_waist, freq, A):
     """Calculate power for all sample locations - JIT optimized"""
     P0 = 0.0
