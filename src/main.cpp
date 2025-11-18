@@ -97,7 +97,7 @@ void run_simulation(
                 double w0 = 5e-6; // Beam waist
                 double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
                 inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
-                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, 1.0);
+                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
 
             }
 
