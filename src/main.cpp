@@ -63,9 +63,9 @@ void run_simulation(
         // This is 2x2 and scalar because it couples only e"x" and m"z" dipoles to fields
         for (int j = 0; j < N; ++j) {
             alpha[j][0][0] = lorentz_alpha_params(freq, params_00[j]);
-            alpha[j][0][1] = 0.000001 * lorentz_alpha_params(freq, params_05[j]);
-            alpha[j][1][0] = 0.000001 * lorentz_alpha_params(freq, params_50[j]);
-            alpha[j][1][1] = 0.000001 * lorentz_alpha_params(freq, params_55[j]);
+            alpha[j][0][1] = lorentz_alpha_params(freq, params_05[j]);
+            alpha[j][1][0] = lorentz_alpha_params(freq, params_50[j]);
+            alpha[j][1][1] = lorentz_alpha_params(freq, params_55[j]);
         }
 
         std::vector<std::complex<double>> A_host(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
