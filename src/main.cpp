@@ -151,9 +151,16 @@ void run_simulation(
                 alpha_inv[1][0] = -alpha[j][1][0] / det;
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
-                // Calculate (px*, mz*) * alpha_inv * (px; mz) for dipole j
-                std::complex<double> temp1 = std::conj(px) * alpha_inv[0][0] + std::conj(mz) * alpha_inv[1][0];
-                std::complex<double> temp2 = std::conj(px) * alpha_inv[0][1] + std::conj(mz) * alpha_inv[1][1];
+                // Take Hermitian conjugate (dagger) of alpha_inv
+                std::complex<double> alpha_inv_dagger[2][2];
+                alpha_inv_dagger[0][0] = std::conj(alpha_inv[0][0]);
+                alpha_inv_dagger[0][1] = std::conj(alpha_inv[1][0]);
+                alpha_inv_dagger[1][0] = std::conj(alpha_inv[0][1]);
+                alpha_inv_dagger[1][1] = std::conj(alpha_inv[1][1]);
+                
+                // Calculate (px*, mz*) * alpha_inv^† * (px; mz) for dipole j
+                std::complex<double> temp1 = std::conj(px) * alpha_inv_dagger[0][0] + std::conj(mz) * alpha_inv_dagger[1][0];
+                std::complex<double> temp2 = std::conj(px) * alpha_inv_dagger[0][1] + std::conj(mz) * alpha_inv_dagger[1][1];
                 std::complex<double> absorbed_power_complex = temp1 * px + temp2 * mz;
                 
                 absorbed_power_total += std::imag(absorbed_power_complex);
