@@ -63,9 +63,9 @@ void run_simulation(
         // This is 2x2 and scalar because it couples only e"x" and m"z" dipoles to fields
         for (int j = 0; j < N; ++j) {
             alpha[j][0][0] = lorentz_alpha_params(freq, params_00[j]);
-            alpha[j][0][1] = lorentz_alpha_params(freq, params_05[j]);
-            alpha[j][1][0] = lorentz_alpha_params(freq, params_50[j]);
-            alpha[j][1][1] = lorentz_alpha_params(freq, params_55[j]);
+            alpha[j][0][1] = 0.001 * lorentz_alpha_params(freq, params_05[j]);
+            alpha[j][1][0] = 0.001 * lorentz_alpha_params(freq, params_50[j]);
+            alpha[j][1][1] = 0.001 * lorentz_alpha_params(freq, params_55[j]);
         }
 
         std::vector<std::complex<double>> A_host(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
@@ -134,13 +134,13 @@ void run_simulation(
             std::complex<double> power_sum(0.0, 0.0);
             for (int i = 0; i < 2 * N; ++i) {
                 power_sum += b[i] * std::conj(inc_field[i]);
-                if (i % 2 == 0) { // Only check electric components (even indices)
-                    int dipole_idx = i / 2;
-                    std::complex<double> alpha_inv = 1.0 / alpha[dipole_idx][0][0];
-                    double radiation_limit = -k*k*k / (6.0 * M_PI * EPSILON_0);
-                    std::cout << "Dipole " << dipole_idx << ": imag(1/alpha_ee) = " << std::imag(alpha_inv) 
-                              << ", radiation limit = " << radiation_limit << std::endl;
-                }
+                // if (i % 2 == 0) { // Only check electric components (even indices)
+                //     int dipole_idx = i / 2;
+                //     std::complex<double> alpha_inv = 1.0 / alpha[dipole_idx][0][0];
+                //     double radiation_limit = -k*k*k / (6.0 * M_PI * EPSILON_0);
+                //     std::cout << "Dipole " << dipole_idx << ": imag(1/alpha_ee) = " << std::imag(alpha_inv) 
+                //               << ", radiation limit = " << radiation_limit << std::endl;
+                // }
             }
             double extinguished_power = (omega / 2.0) * std::imag(power_sum);
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
