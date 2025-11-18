@@ -135,9 +135,11 @@ void run_simulation(
             for (int i = 0; i < 2 * N; ++i) {
                 power_sum += b[i] * std::conj(inc_field[i]);
                 if (i == 0) { // Only for the first electric dipole (index 0)
-                    std::complex<double> alpha_ee = alpha[0][0][0];
-                    std::cout << "First dipole alpha_ee: real = " << std::real(alpha_ee) 
-                              << ", imag = " << std::imag(alpha_ee) << std::endl;
+                    std::cout << "First dipole 2x2 alpha matrix:" << std::endl;
+                    std::cout << "  [" << std::real(alpha[0][0][0]) << " + " << std::imag(alpha[0][0][0]) << "i, "
+                              << std::real(alpha[0][0][1]) << " + " << std::imag(alpha[0][0][1]) << "i]" << std::endl;
+                    std::cout << "  [" << std::real(alpha[0][1][0]) << " + " << std::imag(alpha[0][1][0]) << "i, "
+                              << std::real(alpha[0][1][1]) << " + " << std::imag(alpha[0][1][1]) << "i]" << std::endl;
                 }
             }
             double extinguished_power = (omega / 2.0) * std::imag(power_sum);
