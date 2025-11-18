@@ -185,7 +185,7 @@ def calculate_absorption_extinction_jit(positions_array, polarizations_array, be
 
         extinguished_power += np.pi * freq * np.imag(np.conj(E_inc[0]) * p_vec[0] + np.conj(E_inc[1]) * p_vec[1] + np.conj(E_inc[2]) * p_vec[2])
         absorbed_power += np.pi * freq * np.imag(np.conj(E_loc[0]) * p_vec[0] + np.conj(E_loc[1]) * p_vec[1] + np.conj(E_loc[2]) * p_vec[2])
-    print(incident_power_estimate, extinguished_power)
+    print(freq, incident_power_estimate, extinguished_power)
     return absorbed_power, extinguished_power
 
 @jit(nopython=True)
