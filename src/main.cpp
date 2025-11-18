@@ -97,7 +97,7 @@ void run_simulation(
                 double w0 = 5e-6; // Beam waist
                 double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
                 inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
-                inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); //positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
+                inc_field[2 * j + 1] = positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, 1.0);
 
             }
 
@@ -134,13 +134,14 @@ void run_simulation(
             std::complex<double> power_sum(0.0, 0.0);
             for (int i = 0; i < 2 * N; ++i) {
                 power_sum += b[i] * std::conj(inc_field[i]);
-                if (i == 0) { // Only for the first electric dipole (index 0)
-                    std::cout << "First dipole 2x2 alpha matrix:" << std::endl;
-                    std::cout << "  [" << std::real(alpha[0][0][0]) << " + " << std::imag(alpha[0][0][0]) << "i, "
-                              << std::real(alpha[0][0][1]) << " + " << std::imag(alpha[0][0][1]) << "i]" << std::endl;
-                    std::cout << "  [" << std::real(alpha[0][1][0]) << " + " << std::imag(alpha[0][1][0]) << "i, "
-                              << std::real(alpha[0][1][1]) << " + " << std::imag(alpha[0][1][1]) << "i]" << std::endl;
-                }
+
+                // if (i == 0) { // Only for the first electric dipole (index 0)
+                //     std::cout << "First dipole 2x2 alpha matrix:" << std::endl;
+                //     std::cout << "  [" << std::real(alpha[0][0][0]) << " + " << std::imag(alpha[0][0][0]) << "i, "
+                //               << std::real(alpha[0][0][1]) << " + " << std::imag(alpha[0][0][1]) << "i]" << std::endl;
+                //     std::cout << "  [" << std::real(alpha[0][1][0]) << " + " << std::imag(alpha[0][1][0]) << "i, "
+                //               << std::real(alpha[0][1][1]) << " + " << std::imag(alpha[0][1][1]) << "i]" << std::endl;
+                // }
             }
             double extinguished_power = (omega / 2.0) * std::imag(power_sum);
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power << std::endl;
