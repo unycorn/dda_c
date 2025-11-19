@@ -134,8 +134,13 @@ void run_simulation(
             std::complex<double> extinguished_power_sum(0.0, 0.0);
             double absorbed_power_total = 0.0;
             
-            for (int i = 0; i < 2 * N; ++i) {
-                extinguished_power_sum += b[i] * std::conj(inc_field[i]);
+            for (int j = 0; j < N; ++j) {
+                std::complex<double> px = b[2 * j + 0];           // Electric polarization for dipole j
+                std::complex<double> mz = b[2 * j + 1];           // Magnetic polarization for dipole j
+                std::complex<double> Ex = inc_field[2 * j + 0];   // Electric incident field for dipole j
+                std::complex<double> Hz = inc_field[2 * j + 1];   // Magnetic incident field for dipole j
+                
+                extinguished_power_sum += px * std::conj(Ex) + MU_0 * mz * std::conj(Hz);
             }
             
             // Compute absorbed power: sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j)
