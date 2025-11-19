@@ -132,7 +132,7 @@ void run_simulation(
             // Compute extinguished power: omega/2 * imag(sum(polarization * conj(incident_field)))
             double omega = 2.0 * M_PI * freq;
             std::complex<double> extinguished_power_sum(0.0, 0.0);
-            double absorbed_power_total = 0.0;
+            std::complex<double> absorbed_power_sum(0.0, 0.0);
             
             for (int j = 0; j < N; ++j) {
                 std::complex<double> px = b[2 * j + 0];           // Electric polarization for dipole j
@@ -190,11 +190,11 @@ void run_simulation(
                 std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] + std::conj(mz) * alpha_inv_dagger[1][1];
                 std::complex<double> absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz;
                 
-                absorbed_power_total += std::imag(absorbed_power_complex);
+                absorbed_power_sum += absorbed_power_complex;
             }
             
-            absorbed_power_total *= (omega / 2.0);
             double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
+            double absorbed_power_total = (omega / 2.0) * std::imag(absorbed_power_sum);
             
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
             std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
