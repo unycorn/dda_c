@@ -181,9 +181,9 @@ void run_simulation(
                 alpha_inv_dagger[1][1] = std::conj(alpha_inv[1][1]);
                 
                 // Calculate (px*, mz*) * alpha_inv^† * (px; mz) for dipole j
-                std::complex<double> temp1 = std::conj(px) * alpha_inv_dagger[0][0] + std::conj(mz) * alpha_inv_dagger[1][0];
-                std::complex<double> temp2 = std::conj(px) * alpha_inv_dagger[0][1] + std::conj(mz) * alpha_inv_dagger[1][1];
-                std::complex<double> absorbed_power_complex = temp1 * px + temp2 * mz;
+                std::complex<double> Ex_star = std::conj(px) * alpha_inv_dagger[0][0] + std::conj(mz) * alpha_inv_dagger[1][0];
+                std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] + std::conj(mz) * alpha_inv_dagger[1][1];
+                std::complex<double> absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz;
                 
                 absorbed_power_total += std::imag(absorbed_power_complex);
             }
