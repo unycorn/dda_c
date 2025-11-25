@@ -80,10 +80,9 @@ for (( i=START_IDX; i<=END_IDX && i<NUM_FOLDERS; i++ )); do
     python3 ../../analysis/DirectionalPowerMeasure/compute_power.py \
         "$CSV_FILE" \
         --incident_power 1.04238780e-13 \
-        --n_theta 50 \
-        --n_phi 100 \
+        --n_theta 100 \
+        --n_phi 200 \
         --save_data "$OUTPUT_FILE" \
-        --max_freqs 10 \
         2>&1 | tee "compute_power_${NUMBER}.log"
     
     # Check if the script ran successfully
