@@ -129,19 +129,9 @@ void run_simulation(
                 b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
             }
 
-            // Compute extinguished power: omega/2 * imag(sum(polarization * conj(incident_field)))
+            // Compute absorbed power: omega/2 * imag(sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j))
             double omega = 2.0 * M_PI * freq;
-            std::complex<double> extinguished_power_sum(0.0, 0.0);
             std::complex<double> absorbed_power_sum(0.0, 0.0);
-            
-            for (int j = 0; j < N; ++j) {
-                std::complex<double> px = b[2 * j + 0];           // Electric polarization for dipole j
-                std::complex<double> mz = b[2 * j + 1];           // Magnetic polarization for dipole j
-                std::complex<double> Ex = inc_field[2 * j + 0];   // Electric incident field for dipole j
-                std::complex<double> Hz = inc_field[2 * j + 1];   // Magnetic incident field for dipole j
-                
-                extinguished_power_sum += px * std::conj(Ex) + MU_0 * mz * std::conj(Hz);
-            }
             
             // Compute absorbed power: sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j)
             for (int j = 0; j < N; ++j) {
@@ -156,27 +146,7 @@ void run_simulation(
                 alpha_inv[1][0] = -alpha[j][1][0] / det;
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
-                if (j == 0) {
-                    // Print the polarizations for j=0 dipole
-                    std::cout << "Polarizations for j=0 dipole at " << freq << " Hz:" << std::endl;
-                    std::cout << "  px = " << std::real(px) << " + " << std::imag(px) << "i" << std::endl;
-                    std::cout << "  mz = " << std::real(mz) << " + " << std::imag(mz) << "i" << std::endl;
-                    
-                    // Print the 2x2 alpha matrix for j=0 dipole
-                    std::cout << "Alpha matrix for j=0 dipole at " << freq << " Hz:" << std::endl;
-                    std::cout << "  [" << std::real(alpha[j][0][0]) << " + " << std::imag(alpha[j][0][0]) << "i, "
-                              << std::real(alpha[j][0][1]) << " + " << std::imag(alpha[j][0][1]) << "i]" << std::endl;
-                    std::cout << "  [" << std::real(alpha[j][1][0]) << " + " << std::imag(alpha[j][1][0]) << "i, "
-                              << std::real(alpha[j][1][1]) << " + " << std::imag(alpha[j][1][1]) << "i]" << std::endl;
-                    
-                    // Calculate local field for j = 0 dipole: E_loc = alpha_inv * (px, mz)
-                    std::complex<double> E_loc_x = alpha_inv[0][0] * px + alpha_inv[0][1] * mz;
-                    std::complex<double> E_loc_z = alpha_inv[1][0] * px + alpha_inv[1][1] * mz;
-                    
-                    std::cout << "Local field for j=0 dipole at " << freq << " Hz:" << std::endl;
-                    std::cout << "  E_loc_x = " << std::real(E_loc_x) << " + " << std::imag(E_loc_x) << "i" << std::endl;
-                    std::cout << "  E_loc_z = " << std::real(E_loc_z) << " + " << std::imag(E_loc_z) << "i" << std::endl;
-                }
+
 
                 // Take Hermitian conjugate (dagger) of alpha_inv
                 std::complex<double> alpha_inv_dagger[2][2];
@@ -193,10 +163,8 @@ void run_simulation(
                 absorbed_power_sum += absorbed_power_complex;
             }
             
-            double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
             double absorbed_power_total = (omega / 2.0) * std::imag(absorbed_power_sum);
             
-            std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
             std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
 
             if (A_device != nullptr) {
@@ -205,7 +173,7 @@ void run_simulation(
             }
 
             // write_polarizations(csvfilename.str().c_str(), b.data(), positions, alpha, N);  // Original plaintext writer
-            write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N, freq);  // New binary writer with frequency
+            write_polarizations_binary(filename.str().c_str(), b.data(), positions, alpha, N, freq, absorbed_power_total);  // New binary writer with frequency and absorption
 
             auto end_time = std::chrono::high_resolution_clock::now();
             auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

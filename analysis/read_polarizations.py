@@ -14,7 +14,13 @@ def read_polarizations_binary(filename):
         # numpy complex128 matches C++ std::complex<double>
         data = np.fromfile(f, dtype=np.complex128, count=2*N)
         
-        return N, freq, data.reshape(-1, 2)  # reshape to (N, 2) array
+        # Read absorption value (8-byte double) if present
+        try:
+            absorption = np.fromfile(f, dtype=np.float64, count=1)[0]
+        except:
+            absorption = None  # For backward compatibility with old files
+        
+        return N, freq, data.reshape(-1, 2), absorption  # reshape to (N, 2) array
 
 def write_polarizations_csv(data, freq, outfile=sys.stdout):
     # Write header with frequency as comment
@@ -33,7 +39,9 @@ def main():
         sys.exit(1)
     
     try:
-        N, freq, data = read_polarizations_binary(sys.argv[1])
+        N, freq, data, absorption = read_polarizations_binary(sys.argv[1])
+        if absorption is not None:
+            print(f"# Absorption: {absorption:.8e}")
         write_polarizations_csv(data, freq)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

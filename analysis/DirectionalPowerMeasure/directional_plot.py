@@ -6,125 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import c, mu_0, epsilon_0, pi
 import read_polarizations
-import dipole
+# import dipole
 from numba import jit
 
 # Constants for JIT functions
 MU_0 = 1.25663706127e-6
 EPSILON_0 = 8.8541878188e-12
 Z_0 = c * mu_0
-
-@jit(nopython=True)
-def calculate_radiated_field_jit(sample_location, positions, polarizations, freq):
-    N = len(positions)
-    
-    r_s = sample_location
-    
-    # Initialize total fields with incident beam
-    Ex_total = 0.0 + 0.0j
-    Ey_total = 0.0 + 0.0j
-    Ez_total = 0.0 + 0.0j
-
-    Bx_total = 0.0 + 0.0j
-    By_total = 0.0 + 0.0j
-    Bz_total = 0.0 + 0.0j
-    
-    # Add dipole contributions
-    for j in range(N):
-        r_p = positions[j]
-        px, mz = polarizations[j]
-
-        # If we are closer than 0.1 nm we just skip it
-        if np.max(np.abs(r_p - r_s)) > 1e-10:
-        
-            # Calculate dipole fields using correct Green's functions
-            EH = calculate_dipole_fields_correct(r_p, r_s, px, mz, 2*np.pi*freq)
-            Ex_total += EH[0]
-            Ey_total += EH[1]
-            Ez_total += EH[2]
-            Bx_total += MU_0 * EH[3]
-            By_total += MU_0 * EH[4]
-            Bz_total += MU_0 * EH[5]
-    
-    return np.array([Ex_total, Ey_total, Ez_total, Bx_total, By_total, Bz_total])
-
-@jit(nopython=True)
-def calculate_absorption_extinction_jit(positions_array, polarizations_array, beam_waist, freq):
-    """Calculate absorbed and extinguished power for all dipoles - JIT optimized"""
-    N = len(positions_array)
-    absorbed_power = 0.0
-    extinguished_power = 0.0
-    
-    incident_power_estimate = 0.0
-
-    for r1_i in range(N):
-        sample_location = positions_array[r1_i]
-        px, mz = polarizations_array[r1_i]
-        p_vec = np.array([px, 0.0 + 0.0j, 0.0 + 0.0j])
-        
-        # Contribution from each dipole
-        EB_loc = calculate_radiated_field_jit(sample_location, positions_array, polarizations_array, freq)
-        # EB_loc = np.array([0,0,0,0,0,0], dtype=np.complex128)
-        
-        # Contribution from incident beam
-        Einc_x, Binc_y = gaussian_beam_downward_jit(sample_location[0], sample_location[1], sample_location[2], beam_waist, freq)
-        incident_power_estimate += -0.5 * np.real(Einc_x * np.conj(Binc_y/mu_0)) * (200e-9)**2
-        EB_loc[0] += Einc_x
-        EB_loc[4] += Binc_y
-
-        E_loc = EB_loc[:3]
-        if r1_i == 0 and freq > 299e12:
-            Exloc = EB_loc[0]
-            Hzloc = EB_loc[5]/mu_0
-            pest = (7.1436e-32 + 1.18792e-31j) * Exloc + (-4.56251e-30 + 2.55184e-30j) * Hzloc
-            print(round(freq*1e-12), "p estimate", pest , px)
-        E_inc = np.array([Einc_x, 0.0 + 0.0j, 0.0 + 0.0j])
-
-        # extinguished_power += np.pi * freq * np.imag(np.conj(E_inc[0]) * p_vec[0] + np.conj(E_inc[1]) * p_vec[1] + np.conj(E_inc[2]) * p_vec[2])
-        # print(px, Einc_x)
-
-        extinguished_power += np.pi * freq * np.imag(np.conj(Einc_x) * px)
-        absorbed_power += np.pi * freq * np.imag(np.conj(E_loc[0]) * p_vec[0] + np.conj(E_loc[1]) * p_vec[1] + np.conj(E_loc[2]) * p_vec[2])
-    print(freq, incident_power_estimate, extinguished_power)
-    return absorbed_power, extinguished_power
-
-@jit(nopython=True)
-def calculate_power_at_samples(sample_locations, positions, polarizations, beam_waist, freq, A):
-    """Calculate power for all sample locations - JIT optimized"""
-    P0 = 0.0
-    Pt = 0.0
-    N = len(positions)
-    
-    for i in range(len(sample_locations)):
-        r_s = sample_locations[i]
-        
-        # Calculate incident beam
-        Ex, By = gaussian_beam_downward_jit(r_s[0], r_s[1], r_s[2], beam_waist, freq)
-        P0 += 0.5 * np.real((np.conj(Ex) * By / MU_0) * (-A))
-        
-        # Initialize total fields with incident beam
-        Ex_total = Ex
-        Ey_total = 0.0 + 0.0j
-        Bx_total = 0.0 + 0.0j
-        By_total = By
-        
-        # Add dipole contributions
-        for j in range(N):
-            r_p = positions[j]
-            px, mz = polarizations[j]
-            
-            # Calculate dipole fields using correct Green's functions
-            EH = calculate_dipole_fields_correct(r_p, r_s, px, mz, 2*np.pi*freq)
-            Ex_total += EH[0]
-            Ey_total += EH[1]
-            Bx_total += MU_0 * EH[3]
-            By_total += MU_0 * EH[4]
-        
-        Pt += 0.5 * np.real(((np.conj(Ex_total) * By_total - np.conj(Ey_total) * Bx_total) / MU_0) * (-A))
-    
-    return P0, Pt
-
-
 
 # Add these functions here
 @jit(nopython=True)
@@ -297,6 +185,7 @@ def calculate_dipole_fields_correct(r_dipole, r_obs, px, mz, omega):
 def main():
     parser = argparse.ArgumentParser(description='Calculate absorption, transmission, and reflection for multiple CSV files')
     parser.add_argument('csv_pattern', help='CSV file pattern (e.g., "data/*.csv" or single file path)')
+    parser.add_argument('--linear', action='store_true', help='Plot linear power values instead of logarithmic (dB) scale')
 
     args = parser.parse_args()
     
@@ -346,46 +235,148 @@ def main():
         # Sort by frequency
         data_pairs.sort()
 
+        # Find frequency closest to 220 THz
+        target_freq = 220e12  # 220 THz in Hz
+        freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
+        closest_idx = np.argmin(freq_diffs)
+        selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
+        print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 220 THz)")
+
         freq_list = []
         absorbed_power_list = []
         extinguished_power_list = []
 
+        # Create three subplots for XZ, YZ, and XY planes
+        fig, (ax_xz, ax_yz, ax_xy) = plt.subplots(1, 3, subplot_kw=dict(projection='polar'), figsize=(24, 8))
         
-
-        # Process each frequency
-        for d in data_pairs:
-            freq, file, N, polarizations = d
-            
-            freq_list.append(freq)
-
-            # Convert data to numpy arrays for JIT optimization
-            positions_array = np.array(positions)
-            polarizations_array = np.array(polarizations)
-
-            sample_R = 100e-6
-            sample_thetas = np.linspace(-pi, pi, 500)
-            sample_powers = np.zeros_like(sample_thetas)
-
-            for theta_i, theta in enumerate(sample_thetas):
-                Efarfield = 0 + 0j
-                r_sample = sample_R * np.array([0, np.cos(theta), np.sin(theta)])
-                for r_source, pm_source in zip(positions_array, polarizations_array):
-                    px, mz = pm_source
-                    Efarfield += farfield_E_E_dipole(px, r_source, r_sample, 2*pi*freq/c)
-                sample_powers[theta_i] = np.dot(np.abs(Efarfield),np.abs(Efarfield))/(2*Z_0)
-
-            # Create polar plot of the radiation pattern
-            fig, ax = plt.subplots(subplot_kw=dict(projection='polar'), figsize=(8, 8))
-            ax.plot(sample_thetas, sample_powers)
-            ax.set_theta_zero_location('N')  # Set 0 degrees at the top
-            ax.set_theta_direction(-1)       # Clockwise direction
-            ax.set_title(f'Radiation Pattern at {freq*1e-12:.1f} THz', pad=20)
-            ax.set_ylabel('Power (W)', labelpad=30)
+        # Set up the axes properties (unit circle style)
+        for ax in [ax_xz, ax_yz, ax_xy]:
+            ax.set_theta_zero_location('E')  # Set 0 degrees on the right
+            ax.set_theta_direction(1)        # Counter-clockwise direction
             ax.grid(True)
+        
+        # Set titles for each plane
+        freq_title = f'{selected_freq*1e-12:.1f} THz'
+        ax_xz.set_title(f'XZ Plane Radiation Pattern ({freq_title})', pad=20)
+        ax_yz.set_title(f'YZ Plane Radiation Pattern ({freq_title})', pad=20)
+        ax_xy.set_title(f'XY Plane Radiation Pattern ({freq_title})', pad=20)
+        
+        # Define cutoff distances to sweep through (in meters), including infinite cutoff
+        cutoff_distances = [0.5e-6, 1.0e-6, 1.5e-6, 2.0e-6, 2.5e-6, 3.0e-6, 4.0e-6, np.inf]
+        
+        # Define colors for different cutoff distances using colormap
+        colors = plt.cm.turbo(np.linspace(0, 1, len(cutoff_distances)))
+
+        # Store all power values to calculate shared range
+        all_powerDB_values = []
+        
+        # Set power label based on scale choice
+        power_label = 'Power (W)' if args.linear else 'Power (dB)'
+
+        # Convert data to numpy arrays for JIT optimization
+        positions_array = np.array(positions)
+        polarizations_array = np.array(selected_polarizations)
+
+        sample_R = 10000e-6
+        sample_thetas = np.linspace(-pi, pi, 1000)
+        
+        # Process each cutoff distance
+        for cutoff_idx, cutoff_distance in enumerate(cutoff_distances):
+            # Handle infinite cutoff case
+            if np.isinf(cutoff_distance):
+                cutoff_distance_sq = np.inf
+            else:
+                cutoff_distance_sq = cutoff_distance**2
             
-            # Save the plot
-            plt.savefig(f"radiation_pattern_{freq*1e-12:.1f}THz.png", dpi=300, bbox_inches='tight')
-            plt.close()
+            # Calculate powers for each plane
+            sample_powers_xz = np.zeros_like(sample_thetas)  # XZ plane (y=0)
+            sample_powers_yz = np.zeros_like(sample_thetas)  # YZ plane (x=0)  
+            sample_powers_xy = np.zeros_like(sample_thetas)  # XY plane (z=0)
+            
+            for theta_i, theta in enumerate(sample_thetas):
+                # XZ plane: r_sample = [cos(θ), 0, sin(θ)]
+                Efarfield_xz = np.zeros((3), dtype=np.complex128)
+                r_sample_xz = sample_R * np.array([np.cos(theta), 0, np.sin(theta)])
+                
+                # YZ plane: r_sample = [0, cos(θ), sin(θ)]
+                Efarfield_yz = np.zeros((3), dtype=np.complex128)
+                r_sample_yz = sample_R * np.array([0, np.cos(theta), np.sin(theta)])
+                
+                # XY plane: r_sample = [cos(θ), sin(θ), 0]
+                Efarfield_xy = np.zeros((3), dtype=np.complex128)
+                r_sample_xy = sample_R * np.array([np.cos(theta), np.sin(theta), 0])
+                
+                for r_source, pm_source in zip(positions_array[::1], polarizations_array[::1]):
+                    # Skip cutoff check if cutoff_distance_sq is infinite
+                    if not np.isinf(cutoff_distance_sq) and np.dot(r_source, r_source) > cutoff_distance_sq:
+                        continue
+                    # print(r_source)
+                    
+                    px, mz = pm_source
+                    Efarfield_xz += farfield_E_E_dipole(px, r_source, r_sample_xz, 2*pi*selected_freq/c)
+                    Efarfield_yz += farfield_E_E_dipole(px, r_source, r_sample_yz, 2*pi*selected_freq/c)
+                    Efarfield_xy += farfield_E_E_dipole(px, r_source, r_sample_xy, 2*pi*selected_freq/c)
+                
+                sample_powers_xz[theta_i] = np.dot(np.abs(Efarfield_xz), np.abs(Efarfield_xz))/(2*Z_0)
+                sample_powers_yz[theta_i] = np.dot(np.abs(Efarfield_yz), np.abs(Efarfield_yz))/(2*Z_0)
+                sample_powers_xy[theta_i] = np.dot(np.abs(Efarfield_xy), np.abs(Efarfield_xy))/(2*Z_0)
+
+            # Convert to appropriate scale based on user choice
+            if args.linear:
+                # Use linear power values
+                power_xz = sample_powers_xz
+                power_yz = sample_powers_yz
+                power_xy = sample_powers_xy
+            else:
+                # Use logarithmic (dB) scale
+                power_xz = np.log10(sample_powers_xz)
+                power_yz = np.log10(sample_powers_yz)
+                power_xy = np.log10(sample_powers_xy)
+            
+            # Normalize each power array to [0, 1] range for consistent radial scaling
+            def normalize_power(power_array):
+                min_val = np.min(power_array)
+                max_val = np.max(power_array)
+                if max_val > min_val:
+                    return (power_array - min_val) / (max_val - min_val)
+                else:
+                    return np.zeros_like(power_array)
+            
+            power_xz_norm = normalize_power(power_xz)
+            power_yz_norm = normalize_power(power_yz)
+            power_xy_norm = normalize_power(power_xy)
+            
+            # Convert angles to degrees for better readability
+            sample_thetas_deg = np.degrees(sample_thetas)
+            
+            # Plot each plane with different colors and labels
+            if np.isinf(cutoff_distance):
+                label = 'r < ∞'
+            else:
+                label = f'r < {cutoff_distance*1e6:.1f} μm'
+            ax_xz.plot(sample_thetas, power_xz_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
+            ax_yz.plot(sample_thetas, power_yz_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
+            ax_xy.plot(sample_thetas, power_xy_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
+
+        # Set radial limits for normalized plots (0 to 1)
+        # Set radial limits and add legends
+        for ax in [ax_xz, ax_yz, ax_xy]:
+            ax.set_ylim(0, 1)  # Normalized range from 0 to 1
+            ax.set_ylabel('Normalized Power', labelpad=30)
+            ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+        
+        # Save the combined plot with unique filename based on input CSV (including parent folder)
+        csv_basename = os.path.splitext(os.path.basename(csv_file))[0]
+        parent_folder = os.path.basename(os.path.dirname(csv_file))
+        scale_suffix = "_linear" if args.linear else "_dB"
+        freq_suffix = f"_{selected_freq*1e-12:.1f}THz"
+        output_filename = f"/Users/dharper/Documents/DDA_C/analysis/DirectionalPowerMeasure/cutoff_sweep_radiation_patterns_{parent_folder}_{csv_basename}{freq_suffix}{scale_suffix}_normalized.pdf"
+        
+        plt.tight_layout()
+        plt.savefig(output_filename, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved radiation pattern plot: {output_filename}")
 
 if __name__ == "__main__":
     main()

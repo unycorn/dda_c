@@ -139,7 +139,8 @@ void write_polarizations_binary(
     std::vector<vec3> positions,
     const std::vector<std::complex<double>[2][2]>& alpha,
     int N,
-    double frequency
+    double frequency,
+    double absorption
 ) {
     std::ofstream out(filename, std::ios::binary);
     if (!out) {
@@ -159,6 +160,9 @@ void write_polarizations_binary(
         out.write(reinterpret_cast<const char*>(&p[2*n + 0]), sizeof(std::complex<double>));     // Ex
         out.write(reinterpret_cast<const char*>(&p[2*n + 1]), sizeof(std::complex<double>));     // Mz
     }
+
+    // Write the absorption value at the end
+    out.write(reinterpret_cast<const char*>(&absorption), sizeof(double));
 
     out.close();
 }

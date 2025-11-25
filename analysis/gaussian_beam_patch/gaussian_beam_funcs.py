@@ -172,7 +172,7 @@ def gaussian_beam_downward(x,y,z,w0,freq):
     return Ex, -By
 
 def main():
-    parser = argparse.ArgumentParser(description='Create animated Voronoi diagram of polarization data')
+    parser = argparse.ArgumentParser(description='compute transmitted power')
     parser.add_argument('csv_file', help='CSV file with x,y,z,theta columns')
     parser.add_argument('distance', help='sampling distance')
     parser.add_argument('width', help='width of sampling region')

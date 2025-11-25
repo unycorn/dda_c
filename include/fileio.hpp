@@ -39,7 +39,8 @@ void write_polarizations_binary(
     std::vector<vec3> positions,
     const std::vector<std::complex<double>[2][2]>& alpha,
     int N,
-    double frequency
+    double frequency,
+    double absorption = 0.0
 );
 
 // Writes polarizations for plane wave sweep with multiple k-vectors and polarizations
