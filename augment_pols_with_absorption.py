@@ -335,7 +335,7 @@ def process_pols_folder(folder_path, csv_file, backup=True, force=False):
             # Read the file
             if has_absorption:
                 N, freq, polarizations, old_absorption = read_pols_file_with_absorption(pols_file)
-                print(f"Processing {filename} (freq={freq:.2e} Hz, old_absorption={old_absorption:.6e})")
+                print(f"Processing {filename} (freq={freq:.2e} Hz, existing_absorption={old_absorption:.6e})")
             else:
                 N, freq, polarizations = read_pols_file_old_format(pols_file)
                 print(f"Processing {filename} (freq={freq:.2e} Hz, no previous absorption)")
@@ -348,6 +348,11 @@ def process_pols_folder(folder_path, csv_file, backup=True, force=False):
             # Compute absorption
             absorption = compute_absorption(freq, polarizations, dipole_params_list)
             print(f"  Computed absorption: {absorption:.6e} W")
+            
+            # Print both values if force flag is used and file has absorption
+            if has_absorption and force:
+                print(f"  Existing absorption: {old_absorption:.6e} W")
+                print(f"  New absorption:      {absorption:.6e} W")
             
             # Create backup if requested
             if backup and not has_absorption:
