@@ -295,7 +295,7 @@ def load_csv_parameters(csv_file):
     return dipole_params_list
 
 
-def process_pols_folder(folder_path, csv_file, backup=True, force=False):
+def process_pols_folder(folder_path, csv_file, backup=True, force=False, save_absorption_csv=None):
     """
     Process all .pols files in a folder, adding absorption data.
     
@@ -304,6 +304,7 @@ def process_pols_folder(folder_path, csv_file, backup=True, force=False):
         csv_file: Path to CSV file with dipole parameters
         backup: Whether to create backup copies of original files
         force: Whether to overwrite files that already have absorption data
+        save_absorption_csv: Optional path to save absorption data as CSV
     """
     # Load dipole parameters
     print(f"Loading dipole parameters from {csv_file}")
@@ -319,6 +320,10 @@ def process_pols_folder(folder_path, csv_file, backup=True, force=False):
     
     processed_count = 0
     skipped_count = 0
+    
+    # Lists to store data for CSV export
+    frequencies = []
+    absorptions = []
     
     for pols_file in sorted(pols_files):
         filename = os.path.basename(pols_file)
@@ -366,11 +371,26 @@ def process_pols_folder(folder_path, csv_file, backup=True, force=False):
             write_pols_file_with_absorption(pols_file, N, freq, polarizations, absorption)
             processed_count += 1
             
+            # Store data for CSV export
+            frequencies.append(freq)
+            absorptions.append(absorption)
+            
         except Exception as e:
             print(f"Error processing {filename}: {e}")
             continue
     
     print(f"\nSummary: Processed {processed_count} files, skipped {skipped_count} files")
+    
+    # Save absorption data to CSV if requested
+    if save_absorption_csv and len(frequencies) > 0:
+        absorption_df = pd.DataFrame({
+            'Frequency_Hz': frequencies,
+            'Absorption_W': absorptions
+        })
+        # Sort by frequency
+        absorption_df = absorption_df.sort_values('Frequency_Hz').reset_index(drop=True)
+        absorption_df.to_csv(save_absorption_csv, index=False)
+        print(f"Absorption data saved to: {save_absorption_csv}")
 
 
 def test_lorentzian_function():
@@ -413,6 +433,9 @@ Examples:
   # Force overwrite files that already have absorption data
   python augment_pols_with_absorption.py folder_name/ input.csv --force
   
+  # Save absorption data to CSV file
+  python augment_pols_with_absorption.py folder_name/ input.csv --save-absorption absorption_results.csv
+  
   # Test Lorentzian function
   python augment_pols_with_absorption.py --test
         """
@@ -424,6 +447,8 @@ Examples:
                         help='Do not create backup copies of original files')
     parser.add_argument('--force', action='store_true',
                         help='Overwrite files that already have absorption data')
+    parser.add_argument('--save-absorption', type=str, metavar='CSV_FILE',
+                        help='Save frequency and absorption data to CSV file')
     parser.add_argument('--test', action='store_true',
                         help='Run test of Lorentzian function')
     
@@ -450,7 +475,8 @@ Examples:
     
     # Process the folder
     process_pols_folder(args.pols_folder, args.csv_file, 
-                       backup=not args.no_backup, force=args.force)
+                       backup=not args.no_backup, force=args.force,
+                       save_absorption_csv=args.save_absorption)
 
 
 if __name__ == "__main__":
