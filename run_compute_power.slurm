@@ -2,7 +2,7 @@
 #SBATCH --job-name=compute_power_dda    # Job name
 #SBATCH --output=power_%A_%a.out        # Output file name (%A = job ID, %a = array index)
 #SBATCH --error=power_%A_%a.err         # Error file name
-#SBATCH --array=0-30                    # Array jobs for processing folders
+#SBATCH --array=0-8                    # Array jobs for processing folders
 #SBATCH --partition=ampere              # Specify the partition
 #SBATCH --time=24:00:00                # Maximum runtime in HH:MM:SS
 #SBATCH --mem=16G                      # Memory per node (reduced since no GPU needed)
