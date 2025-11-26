@@ -2,7 +2,7 @@
 #SBATCH --job-name=freq_dda         # Job name
 #SBATCH --output=dda_%A_%a.out      # Output file name (%A = job ID, %a = array index)
 #SBATCH --error=dda_%A_%a.err       # Error file name
-#SBATCH --array=0-7                 # Array jobs for 5 frequency chunks (adjust as needed)
+#SBATCH --array=0-7                 # Array jobs for 8 frequency chunks (adjust as needed)
 #SBATCH --partition=ampere          # Specify the partition
 #SBATCH --time=24:00:00             # Maximum runtime in HH:MM:SS
 #SBATCH --mem=32G                   # Memory per node
@@ -30,7 +30,7 @@ fi
 FREQ_MIN=150e12  # 150 THz
 FREQ_MAX=400e12  # 400 THz
 TOTAL_FREQS=250
-NUM_CHUNKS=7     # Number of frequency chunks (should match array size)
+NUM_CHUNKS=8     # Number of frequency chunks (should match array size)
 
 # Calculate frequency range for this job
 FREQS_PER_CHUNK=$(( (TOTAL_FREQS + NUM_CHUNKS - 1) / NUM_CHUNKS ))  # Ceiling division
@@ -42,12 +42,21 @@ if [ $END_FREQ_IDX -gt $TOTAL_FREQS ]; then
     END_FREQ_IDX=$TOTAL_FREQS
 fi
 
-# Calculate actual frequency values
-FREQ_RANGE=$(echo "$FREQ_MAX - $FREQ_MIN" | bc -l)
-FREQ_STEP=$(echo "$FREQ_RANGE / ($TOTAL_FREQS - 1)" | bc -l)
-START_FREQ=$(echo "$FREQ_MIN + $START_FREQ_IDX * $FREQ_STEP" | bc -l)
-END_FREQ=$(echo "$FREQ_MIN + ($END_FREQ_IDX - 1) * $FREQ_STEP" | bc -l)
-NUM_FREQS=$(( END_FREQ_IDX - START_FREQ_IDX ))
+# Calculate actual frequency values using Python (handles scientific notation)
+read START_FREQ END_FREQ NUM_FREQS <<< $(python3 -c "
+freq_min = $FREQ_MIN
+freq_max = $FREQ_MAX
+total_freqs = $TOTAL_FREQS
+start_idx = $START_FREQ_IDX
+end_idx = $END_FREQ_IDX
+
+freq_step = (freq_max - freq_min) / (total_freqs - 1)
+start_freq = freq_min + start_idx * freq_step
+end_freq = freq_min + (end_idx - 1) * freq_step
+num_freqs = end_idx - start_idx
+
+print(f'{start_freq:.15e} {end_freq:.15e} {num_freqs}')
+")
 
 # Print debug information
 echo "Running on node: $(hostname)"
