@@ -94,7 +94,7 @@ void run_simulation(
                 // inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
 
                 // Gaussian beam profile
-                double w0 = 2.5e-6; // Beam waist
+                double w0 = 2.0e-6; // Beam waist
                 double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
                 inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
                 inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); //positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
