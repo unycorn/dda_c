@@ -370,7 +370,7 @@ def main():
         parent_folder = os.path.basename(os.path.dirname(csv_file))
         scale_suffix = "_linear" if args.linear else "_dB"
         freq_suffix = f"_{selected_freq*1e-12:.1f}THz"
-        output_filename = f"/Users/dharper/Documents/DDA_C/analysis/DirectionalPowerMeasure/cutoff_sweep_radiation_patterns_{parent_folder}_{csv_basename}{freq_suffix}{scale_suffix}_normalized.pdf"
+        output_filename = f"./cutoff_sweep_radiation_patterns_{parent_folder}_{csv_basename}{freq_suffix}{scale_suffix}_normalized.pdf"
         
         plt.tight_layout()
         plt.savefig(output_filename, bbox_inches='tight')
