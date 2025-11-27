@@ -185,7 +185,6 @@ def calculate_dipole_fields_correct(r_dipole, r_obs, px, mz, omega):
 def main():
     parser = argparse.ArgumentParser(description='Calculate absorption, transmission, and reflection for multiple CSV files')
     parser.add_argument('csv_pattern', help='CSV file pattern (e.g., "data/*.csv" or single file path)')
-    parser.add_argument('--linear', action='store_true', help='Plot linear power values instead of logarithmic (dB) scale')
 
     args = parser.parse_args()
     
@@ -203,50 +202,19 @@ def main():
     # incident_power = pi * beam_waist**2 / ( 2 * Z_0 ) # With a center amplitude of 1 V/m
     # print("incident power", incident_power)
 
+    # Define colors for different CSV files using colormap
+    colors = plt.cm.turbo(np.linspace(0, 1, len(csv_files)))
+    
     # Store results for all files
     all_results = {}
     
-    # Process each CSV file
-    for csv_file in csv_files:
-        print(f"\nProcessing: {csv_file}")
+    # Process both linear and logarithmic scales
+    for scale_type in ['linear', 'logarithmic']:
+        print(f"\n{'='*60}")
+        print(f"Processing {scale_type} scale")
+        print(f"{'='*60}")
         
-        # Read position data
-        df = pd.read_csv(csv_file)
-        positions = df[['x', 'y', 'z']].values
-        thetas = df['theta'].values
-        
-        # Get the pols folder path by removing .csv from the input file path
-        pols_folder = os.path.splitext(csv_file)[0]
-        if not os.path.isdir(pols_folder):
-            print(f"Warning: Could not find polarization data folder: {pols_folder}")
-            continue
-        
-        pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
-        if not pols_files:
-            print(f"Warning: No .pols files found in {pols_folder}")
-            continue
-            
-        # Read frequencies and full data to sort files
-        data_pairs = []
-        for file in pols_files:
-            N, freq, polarizations, absorption = read_polarizations.read_polarizations_binary(file)
-            data_pairs.append((freq, file, N, polarizations))
-        
-        # Sort by frequency
-        data_pairs.sort()
-
-        # Find frequency closest to 300 THz
-        target_freq = 300e12 
-        freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
-        closest_idx = np.argmin(freq_diffs)
-        selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
-        print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 300 THz)")
-
-        freq_list = []
-        absorbed_power_list = []
-        extinguished_power_list = []
-
-        # Create three subplots for XZ, YZ, and XY planes
+        # Create fresh subplots for this scale type
         fig, (ax_xz, ax_yz, ax_xy) = plt.subplots(1, 3, subplot_kw=dict(projection='polar'), figsize=(24, 8))
         
         # Set up the axes properties (unit circle style)
@@ -256,39 +224,54 @@ def main():
             ax.grid(True)
         
         # Set titles for each plane
-        freq_title = f'{selected_freq*1e-12:.1f} THz'
-        ax_xz.set_title(f'XZ Plane Radiation Pattern ({freq_title})', pad=20)
-        ax_yz.set_title(f'YZ Plane Radiation Pattern ({freq_title})', pad=20)
-        ax_xy.set_title(f'XY Plane Radiation Pattern ({freq_title})', pad=20)
+        ax_xz.set_title(f'XZ Plane Radiation Pattern ({scale_type})', pad=20)
+        ax_yz.set_title(f'YZ Plane Radiation Pattern ({scale_type})', pad=20)
+        ax_xy.set_title(f'XY Plane Radiation Pattern ({scale_type})', pad=20)
         
-        # Define cutoff distances to sweep through (in meters), including infinite cutoff
-        cutoff_distances = [0.5e-6, 1.0e-6, 1.5e-6, 2.0e-6, 2.5e-6, 3.0e-6, 4.0e-6, np.inf]
-        
-        # Define colors for different cutoff distances using colormap
-        colors = plt.cm.turbo(np.linspace(0, 1, len(cutoff_distances)))
-
-        # Store all power values to calculate shared range
-        all_powerDB_values = []
-        
-        # Set power label based on scale choice
-        power_label = 'Power (W)' if args.linear else 'Power (dB)'
-
-        # Convert data to numpy arrays for JIT optimization
-        positions_array = np.array(positions)
-        polarizations_array = np.array(selected_polarizations)
-
-        sample_R = 10000e-6
-        sample_thetas = np.linspace(-pi, pi, 1000)
-        
-        # Process each cutoff distance
-        for cutoff_idx, cutoff_distance in enumerate(cutoff_distances):
-            # Handle infinite cutoff case
-            if np.isinf(cutoff_distance):
-                cutoff_distance_sq = np.inf
-            else:
-                cutoff_distance_sq = cutoff_distance**2
+        # Process each CSV file
+        for csv_idx, csv_file in enumerate(csv_files):
+            print(f"\nProcessing: {csv_file}")
             
-            # Calculate powers for each plane
+                # Read position data
+            df = pd.read_csv(csv_file)
+            positions = df[['x', 'y', 'z']].values
+            thetas = df['theta'].values
+            
+            # Get the pols folder path by removing .csv from the input file path
+            pols_folder = os.path.splitext(csv_file)[0]
+            if not os.path.isdir(pols_folder):
+                print(f"Warning: Could not find polarization data folder: {pols_folder}")
+                continue
+            
+            pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
+            if not pols_files:
+                print(f"Warning: No .pols files found in {pols_folder}")
+                continue
+                
+            # Read frequencies and full data to sort files
+            data_pairs = []
+            for file in pols_files:
+                N, freq, polarizations, absorption = read_polarizations.read_polarizations_binary(file)
+                data_pairs.append((freq, file, N, polarizations))
+            
+            # Sort by frequency
+            data_pairs.sort()
+
+            # Find frequency closest to 300 THz
+            target_freq = 300e12 
+            freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
+            closest_idx = np.argmin(freq_diffs)
+            selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
+            print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 300 THz)")
+
+            # Convert data to numpy arrays for JIT optimization
+            positions_array = np.array(positions)
+            polarizations_array = np.array(selected_polarizations)
+
+            sample_R = 10000e-6
+            sample_thetas = np.linspace(-pi, pi, 1000)
+            
+            # Calculate powers for each plane (no cutoff distance)
             sample_powers_xz = np.zeros_like(sample_thetas)  # XZ plane (y=0)
             sample_powers_yz = np.zeros_like(sample_thetas)  # YZ plane (x=0)  
             sample_powers_xy = np.zeros_like(sample_thetas)  # XY plane (z=0)
@@ -307,11 +290,6 @@ def main():
                 r_sample_xy = sample_R * np.array([np.cos(theta), np.sin(theta), 0])
                 
                 for r_source, pm_source in zip(positions_array[::1], polarizations_array[::1]):
-                    # Skip cutoff check if cutoff_distance_sq is infinite
-                    if not np.isinf(cutoff_distance_sq) and np.dot(r_source, r_source) > cutoff_distance_sq:
-                        continue
-                    # print(r_source)
-                    
                     px, mz = pm_source
                     Efarfield_xz += farfield_E_E_dipole(px, r_source, r_sample_xz, 2*pi*selected_freq/c)
                     Efarfield_yz += farfield_E_E_dipole(px, r_source, r_sample_yz, 2*pi*selected_freq/c)
@@ -321,8 +299,8 @@ def main():
                 sample_powers_yz[theta_i] = np.dot(np.abs(Efarfield_yz), np.abs(Efarfield_yz))/(2*Z_0)
                 sample_powers_xy[theta_i] = np.dot(np.abs(Efarfield_xy), np.abs(Efarfield_xy))/(2*Z_0)
 
-            # Convert to appropriate scale based on user choice
-            if args.linear:
+            # Convert to appropriate scale based on current scale type
+            if scale_type == 'linear':
                 # Use linear power values
                 power_xz = sample_powers_xz
                 power_yz = sample_powers_yz
@@ -346,37 +324,31 @@ def main():
             power_yz_norm = normalize_power(power_yz)
             power_xy_norm = normalize_power(power_xy)
             
-            # Convert angles to degrees for better readability
-            sample_thetas_deg = np.degrees(sample_thetas)
+            # Create label from CSV file (parent folder and basename)
+            csv_basename = os.path.splitext(os.path.basename(csv_file))[0]
+            parent_folder = os.path.basename(os.path.dirname(csv_file))
+            label = f'{parent_folder}/{csv_basename}'
             
-            # Plot each plane with different colors and labels
-            if np.isinf(cutoff_distance):
-                label = 'r < ∞'
-            else:
-                label = f'r < {cutoff_distance*1e6:.1f} μm'
-            ax_xz.plot(sample_thetas, power_xz_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
-            ax_yz.plot(sample_thetas, power_yz_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
-            ax_xy.plot(sample_thetas, power_xy_norm, linewidth=2, color=colors[cutoff_idx], label=label, alpha=0.7)
-
-        # Set radial limits for normalized plots (0 to 1)
-        # Set radial limits and add legends
+            # Plot each plane with different colors for each CSV file
+            ax_xz.plot(sample_thetas, power_xz_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
+            ax_yz.plot(sample_thetas, power_yz_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
+            ax_xy.plot(sample_thetas, power_xy_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
+        
+        # Set radial limits (after processing all CSV files for this scale)
         for ax in [ax_xz, ax_yz, ax_xy]:
             ax.set_ylim(0, 1)  # Normalized range from 0 to 1
             ax.set_ylabel('Normalized Power', labelpad=30)
-            ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+            # ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))  # Legend commented out
         
-        # Save the combined plot with unique filename based on input CSV (including parent folder)
-        csv_basename = os.path.splitext(os.path.basename(csv_file))[0]
-        parent_folder = os.path.basename(os.path.dirname(csv_file))
-        scale_suffix = "_linear" if args.linear else "_dB"
-        freq_suffix = f"_{selected_freq*1e-12:.1f}THz"
-        output_filename = f"./cutoff_sweep_radiation_patterns_{parent_folder}_{csv_basename}{freq_suffix}{scale_suffix}_normalized.pdf"
+        # Save the combined plot with appropriate filename
+        scale_suffix = "_linear" if scale_type == 'linear' else "_dB"
+        output_filename = f"./radiation_patterns_combined{scale_suffix}_normalized.pdf"
         
         plt.tight_layout()
         plt.savefig(output_filename, bbox_inches='tight')
         plt.close()
         
-        print(f"Saved radiation pattern plot: {output_filename}")
+        print(f"Saved combined radiation pattern plot: {output_filename}")
 
 if __name__ == "__main__":
     main()
