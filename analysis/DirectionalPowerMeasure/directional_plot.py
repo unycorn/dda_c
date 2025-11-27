@@ -199,9 +199,9 @@ def main():
     for file in csv_files:
         print(f"  {file}")
 
-    beam_waist = 5e-6
-    incident_power = pi * beam_waist**2 / ( 2 * Z_0 ) # With a center amplitude of 1 V/m
-    print("incident power", incident_power)
+    # beam_waist = 5e-6
+    # incident_power = pi * beam_waist**2 / ( 2 * Z_0 ) # With a center amplitude of 1 V/m
+    # print("incident power", incident_power)
 
     # Store results for all files
     all_results = {}
@@ -229,18 +229,18 @@ def main():
         # Read frequencies and full data to sort files
         data_pairs = []
         for file in pols_files:
-            N, freq, polarizations = read_polarizations.read_polarizations_binary(file)
+            N, freq, polarizations, absorption = read_polarizations.read_polarizations_binary(file)
             data_pairs.append((freq, file, N, polarizations))
         
         # Sort by frequency
         data_pairs.sort()
 
-        # Find frequency closest to 220 THz
-        target_freq = 220e12  # 220 THz in Hz
+        # Find frequency closest to 300 THz
+        target_freq = 300e12 
         freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
         closest_idx = np.argmin(freq_diffs)
         selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
-        print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 220 THz)")
+        print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 300 THz)")
 
         freq_list = []
         absorbed_power_list = []
