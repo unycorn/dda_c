@@ -208,10 +208,105 @@ def main():
     # Store results for all files
     all_results = {}
     
-    # Process both linear and logarithmic scales
+    # Process each CSV file
+    for csv_idx, csv_file in enumerate(csv_files):
+        print(f"\nProcessing: {csv_file}")
+        
+        # Read position data
+        df = pd.read_csv(csv_file)
+        positions = df[['x', 'y', 'z']].values
+        thetas = df['theta'].values
+        
+        # Get the pols folder path by removing .csv from the input file path
+        pols_folder = os.path.splitext(csv_file)[0]
+        if not os.path.isdir(pols_folder):
+            print(f"Warning: Could not find polarization data folder: {pols_folder}")
+            continue
+        
+        pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
+        if not pols_files:
+            print(f"Warning: No .pols files found in {pols_folder}")
+            continue
+            
+        # Read frequencies and full data to sort files
+        data_pairs = []
+        for file in pols_files:
+            N, freq, polarizations, absorption = read_polarizations.read_polarizations_binary(file)
+            data_pairs.append((freq, file, N, polarizations))
+        
+        # Sort by frequency
+        data_pairs.sort()
+
+        # Find frequency closest to 300 THz
+        target_freq = 300e12 
+        freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
+        closest_idx = np.argmin(freq_diffs)
+        selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
+        print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 300 THz)")
+
+        # Convert data to numpy arrays for JIT optimization
+        positions_array = np.array(positions)
+        polarizations_array = np.array(selected_polarizations)
+
+        sample_R = 10000e-6
+        sample_thetas = np.linspace(-pi, pi, 1000)
+        
+        # Calculate powers for each plane (no cutoff distance)
+        sample_powers_xz = np.zeros_like(sample_thetas)  # XZ plane (y=0)
+        sample_powers_yz = np.zeros_like(sample_thetas)  # YZ plane (x=0)  
+        sample_powers_xy = np.zeros_like(sample_thetas)  # XY plane (z=0)
+        
+        for theta_i, theta in enumerate(sample_thetas):
+            # XZ plane: r_sample = [cos(θ), 0, sin(θ)]
+            Efarfield_xz = np.zeros((3), dtype=np.complex128)
+            r_sample_xz = sample_R * np.array([np.cos(theta), 0, np.sin(theta)])
+            
+            # YZ plane: r_sample = [0, cos(θ), sin(θ)]
+            Efarfield_yz = np.zeros((3), dtype=np.complex128)
+            r_sample_yz = sample_R * np.array([0, np.cos(theta), np.sin(theta)])
+            
+            # XY plane: r_sample = [cos(θ), sin(θ), 0]
+            Efarfield_xy = np.zeros((3), dtype=np.complex128)
+            r_sample_xy = sample_R * np.array([np.cos(theta), np.sin(theta), 0])
+            
+            for r_source, pm_source in zip(positions_array[::1], polarizations_array[::1]):
+                px, mz = pm_source
+                Efarfield_xz += farfield_E_E_dipole(px, r_source, r_sample_xz, 2*pi*selected_freq/c)
+                Efarfield_yz += farfield_E_E_dipole(px, r_source, r_sample_yz, 2*pi*selected_freq/c)
+                Efarfield_xy += farfield_E_E_dipole(px, r_source, r_sample_xy, 2*pi*selected_freq/c)
+            
+            sample_powers_xz[theta_i] = np.dot(np.abs(Efarfield_xz), np.abs(Efarfield_xz))/(2*Z_0)
+            sample_powers_yz[theta_i] = np.dot(np.abs(Efarfield_yz), np.abs(Efarfield_yz))/(2*Z_0)
+            sample_powers_xy[theta_i] = np.dot(np.abs(Efarfield_xy), np.abs(Efarfield_xy))/(2*Z_0)
+
+        # Create label from CSV file (parent folder and basename)
+        csv_basename = os.path.splitext(os.path.basename(csv_file))[0]
+        parent_folder = os.path.basename(os.path.dirname(csv_file))
+        label = f'{parent_folder}/{csv_basename}'
+        
+        # Store results for later plotting
+        all_results[csv_file] = {
+            'sample_thetas': sample_thetas,
+            'sample_powers_xz': sample_powers_xz,
+            'sample_powers_yz': sample_powers_yz,
+            'sample_powers_xy': sample_powers_xy,
+            'label': label,
+            'color': colors[csv_idx]
+        }
+    
+    # Normalize power array to [0, 1] range for consistent radial scaling
+    def normalize_power(power_array):
+        min_val = np.min(power_array)
+        max_val = np.max(power_array)
+        if max_val > min_val:
+            return (power_array - min_val) / (max_val - min_val)
+        else:
+            return np.zeros_like(power_array)
+    
+    # Now create plots for both linear and logarithmic scales
     for scale_type in ['linear', 'logarithmic']:
         print(f"\n{'='*60}")
-        print(f"Processing {scale_type} scale")
+        print(f"Saving {scale_type} scale plot")
         print(f"{'='*60}")
         
         # Create fresh subplots for this scale type
@@ -228,113 +323,34 @@ def main():
         ax_yz.set_title(f'YZ Plane Radiation Pattern ({scale_type})', pad=20)
         ax_xy.set_title(f'XY Plane Radiation Pattern ({scale_type})', pad=20)
         
-        # Process each CSV file
-        for csv_idx, csv_file in enumerate(csv_files):
-            print(f"\nProcessing: {csv_file}")
+        # Plot all CSV results with appropriate scale
+        for csv_file, result in all_results.items():
+            sample_thetas = result['sample_thetas']
+            label = result['label']
+            color = result['color']
             
-                # Read position data
-            df = pd.read_csv(csv_file)
-            positions = df[['x', 'y', 'z']].values
-            thetas = df['theta'].values
-            
-            # Get the pols folder path by removing .csv from the input file path
-            pols_folder = os.path.splitext(csv_file)[0]
-            if not os.path.isdir(pols_folder):
-                print(f"Warning: Could not find polarization data folder: {pols_folder}")
-                continue
-            
-            pols_files = glob.glob(os.path.join(pols_folder, "*.pols"))
-            if not pols_files:
-                print(f"Warning: No .pols files found in {pols_folder}")
-                continue
-                
-            # Read frequencies and full data to sort files
-            data_pairs = []
-            for file in pols_files:
-                N, freq, polarizations, absorption = read_polarizations.read_polarizations_binary(file)
-                data_pairs.append((freq, file, N, polarizations))
-            
-            # Sort by frequency
-            data_pairs.sort()
-
-            # Find frequency closest to 300 THz
-            target_freq = 300e12 
-            freq_diffs = [abs(freq - target_freq) for freq, _, _, _ in data_pairs]
-            closest_idx = np.argmin(freq_diffs)
-            selected_freq, selected_file, selected_N, selected_polarizations = data_pairs[closest_idx]
-            print(f"Selected frequency: {selected_freq*1e-12:.2f} THz (closest to 300 THz)")
-
-            # Convert data to numpy arrays for JIT optimization
-            positions_array = np.array(positions)
-            polarizations_array = np.array(selected_polarizations)
-
-            sample_R = 10000e-6
-            sample_thetas = np.linspace(-pi, pi, 1000)
-            
-            # Calculate powers for each plane (no cutoff distance)
-            sample_powers_xz = np.zeros_like(sample_thetas)  # XZ plane (y=0)
-            sample_powers_yz = np.zeros_like(sample_thetas)  # YZ plane (x=0)  
-            sample_powers_xy = np.zeros_like(sample_thetas)  # XY plane (z=0)
-            
-            for theta_i, theta in enumerate(sample_thetas):
-                # XZ plane: r_sample = [cos(θ), 0, sin(θ)]
-                Efarfield_xz = np.zeros((3), dtype=np.complex128)
-                r_sample_xz = sample_R * np.array([np.cos(theta), 0, np.sin(theta)])
-                
-                # YZ plane: r_sample = [0, cos(θ), sin(θ)]
-                Efarfield_yz = np.zeros((3), dtype=np.complex128)
-                r_sample_yz = sample_R * np.array([0, np.cos(theta), np.sin(theta)])
-                
-                # XY plane: r_sample = [cos(θ), sin(θ), 0]
-                Efarfield_xy = np.zeros((3), dtype=np.complex128)
-                r_sample_xy = sample_R * np.array([np.cos(theta), np.sin(theta), 0])
-                
-                for r_source, pm_source in zip(positions_array[::1], polarizations_array[::1]):
-                    px, mz = pm_source
-                    Efarfield_xz += farfield_E_E_dipole(px, r_source, r_sample_xz, 2*pi*selected_freq/c)
-                    Efarfield_yz += farfield_E_E_dipole(px, r_source, r_sample_yz, 2*pi*selected_freq/c)
-                    Efarfield_xy += farfield_E_E_dipole(px, r_source, r_sample_xy, 2*pi*selected_freq/c)
-                
-                sample_powers_xz[theta_i] = np.dot(np.abs(Efarfield_xz), np.abs(Efarfield_xz))/(2*Z_0)
-                sample_powers_yz[theta_i] = np.dot(np.abs(Efarfield_yz), np.abs(Efarfield_yz))/(2*Z_0)
-                sample_powers_xy[theta_i] = np.dot(np.abs(Efarfield_xy), np.abs(Efarfield_xy))/(2*Z_0)
-
-            # Convert to appropriate scale based on current scale type
+            # Convert to appropriate scale
             if scale_type == 'linear':
-                # Use linear power values
-                power_xz = sample_powers_xz
-                power_yz = sample_powers_yz
-                power_xy = sample_powers_xy
+                power_xz = result['sample_powers_xz']
+                power_yz = result['sample_powers_yz']
+                power_xy = result['sample_powers_xy']
             else:
                 # Use logarithmic (dB) scale
-                power_xz = np.log10(sample_powers_xz)
-                power_yz = np.log10(sample_powers_yz)
-                power_xy = np.log10(sample_powers_xy)
+                power_xz = np.log10(result['sample_powers_xz'])
+                power_yz = np.log10(result['sample_powers_yz'])
+                power_xy = np.log10(result['sample_powers_xy'])
             
-            # Normalize each power array to [0, 1] range for consistent radial scaling
-            def normalize_power(power_array):
-                min_val = np.min(power_array)
-                max_val = np.max(power_array)
-                if max_val > min_val:
-                    return (power_array - min_val) / (max_val - min_val)
-                else:
-                    return np.zeros_like(power_array)
-            
+            # Normalize
             power_xz_norm = normalize_power(power_xz)
             power_yz_norm = normalize_power(power_yz)
             power_xy_norm = normalize_power(power_xy)
             
-            # Create label from CSV file (parent folder and basename)
-            csv_basename = os.path.splitext(os.path.basename(csv_file))[0]
-            parent_folder = os.path.basename(os.path.dirname(csv_file))
-            label = f'{parent_folder}/{csv_basename}'
-            
-            # Plot each plane with different colors for each CSV file
-            ax_xz.plot(sample_thetas, power_xz_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
-            ax_yz.plot(sample_thetas, power_yz_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
-            ax_xy.plot(sample_thetas, power_xy_norm, linewidth=2, color=colors[csv_idx], label=label, alpha=0.7)
+            # Plot each plane
+            ax_xz.plot(sample_thetas, power_xz_norm, linewidth=2, color=color, label=label, alpha=0.7)
+            ax_yz.plot(sample_thetas, power_yz_norm, linewidth=2, color=color, label=label, alpha=0.7)
+            ax_xy.plot(sample_thetas, power_xy_norm, linewidth=2, color=color, label=label, alpha=0.7)
         
-        # Set radial limits (after processing all CSV files for this scale)
+        # Set radial limits
         for ax in [ax_xz, ax_yz, ax_xy]:
             ax.set_ylim(0, 1)  # Normalized range from 0 to 1
             ax.set_ylabel('Normalized Power', labelpad=30)
