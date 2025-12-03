@@ -193,7 +193,7 @@ if __name__ == "__main__":
         # 'u-shape-29': 'u-shape-29-cdm-param.csv'
     }
 
-    lattice_sizes = np.array([1.14e-6, 5.14e-6, 13.14e-6])
+    lattice_sizes = np.array([1.14e-6, 2.14e-6, 3.14e-6, 4.14e-6, 5.14e-6, 13.14e-6])
 
     # Dictionary to store all lattice types
     lattices = {

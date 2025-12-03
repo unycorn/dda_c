@@ -137,13 +137,23 @@ void run_simulation(
             }
 
             // Compute absorbed power: omega/2 * imag(sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j))
+            // Compute extinguished power: omega/2 * imag(sum over all dipoles of (E_j*, H_j*) * (p_j; m_j))
             double omega = 2.0 * M_PI * freq;
             std::complex<double> absorbed_power_sum(0.0, 0.0);
+            std::complex<double> extinguished_power_sum(0.0, 0.0);
             
-            // Compute absorbed power: sum over all dipoles of (p_j*, m_j*) * alpha_j^(-1) * (p_j; m_j)
+            // Compute absorbed and extinguished power
             for (int j = 0; j < N; ++j) {
                 std::complex<double> px = b[2 * j + 0];     // Electric polarization for dipole j
                 std::complex<double> mz = b[2 * j + 1];     // Magnetic polarization for dipole j
+                
+                // Get incident field components for dipole j
+                std::complex<double> Ex_inc = inc_field[2 * j + 0];
+                std::complex<double> Hz_inc = inc_field[2 * j + 1];
+                
+                // Compute extinguished power contribution: (E_j*, H_j*) * (p_j; m_j)
+                std::complex<double> extinguished_power_complex = std::conj(Ex_inc) * px + MU_0 * std::conj(Hz_inc) * mz;
+                extinguished_power_sum += extinguished_power_complex;
                 
                 // Invert 2x2 alpha matrix for dipole j using determinant method
                 std::complex<double> det = alpha[j][0][0] * alpha[j][1][1] - alpha[j][0][1] * alpha[j][1][0];
@@ -153,8 +163,6 @@ void run_simulation(
                 alpha_inv[1][0] = -alpha[j][1][0] / det;
                 alpha_inv[1][1] = alpha[j][0][0] / det;
                 
-
-
                 // Take Hermitian conjugate (dagger) of alpha_inv
                 std::complex<double> alpha_inv_dagger[2][2];
                 alpha_inv_dagger[0][0] = std::conj(alpha_inv[0][0]);
@@ -171,8 +179,10 @@ void run_simulation(
             }
             
             double absorbed_power_total = (omega / 2.0) * std::imag(absorbed_power_sum);
+            double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
             
             std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
+            std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
 
             if (A_device != nullptr) {
                 cudaFree(A_device);
