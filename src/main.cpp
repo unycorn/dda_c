@@ -42,18 +42,20 @@ void run_simulation(
 ) {
     const int N = positions.size();
     
-    // Open CSV file for power logging if using Gaussian beam
+    // Open CSV file for power logging
     std::ofstream power_csv;
-    if (use_gaussian_beam) {
-        std::string power_csv_path = output_dir + "/power_data.csv";
-        power_csv.open(power_csv_path);
-        if (!power_csv.is_open()) {
-            std::cerr << "Warning: Could not open power CSV file: " << power_csv_path << std::endl;
-        } else {
-            // Write header
+    std::string power_csv_path = output_dir + "/power_data.csv";
+    power_csv.open(power_csv_path);
+    if (!power_csv.is_open()) {
+        std::cerr << "Warning: Could not open power CSV file: " << power_csv_path << std::endl;
+    } else {
+        // Write header based on beam type
+        if (use_gaussian_beam) {
             power_csv << "frequency_Hz,incident_power,absorbed_power,extinguished_power\n";
-            power_csv << std::scientific << std::setprecision(10);
+        } else {
+            power_csv << "frequency_Hz,incident_intensity_PW,absorbed_power,extinguished_power\n";
         }
+        power_csv << std::scientific << std::setprecision(10);
     }
     
     for (int i = 0; i < num_freqs; ++i) {
@@ -183,21 +185,24 @@ void run_simulation(
             double absorbed_power_total = (omega / 2.0) * std::imag(absorbed_power_sum);
             double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
             
-            // Compute incident power for Gaussian beam: P_inc = pi * w0^2 / (2 * Z_0)
-            double incident_power = 0.0;
+            // Compute incident power/intensity based on beam type
+            double incident_value = 0.0;
             if (use_gaussian_beam) {
-                incident_power = M_PI * w0 * w0 / (2.0 * Z_0);
+                // Gaussian beam: P_inc = |Einc|^2 * pi * w0^2 / (2 * Z_0)
+                incident_value = M_PI * w0 * w0 / (2.0 * Z_0);
+                std::cout << "Incident power (Gaussian beam): " << incident_value << std::endl;
+            } else {
+                // Plane wave: I_inc = |Einc|^2 / (2 * Z_0)
+                incident_value = 1.0 / (2.0 * Z_0);
+                std::cout << "Incident intensity (Plane wave): " << incident_value << std::endl;
             }
             
             std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
-            if (use_gaussian_beam) {
-                std::cout << "Incident power (Gaussian beam): " << incident_power << std::endl;
-            }
 
-            // Write to power CSV if using Gaussian beam
-            if (use_gaussian_beam && power_csv.is_open()) {
-                power_csv << freq << "," << incident_power << "," << absorbed_power_total << "," << extinguished_power_total << "\n";
+            // Write to power CSV
+            if (power_csv.is_open()) {
+                power_csv << freq << "," << incident_value << "," << absorbed_power_total << "," << extinguished_power_total << "\n";
             }
 
             if (A_device != nullptr) {
