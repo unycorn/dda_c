@@ -36,7 +36,9 @@ void run_simulation(
     const std::vector<LorentzianParams>& params_50,
     const std::vector<LorentzianParams>& params_55,
     const std::vector<double>& angles,
-    const std::string& output_dir  // Add output directory parameter
+    const std::string& output_dir,  // Add output directory parameter
+    bool use_gaussian_beam,         // Flag to enable Gaussian beam
+    double w0                        // Beam waist parameter for Gaussian beam
 ) {
     const int N = positions.size();
     for (int i = 0; i < num_freqs; ++i) {
@@ -76,36 +78,21 @@ void run_simulation(
         try {
             // Initialize incident field (2N components - one electric and one magnetic scalar per dipole)
             std::vector<std::complex<double>> inc_field(2 * N, std::complex<double>(0.0, 0.0));
-            for (int j = 0; j < N; ++j) {
-                // // Calculate phase at dipole position (these should all be identity)
-                // double phase = k * positions[j].z;
-                // std::complex<double> phase_factor = std::exp(I * phase);
-                
-                // // Create complex vectors for E and H fields
-                // vec3 E_inc_real = {1.0, 0.0, 0.0};  // Real part of E-field (x-component)
-                // vec3 H_inc_real = {0.0, 1.0/Z_0, 0.0};  // Real part of H-field (y-component)
-                
-                // // Create projection vectors
-                // vec3 u_e = {cos(angles[j]), sin(angles[j]), 0.0}; // Electric projection vector
-                // vec3 u_h = {0.0, 0.0, 1.0}; // Magnetic projection vector (assumed along z-axis)
-
-                // // Calculate projections and multiply by phase factor
-                // inc_field[2 * j + 0] = phase_factor * vec3_dot(E_inc_real, u_e);     // Electric projection
-                // inc_field[2 * j + 1] = phase_factor * vec3_dot(H_inc_real, u_h);     // Magnetic projection
-
-
-
+            
+            if (use_gaussian_beam) {
                 // Gaussian beam profile
-                // double w0 = 2.0e-6; // Beam waist
-                // double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
-                // inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
-                // inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); //positions[j].y / (k * w0 * w0 * Z_0) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(0.0, -1.0);
-
-
-
-                inc_field[2 * j + 0] = cos(angles[j]) * std::complex<double>(1.0, 0.0); // Ex
-                inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); // Hz
-
+                std::cout << "Using Gaussian beam with w0 = " << w0 << " m\n";
+                for (int j = 0; j < N; ++j) {
+                    double rho2 = positions[j].x * positions[j].x + positions[j].y * positions[j].y;
+                    inc_field[2 * j + 0] = cos(angles[j]) * std::exp(-rho2 / (2 * w0 * w0)) * std::complex<double>(1.0, 0.0); // Ex
+                    inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); // Hz
+                }
+            } else {
+                // Default plane wave
+                for (int j = 0; j < N; ++j) {
+                    inc_field[2 * j + 0] = cos(angles[j]) * std::complex<double>(1.0, 0.0); // Ex
+                    inc_field[2 * j + 1] = std::complex<double>(0.0, 0.0); // Hz
+                }
             }
 
             // Convert incident field to cuDoubleComplex for GPU
@@ -242,7 +229,8 @@ std::string get_filename_without_ext(const std::string& filepath) {
 }
 
 // ---- Process Single CSV File ----
-void process_csv_file(const std::string& csv_path, double f_start, double f_end, int num_freqs) {
+void process_csv_file(const std::string& csv_path, double f_start, double f_end, int num_freqs, 
+                     bool use_gaussian_beam, double w0) {
     std::vector<vec3> positions;
     std::vector<LorentzianParams> params_00, params_05, params_50, params_55;
     std::vector<double> angles;
@@ -316,7 +304,7 @@ void process_csv_file(const std::string& csv_path, double f_start, double f_end,
     
     // Run the simulation with the loaded parameters
     auto simulation_start = std::chrono::high_resolution_clock::now();
-    run_simulation(f_start, f_end, num_freqs, positions, params_00, params_05, params_50, params_55, angles, output_dir);
+    run_simulation(f_start, f_end, num_freqs, positions, params_00, params_05, params_50, params_55, angles, output_dir, use_gaussian_beam, w0);
     auto simulation_end = std::chrono::high_resolution_clock::now();
     auto simulation_duration = std::chrono::duration_cast<std::chrono::seconds>(simulation_end - simulation_start);
     std::cout << "Finished processing " << csv_path << " in " << simulation_duration.count() << " seconds" << std::endl;
@@ -324,12 +312,14 @@ void process_csv_file(const std::string& csv_path, double f_start, double f_end,
 
 // ---- Main Function ----
 int main(int argc, char* argv[]) {
-    if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <input_directory> <f_start> <f_end> <num_freqs>\n";
+    if (argc != 5 && argc != 7) {
+        std::cerr << "Usage: " << argv[0] << " <input_directory> <f_start> <f_end> <num_freqs> [--gaussian-beam <w0>]\n";
         std::cerr << "  input_directory: Path to directory containing CSV files\n";
         std::cerr << "  f_start: Starting frequency in Hz\n";
         std::cerr << "  f_end: Ending frequency in Hz\n";
         std::cerr << "  num_freqs: Number of frequency points\n";
+        std::cerr << "  --gaussian-beam: Optional flag to use Gaussian beam instead of plane wave\n";
+        std::cerr << "  w0: Beam waist parameter in meters (required if --gaussian-beam is used)\n";
         std::cerr << "  CSV format: x,y,z,f0_00,gamma_00,A_00,...,angle\n";
         return 1;
     }
@@ -338,6 +328,28 @@ int main(int argc, char* argv[]) {
     double f_start = std::stod(argv[2]);
     double f_end = std::stod(argv[3]);
     int num_freqs = std::stoi(argv[4]);
+    
+    // Parse optional Gaussian beam parameters
+    bool use_gaussian_beam = false;
+    double w0 = 0.0;
+    
+    if (argc == 7) {
+        std::string flag = argv[5];
+        if (flag == "--gaussian-beam") {
+            use_gaussian_beam = true;
+            w0 = std::stod(argv[6]);
+            if (w0 <= 0) {
+                std::cerr << "Error: Beam waist w0 must be positive.\n";
+                return 1;
+            }
+            std::cout << "Using Gaussian beam mode with w0 = " << w0 << " m\n";
+        } else {
+            std::cerr << "Error: Unknown flag '" << flag << "'. Use --gaussian-beam.\n";
+            return 1;
+        }
+    } else {
+        std::cout << "Using plane wave mode (default)\n";
+    }
 
     // Validate frequency parameters
     if (f_start <= 0 || f_end <= 0 || num_freqs <= 0 || f_start >= f_end) {
@@ -369,7 +381,7 @@ int main(int argc, char* argv[]) {
             filename.compare(filename.length() - 4, 4, ".csv") == 0) {
             
             std::string filepath = std::string(argv[1]) + "/" + filename;
-            process_csv_file(filepath, f_start, f_end, num_freqs);
+            process_csv_file(filepath, f_start, f_end, num_freqs, use_gaussian_beam, w0);
         }
     }
 
