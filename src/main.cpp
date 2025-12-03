@@ -41,6 +41,21 @@ void run_simulation(
     double w0                        // Beam waist parameter for Gaussian beam
 ) {
     const int N = positions.size();
+    
+    // Open CSV file for power logging if using Gaussian beam
+    std::ofstream power_csv;
+    if (use_gaussian_beam) {
+        std::string power_csv_path = output_dir + "/power_data.csv";
+        power_csv.open(power_csv_path);
+        if (!power_csv.is_open()) {
+            std::cerr << "Warning: Could not open power CSV file: " << power_csv_path << std::endl;
+        } else {
+            // Write header
+            power_csv << "frequency_Hz,incident_power,absorbed_power,extinguished_power\n";
+            power_csv << std::scientific << std::setprecision(10);
+        }
+    }
+    
     for (int i = 0; i < num_freqs; ++i) {
         double freq = (num_freqs == 1) ? f_start : f_start + i * (f_end - f_start) / (num_freqs - 1);
         
@@ -168,8 +183,22 @@ void run_simulation(
             double absorbed_power_total = (omega / 2.0) * std::imag(absorbed_power_sum);
             double extinguished_power_total = (omega / 2.0) * std::imag(extinguished_power_sum);
             
+            // Compute incident power for Gaussian beam: P_inc = pi * w0^2 / (2 * Z_0)
+            double incident_power = 0.0;
+            if (use_gaussian_beam) {
+                incident_power = M_PI * w0 * w0 / (2.0 * Z_0);
+            }
+            
             std::cout << "Absorbed power at " << freq << " Hz: " << absorbed_power_total << std::endl;
             std::cout << "Extinguished power at " << freq << " Hz: " << extinguished_power_total << std::endl;
+            if (use_gaussian_beam) {
+                std::cout << "Incident power (Gaussian beam): " << incident_power << std::endl;
+            }
+
+            // Write to power CSV if using Gaussian beam
+            if (use_gaussian_beam && power_csv.is_open()) {
+                power_csv << freq << "," << incident_power << "," << absorbed_power_total << "," << extinguished_power_total << "\n";
+            }
 
             if (A_device != nullptr) {
                 cudaFree(A_device);
@@ -191,6 +220,12 @@ void run_simulation(
             }
             throw;
         }
+    }
+    
+    // Close power CSV file if it was opened
+    if (power_csv.is_open()) {
+        power_csv.close();
+        std::cout << "Power data saved to " << output_dir << "/power_data.csv\n";
     }
 }
 
