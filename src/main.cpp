@@ -156,7 +156,7 @@ void run_simulation(
                 std::complex<double> Hz_inc = inc_field[2 * j + 1];
                 
                 // Compute extinguished power contribution: (E_j*, H_j*) * (p_j; m_j)
-                std::complex<double> extinguished_power_complex = std::conj(Ex_inc) * px + MU_0 * std::conj(Hz_inc) * mz;
+                std::complex<double> extinguished_power_complex = std::conj(Ex_inc) * px;// + MU_0 * std::conj(Hz_inc) * mz;
                 extinguished_power_sum += extinguished_power_complex;
                 
                 // Invert 2x2 alpha matrix for dipole j using determinant method
@@ -177,7 +177,7 @@ void run_simulation(
                 // Calculate (px*, mz*) * alpha_inv^† * (px; mz) for dipole j
                 std::complex<double> Ex_star = std::conj(px) * alpha_inv_dagger[0][0] + std::conj(mz) * alpha_inv_dagger[1][0];
                 std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] + std::conj(mz) * alpha_inv_dagger[1][1];
-                std::complex<double> absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz;
+                std::complex<double> absorbed_power_complex = Ex_star * px;// + MU_0 * Hz_star * mz;
                 
                 absorbed_power_sum += absorbed_power_complex;
             }
