@@ -157,7 +157,7 @@ if __name__ == "__main__":
     ab_y = np.array([xyi.imag for xyi in ab_xy_data])
     
     
-    physical_size = 80e-6  # 80 µm
+    physical_size = 100e-6
     lattice_spacing = 1365e-9  # 1365 nm spacing (roughly the resonance wavelength of the SRR to get hybridization)
 
     print("area m^2", physical_size**2)
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
 
-    seed_count = 5  # Number of seeds to generate
+    seed_count = 1  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     M_OFFSET = 0
 
     # Disorder parameters
-    spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9, 200e-9, 300e-9, 400e-9, 500e-9]  # meters
+    spatial_disorder_degrees = [0, 100e-9, 200e-9, 300e-9, 400e-9]  # meters
     orientational_disorder_degrees = [0]  # radians
 
     # Iterate through resonator types, spatial and orientational disorder, and lattice types
