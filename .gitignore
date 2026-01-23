@@ -3,3 +3,6 @@ output/
 *.blend1
 csv_inputs/
 figures/
+analysis/
+possible_garbage/
+plots_/
