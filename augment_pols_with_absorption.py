@@ -210,7 +210,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     k = omega / C_LIGHT
     N = len(polarizations)
     
-    absorbed_power_sum = 0.0 + 0.0j
+    absorbed_power_sum = 0.0
     
     for j in range(N):
         px = polarizations[j, 0]  # Electric polarization Ex
