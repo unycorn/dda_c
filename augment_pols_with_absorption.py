@@ -207,6 +207,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         absorbed_power_total: Total absorbed power in Watts
     """
     omega = 2.0 * PI * freq
+    k = omega / C_LIGHT
     N = len(polarizations)
     
     absorbed_power_sum = 0.0 + 0.0j
@@ -238,10 +239,11 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         Ex_star = temp[0]
         Hz_star = temp[1]
         absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz
+        self_term = -k**3 / (6*PI) * (abs(px)**2 / EPSILON_0 + MU_0 * abs(mz)**2)
         
-        absorbed_power_sum += absorbed_power_complex
+        absorbed_power_sum += np.imag(absorbed_power_complex) + self_term
     
-    absorbed_power_total = (omega / 2.0) * np.imag(absorbed_power_sum)
+    absorbed_power_total = (omega / 2.0) * absorbed_power_sum
     return absorbed_power_total
 
 
