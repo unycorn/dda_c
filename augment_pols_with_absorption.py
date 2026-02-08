@@ -309,7 +309,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         omega = 2*np.pi*freq
         k = omega / C_LIGHT
 
-        if (term1 + term2) < 0:
+        if (term1 + term2) > 0:
             ok, eigvals, M = check_passivity_2x2(alpha, k)
             print("passive?", ok)
             print("eigvals:", eigvals)
