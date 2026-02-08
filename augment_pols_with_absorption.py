@@ -311,7 +311,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
 
         # print(term1 + term2)
         ok, eigvals, M = check_passivity_2x2(alpha, k)
-        print("passive?", ok)
+        print("passive?", ok, np.sign(term1 + term2))
         # print("eigvals:", eigvals)
         # input("here")
 
