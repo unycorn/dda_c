@@ -287,6 +287,9 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     term1_sum = 0.0
     term2_sum = 0.0
 
+    false_counts = np.array([0,0])
+    true_counts = np.array([0,0])
+
     for i in range(polarizations.shape[0]):
         p = polarizations[i, 0]
         m = polarizations[i, 1]
@@ -311,12 +314,23 @@ def compute_absorption(freq, polarizations, dipole_params_list):
 
         # print(term1 + term2)
         ok, eigvals, M = check_passivity_2x2(alpha, k)
-        print("passive?", ok, np.sign(term1 + term2))
+        if ok:
+            if term1 + term2 < 0:
+                true_counts[0] += 1
+            else:
+                true_counts[1] += 1
+        else:
+            if term1 + term2 < 0:
+                false_counts[0] += 1
+            else:
+                false_counts[1] += 1
+        # print("passive?", ok, np.sign(term1 + term2))
         # print("eigvals:", eigvals)
         # input("here")
 
     absorbed_power_total = -(omega / 2.0) * total_sum
     print("alpha_inv term:", term1_sum, "self term:", term2_sum)
+    print(true_counts, false_counts)
     return absorbed_power_total
 
 
