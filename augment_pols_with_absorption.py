@@ -252,6 +252,27 @@ def write_pols_file_with_absorption(filename, N, freq, polarizations, absorption
 #     print("alpha_inv term: ", term1_sum, "self term: ", term2_sum)
 #     return absorbed_power_total
 
+def check_passivity_2x2(alpha, k, tol=1e-12):
+    Ainv = np.linalg.inv(alpha)
+
+    W = np.array([[1.0, 0.0],
+                  [0.0, MU_0]], dtype=np.complex128)
+
+    D = (k**3/(6*np.pi)) * np.array([[1.0/EPSILON_0, 0.0],
+                                    [0.0, MU_0]], dtype=np.complex128)
+
+    WAinv = W @ Ainv
+
+    Im_part = (WAinv - WAinv.conj().T) / (2j)
+
+    M = -Im_part - D
+    M = 0.5 * (M + M.conj().T)   # enforce Hermitian
+
+    eigvals = np.linalg.eigvalsh(M)
+
+    is_passive = np.all(eigvals >= -tol)
+    return is_passive, eigvals, M
+
 def compute_absorption(freq, polarizations, dipole_params_list):
     """
     P_abs = -(omega/2) * sum_i [
@@ -285,27 +306,12 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         term1_sum += term1
         term2_sum += term2
 
+        omega = 2*np.pi*freq
+        k = omega / C_LIGHT
 
-        Ainv = np.linalg.inv(alpha)
-
-        W = np.block([
-            [np.eye(3),           np.zeros((3,3))],
-            [np.zeros((3,3)), MU_0*np.eye(3)]
-        ])
-
-        D = (k**3/(6*np.pi)) * np.block([
-            [(1/EPSILON_0)*np.eye(3), np.zeros((3,3))],
-            [np.zeros((3,3)),         MU_0*np.eye(3)]
-        ])
-
-        Im_part = (W @ Ainv - (W @ Ainv).conj().T)/(2j)
-
-        M = -Im_part - D
-        M = 0.5*(M + M.conj().T)   # force Hermitian cleanup
-
-        eigvals = np.linalg.eigvalsh(M)
-        print(eigvals)
-
+        ok, eigvals, M = check_passivity_2x2(alpha, k)
+        print("passive?", ok)
+        print("eigvals:", eigvals)
 
     absorbed_power_total = -(omega / 2.0) * total_sum
     print("alpha_inv term:", term1_sum, "self term:", term2_sum)
