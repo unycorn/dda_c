@@ -211,6 +211,9 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     N = len(polarizations)
     
     absorbed_power_sum = 0.0
+
+    term1_sum = 0
+    term2_sum = 0
     
     for j in range(N):
         px = polarizations[j, 0]  # Electric polarization Ex
@@ -242,8 +245,11 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         self_term = -k**3 / (6*PI) * (abs(px)**2 / EPSILON_0 + MU_0 * abs(mz)**2)
         
         absorbed_power_sum += np.imag(absorbed_power_complex) + self_term
+        term1_sum += np.imag(absorbed_power_complex)
+        term2_sum += self_term
     
     absorbed_power_total = (omega / 2.0) * absorbed_power_sum
+    print("alpha_inv term: ", term1_sum, "self term: ", term2_sum)
     return absorbed_power_total
 
 
