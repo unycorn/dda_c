@@ -193,63 +193,100 @@ def write_pols_file_with_absorption(filename, N, freq, polarizations, absorption
         np.array([absorption], dtype=np.float64).tofile(f)
 
 
+# def compute_absorption(freq, polarizations, dipole_params_list):
+#     """
+#     Compute absorbed power using the same formula as main.cpp.
+    
+#     Args:
+#         freq: Frequency in Hz
+#         polarizations: Array of shape (N, 2) with complex polarizations [Ex, Mz]
+#         dipole_params_list: List of parameter lists, one per dipole, each containing
+#                            4 parameter dictionaries for the matrix elements
+    
+#     Returns:
+#         absorbed_power_total: Total absorbed power in Watts
+#     """
+#     omega = 2.0 * PI * freq
+#     k = omega / C_LIGHT
+#     N = len(polarizations)
+    
+#     absorbed_power_sum = 0.0
+
+#     term1_sum = 0
+#     term2_sum = 0
+    
+#     for j in range(N):
+#         px = polarizations[j, 0]  # Electric polarization Ex
+#         mz = polarizations[j, 1]  # Magnetic polarization Mz
+        
+#         # Generate polarizability matrix for this dipole
+#         alpha = generate_polarizability_matrix(freq, dipole_params_list[j])
+        
+#         # Invert 2x2 alpha matrix using determinant method
+#         det = alpha[0, 0] * alpha[1, 1] - alpha[0, 1] * alpha[1, 0]
+#         alpha_inv = np.array([[alpha[1, 1], -alpha[0, 1]],
+#                               [-alpha[1, 0], alpha[0, 0]]]) / det
+        
+#         # Take Hermitian conjugate (dagger) of alpha_inv
+#         alpha_inv_dagger = np.conj(alpha_inv).T
+        
+#         # Calculate (px*, mz*) * alpha_inv^† * (px; mz) for dipole j
+#         polarization_conj = np.array([np.conj(px), np.conj(mz)])
+#         polarization = np.array([px, mz])
+        
+#         # Matrix multiplication: (px*, mz*) * alpha_inv^†
+#         temp = np.dot(polarization_conj, alpha_inv_dagger)
+        
+#         # Final multiplication with (px; mz), but need to account for units
+#         # From C++: Ex_star * px + MU_0 * Hz_star * mz
+#         Ex_star = temp[0]
+#         Hz_star = temp[1]
+#         absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz
+#         self_term = -k**3 / (6*PI) * (abs(px)**2 / EPSILON_0 + MU_0 * abs(mz)**2)
+        
+#         absorbed_power_sum += np.imag(absorbed_power_complex) + self_term
+#         term1_sum += np.imag(absorbed_power_complex)
+#         term2_sum += self_term
+    
+#     absorbed_power_total = (omega / 2.0) * absorbed_power_sum
+#     print("alpha_inv term: ", term1_sum, "self term: ", term2_sum)
+#     return absorbed_power_total
+
 def compute_absorption(freq, polarizations, dipole_params_list):
     """
-    Compute absorbed power using the same formula as main.cpp.
-    
-    Args:
-        freq: Frequency in Hz
-        polarizations: Array of shape (N, 2) with complex polarizations [Ex, Mz]
-        dipole_params_list: List of parameter lists, one per dipole, each containing
-                           4 parameter dictionaries for the matrix elements
-    
-    Returns:
-        absorbed_power_total: Total absorbed power in Watts
+    P_abs = -(omega/2) * sum_i [
+                Im( [p_i, m_i]^† (alpha_i^{-1}) [p_i, mu0 m_i]^T )
+              + (k^3/(6pi)) * ( |p_i|^2/eps0 + mu0 |m_i|^2 )
+            ]
     """
     omega = 2.0 * PI * freq
     k = omega / C_LIGHT
-    N = len(polarizations)
-    
-    absorbed_power_sum = 0.0
 
-    term1_sum = 0
-    term2_sum = 0
-    
-    for j in range(N):
-        px = polarizations[j, 0]  # Electric polarization Ex
-        mz = polarizations[j, 1]  # Magnetic polarization Mz
-        
-        # Generate polarizability matrix for this dipole
-        alpha = generate_polarizability_matrix(freq, dipole_params_list[j])
-        
-        # Invert 2x2 alpha matrix using determinant method
-        det = alpha[0, 0] * alpha[1, 1] - alpha[0, 1] * alpha[1, 0]
-        alpha_inv = np.array([[alpha[1, 1], -alpha[0, 1]],
-                              [-alpha[1, 0], alpha[0, 0]]]) / det
-        
-        # Take Hermitian conjugate (dagger) of alpha_inv
-        alpha_inv_dagger = np.conj(alpha_inv).T
-        
-        # Calculate (px*, mz*) * alpha_inv^† * (px; mz) for dipole j
-        polarization_conj = np.array([np.conj(px), np.conj(mz)])
-        polarization = np.array([px, mz])
-        
-        # Matrix multiplication: (px*, mz*) * alpha_inv^†
-        temp = np.dot(polarization_conj, alpha_inv_dagger)
-        
-        # Final multiplication with (px; mz), but need to account for units
-        # From C++: Ex_star * px + MU_0 * Hz_star * mz
-        Ex_star = temp[0]
-        Hz_star = temp[1]
-        absorbed_power_complex = Ex_star * px + MU_0 * Hz_star * mz
-        self_term = -k**3 / (6*PI) * (abs(px)**2 / EPSILON_0 + MU_0 * abs(mz)**2)
-        
-        absorbed_power_sum += np.imag(absorbed_power_complex) + self_term
-        term1_sum += np.imag(absorbed_power_complex)
-        term2_sum += self_term
-    
-    absorbed_power_total = (omega / 2.0) * absorbed_power_sum
-    print("alpha_inv term: ", term1_sum, "self term: ", term2_sum)
+    total_sum = 0.0
+    term1_sum = 0.0
+    term2_sum = 0.0
+
+    for i in range(polarizations.shape[0]):
+        p = polarizations[i, 0]
+        m = polarizations[i, 1]
+
+        alpha = generate_polarizability_matrix(freq, dipole_params_list[i])
+        alpha_inv = np.linalg.inv(alpha)
+
+        v_left  = np.array([p, m], dtype=np.complex128)
+        v_right = np.array([p, MU_0 * m], dtype=np.complex128)
+
+        quad = np.vdot(v_left, alpha_inv @ v_right)
+
+        term1 = np.imag(quad)
+        term2 = (k**3 / (6.0 * PI)) * (abs(p)**2 / EPSILON_0 + MU_0 * abs(m)**2)
+
+        total_sum += (term1 + term2)
+        term1_sum += term1
+        term2_sum += term2
+
+    absorbed_power_total = -(omega / 2.0) * total_sum
+    print("alpha_inv term:", term1_sum, "self term:", term2_sum)
     return absorbed_power_total
 
 
