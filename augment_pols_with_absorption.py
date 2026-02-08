@@ -273,8 +273,8 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         alpha = generate_polarizability_matrix(freq, dipole_params_list[i])
         alpha_inv = np.linalg.inv(alpha)
 
-        v_left  = np.array([p, m], dtype=np.complex128)
-        v_right = np.array([p, MU_0 * m], dtype=np.complex128)
+        v_left  = np.array([p, MU_0 * m], dtype=np.complex128)
+        v_right = np.array([p, m], dtype=np.complex128)
 
         quad = np.vdot(v_left, alpha_inv @ v_right)
 
