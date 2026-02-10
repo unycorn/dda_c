@@ -252,26 +252,26 @@ def write_pols_file_with_absorption(filename, N, freq, polarizations, absorption
 #     print("alpha_inv term: ", term1_sum, "self term: ", term2_sum)
 #     return absorbed_power_total
 
-def check_passivity_2x2(alpha, k, tol=1e-12):
-    Ainv = np.linalg.inv(alpha)
+# def check_passivity_2x2(alpha, k, tol=1e-12):
+#     Ainv = np.linalg.inv(alpha)
 
-    W = np.array([[1.0, 0.0],
-                  [0.0, MU_0]], dtype=np.complex128)
+#     W = np.array([[1.0, 0.0],
+#                   [0.0, MU_0]], dtype=np.complex128)
 
-    D = (k**3/(6*np.pi)) * np.array([[1.0/EPSILON_0, 0.0],
-                                    [0.0, MU_0]], dtype=np.complex128)
+#     D = (k**3/(6*np.pi)) * np.array([[1.0/EPSILON_0, 0.0],
+#                                     [0.0, MU_0]], dtype=np.complex128)
 
-    WAinv = W @ Ainv
+#     WAinv = W @ Ainv
 
-    Im_part = (WAinv - WAinv.conj().T) / (2j)
+#     Im_part = (WAinv - WAinv.conj().T) / (2j)
 
-    M = -Im_part - D
-    M = 0.5 * (M + M.conj().T)   # enforce Hermitian
+#     M = -Im_part - D
+#     M = 0.5 * (M + M.conj().T)   # enforce Hermitian
 
-    eigvals = np.linalg.eigvalsh(M)
+#     eigvals = np.linalg.eigvalsh(M)
 
-    is_passive = np.all(eigvals >= -tol)
-    return is_passive, eigvals, M
+#     is_passive = np.all(eigvals >= -tol)
+#     return is_passive, eigvals, M
 
 def compute_absorption(freq, polarizations, dipole_params_list):
     """
@@ -287,8 +287,8 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     term1_sum = 0.0
     term2_sum = 0.0
 
-    false_counts = np.array([0,0])
-    true_counts = np.array([0,0])
+    # false_counts = np.array([0,0])
+    # true_counts = np.array([0,0])
 
     for i in range(polarizations.shape[0]):
         p = polarizations[i, 0]
@@ -312,25 +312,29 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         omega = 2*np.pi*freq
         k = omega / C_LIGHT
 
+        print(-(omega / 2.0) * total_sum)
+
         # print(term1 + term2)
-        ok, eigvals, M = check_passivity_2x2(alpha, k)
-        if ok:
-            if term1 + term2 < 0:
-                true_counts[0] += 1
-            else:
-                true_counts[1] += 1
-        else:
-            if term1 + term2 < 0:
-                false_counts[0] += 1
-            else:
-                false_counts[1] += 1
+
+        # ok, eigvals, M = check_passivity_2x2(alpha, k)
+        # if ok:
+        #     if term1 + term2 < 0:
+        #         true_counts[0] += 1
+        #     else:
+        #         true_counts[1] += 1
+        # else:
+        #     if term1 + term2 < 0:
+        #         false_counts[0] += 1
+        #     else:
+        #         false_counts[1] += 1
+
         # print("passive?", ok, np.sign(term1 + term2))
         # print("eigvals:", eigvals)
         # input("here")
 
     absorbed_power_total = -(omega / 2.0) * total_sum
     print("alpha_inv term:", term1_sum, "self term:", term2_sum)
-    print(true_counts, false_counts)
+    # print(true_counts, false_counts)
     return absorbed_power_total
 
 
