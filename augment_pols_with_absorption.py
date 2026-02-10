@@ -312,7 +312,9 @@ def compute_absorption(freq, polarizations, dipole_params_list):
         omega = 2*np.pi*freq
         k = omega / C_LIGHT
 
-        print(-(omega / 2.0) * total_sum)
+        absorption_contribution = -(omega / 2.0) * (term1 + term2)
+        if absorption_contribution < 0:
+            print(absorption_contribution)
 
         # print(term1 + term2)
 
