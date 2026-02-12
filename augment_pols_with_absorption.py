@@ -345,7 +345,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     
     print(min_absorption)
     print(min_absorption_params)
-    input()
+    # input()
 
     absorbed_power_total = -(omega / 2.0) * total_sum
     print("alpha_inv term:", term1_sum, "self term:", term2_sum)
