@@ -315,7 +315,9 @@ def compute_absorption(freq, polarizations, dipole_params_list):
 
         absorption_contribution = -(omega / 2.0) * (term1 + term2)
         if absorption_contribution < 0:
-            # print(absorption_contribution)
+            print("negative absorption")
+            print(absorption_contribution)
+            print(dipole_params_list[i])
             negative_count += 1
 
         # print(term1 + term2)
