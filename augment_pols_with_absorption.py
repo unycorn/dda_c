@@ -293,6 +293,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
 
     min_absorption = 0
     min_absorption_params = None
+    min_fields = None
 
     for i in range(polarizations.shape[0]):
         p = polarizations[i, 0]
@@ -323,6 +324,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
             if min_absorption > absorption_contribution:
                 min_absorption = absorption_contribution
                 min_absorption_params = dipole_params_list[i]
+                min_fields = alpha_inv @ v_right
             negative_count += 1
 
         # print(term1 + term2)
@@ -345,6 +347,7 @@ def compute_absorption(freq, polarizations, dipole_params_list):
     
     print(min_absorption)
     print(min_absorption_params)
+    print(min_fields)
     # input()
 
     absorbed_power_total = -(omega / 2.0) * total_sum
