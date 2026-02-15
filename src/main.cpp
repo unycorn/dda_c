@@ -119,6 +119,9 @@ void run_simulation(
     }
 
     std::cout << "alpha00: " << alpha[0][0][0] << "\n";
+    std::cout << "alpha01: " << alpha[0][0][1] << "\n";
+    std::cout << "alpha10: " << alpha[0][1][0] << "\n";
+    std::cout << "alpha11: " << alpha[0][1][1] << "\n";
 
     std::vector<std::complex<double>> A_host(2 * N * 2 * N,
                                              std::complex<double>(0.0, 0.0));
