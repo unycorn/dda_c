@@ -110,11 +110,11 @@ void run_simulation(
       alpha_inv[1][0] = (-alpha_0[1][0] / det);
       alpha_inv[1][1] = (alpha_0[0][0] / det) + correction;
 
-      det =
-          alpha_inv[0][0] * alpha_inv[1][1] - alpha_inv[0][1] * alpha_inv[1][0];
-      alpha[j][0][0] = alpha_inv[1][1] / det;
-      alpha[j][0][1] = -alpha_inv[0][1] / det;
-      alpha[j][1][0] = -alpha_inv[1][0] / det;
+      det = alpha_inv[0][0] * alpha_inv[1][1] - alpha_inv[0][1] * alpha_inv[1][0];
+
+      alpha[j][0][0] = alpha_inv[1][1] / det * EPSILON_0;
+      alpha[j][0][1] = -alpha_inv[0][1] / det * (EPSILON_0 * Z_0);
+      alpha[j][1][0] = -alpha_inv[1][0] / det / Z_0;
       alpha[j][1][1] = alpha_inv[0][0] / det;
     }
 
