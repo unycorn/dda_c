@@ -4,6 +4,37 @@ import random
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.spatial import cKDTree
+import random
+from scipy.stats import truncnorm
+
+def pairwise_correlation_multiple(x_sets, y_sets, title=""):
+    """
+    x_sets: list of x arrays
+    y_sets: list of y arrays
+    """
+
+    all_nn_distances = []
+
+    for x, y in zip(x_sets, y_sets):
+        points = np.column_stack((x, y))
+        tree = cKDTree(points)
+
+        distances, _ = tree.query(points, k=2)
+        nn = distances[:, 1] * 1e9  # nm
+
+        all_nn_distances.append(nn)
+
+    all_nn_distances = np.concatenate(all_nn_distances)
+
+    plt.figure()
+    plt.hist(all_nn_distances, bins=100, density=False, range=(0, 600))
+    plt.xlabel("Nearest-neighbor distance (nm)")
+    plt.ylabel("Count")
+    plt.title(f"Nearest-Neighbor Distance Distribution {title}")
+    plt.savefig(f"PCF_translational_disorder_{title}.pdf")
+    plt.show()
+
 
 def create_square_lattice(spacing, physical_size):
     """
@@ -71,15 +102,41 @@ def create_triangular_lattice(spacing, physical_size):
     
     return np.array(x_coords), np.array(y_coords)
 
-def generate_normal_values(distributions, num_values):
+def generate_normal_values(distributions, num_values, truncation=None):
     """
     Generate values from normal distributions.
 
     :param distributions: List of tuples (name, mean, std_dev) for each distribution.
     :param num_values: Number of values to generate for each distribution.
+    :param truncation: Optional dict mapping name -> (lower, upper) bounds.
+                       If provided and name matches, values are drawn from a
+                       properly normalized truncated Gaussian.
     :return: Dictionary containing generated values for each distribution.
     """
-    return {name: [random.gauss(mean, std_dev) for _ in range(num_values)] for name, mean, std_dev in distributions}
+
+    results = {}
+
+    for name, mean, std_dev in distributions:
+
+        if std_dev == 0:
+            values = [mean] * num_values
+
+        elif truncation and name in truncation:
+            lower, upper = truncation[name]
+
+            a = (lower - mean) / std_dev
+            b = (upper - mean) / std_dev
+
+            dist = truncnorm(a, b, loc=mean, scale=std_dev)
+            values = dist.rvs(num_values)
+
+        else:
+            values = [random.gauss(mean, std_dev) for _ in range(num_values)]
+
+        results[name] = values
+
+    return results
+
 
 def write_output_csv(filename, data, headers):
     """
@@ -131,22 +188,22 @@ if __name__ == "__main__":
     lattice_spacing = 300e-9  # 300 nm spacing
     
     print("area m^2", physical_size**2)
-    input()
+    # input()
     print(f"Using physical size of {physical_size*1e6:.1f} µm based on Ammann-Beenker tiling")
 
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
 
-    seed_count = 10  # Number of seeds to generate
+    seed_count = 1  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
-        'c-shape-ideal': 'c-shape-ideal-cdm-param.csv',
-        'c-shape-36': 'c-shape-36-cdm-param.csv',
-        'c-shape-28': 'c-shape-28-cdm-param.csv',
-        'u-shape-ideal': 'u-shape-ideal-cdm-param.csv',
-        'u-shape-37': 'u-shape-37-cdm-param.csv',
-        'u-shape-29': 'u-shape-29-cdm-param.csv'
+        'c-shape-ideal': 'c-shape-ideal-cdm-param_NoRadLoss.csv',
+        'c-shape-36': 'c-shape-36-cdm-param_NoRadLoss.csv',
+        'c-shape-28': 'c-shape-28-cdm-param_NoRadLoss.csv',
+        'u-shape-ideal': 'u-shape-ideal-cdm-param_NoRadLoss.csv',
+        'u-shape-37': 'u-shape-37-cdm-param_NoRadLoss.csv',
+        'u-shape-29': 'u-shape-29-cdm-param_NoRadLoss.csv'
     }
 
     # Dictionary to store all lattice types
@@ -162,6 +219,9 @@ if __name__ == "__main__":
     spatial_disorder_degrees = [0, 25e-9, 50e-9, 75e-9, 100e-9]  # meters
     orientational_disorder_degrees = [0, np.deg2rad(10), np.deg2rad(20), np.deg2rad(50), np.deg2rad(1_000_000)]  # radians
 
+    all_x = [[],[],[],[],[]]
+    all_y = [[],[],[],[],[]]
+
     # Iterate through resonator types, spatial and orientational disorder, and lattice types
     for m, (resonator_type, resonator_filename) in enumerate(resonator_files.items()):
         print(f"\nProcessing resonator type {m}: {resonator_type}")
@@ -171,6 +231,7 @@ if __name__ == "__main__":
             print(f"Processing lattice type {l}: {lattice_name}")
             z_base = np.zeros_like(x_base)  # z coordinates are all 0
             
+
             for s, spatial_disorder in enumerate(spatial_disorder_degrees):
                 for o, orientational_disorder in enumerate(orientational_disorder_degrees):
                     output_folder = os.path.join(base_output_dir, f"l{l}_p{s}_o{o}_m{m+M_OFFSET}")
@@ -194,13 +255,26 @@ if __name__ == "__main__":
 
                         # Generate disorder parameters directly
                         num_points = len(x_base)
-                        disorder_data = generate_normal_values(distributions, num_points)
+                        disorder_data = generate_normal_values(distributions, num_points)#, truncation={"delta_x": (-100e-9, 100e-9),"delta_y": (-100e-9, 100e-9)})
                         
+                        if 'ideal' not in resonator_type:
+                            disorder_data['ee_A'] = np.abs(np.array(disorder_data['ee_A']))
+                            disorder_data['mm_A'] = np.abs(np.array(disorder_data['mm_A']))
+
+                            off_diagonals = np.sqrt(disorder_data['ee_A']*disorder_data['mm_A'])
+                            disorder_data['em_A'] = off_diagonals
+                            disorder_data['me_A'] = off_diagonals
+
                         # Create final data dictionary
                         data = {}
                         data['x'] = x_base + disorder_data['delta_x'][:num_points]
                         data['y'] = y_base + disorder_data['delta_y'][:num_points]
                         data['z'] = z_base
+
+
+                        all_x[s].append(data['x'])
+                        all_y[s].append(data['y'])
+
                         
                         # Create the eight resonator parameter columns from the loaded distributions
                         for prefix in ['ee', 'em', 'me', 'mm']:
@@ -222,5 +296,8 @@ if __name__ == "__main__":
                         # Write the output file
                         write_output_csv(output_file, data, headers)
                         print(f"Generated CDM input parameters saved to {output_file}")
-                    
-                    
+
+    for s in range(1,5):
+        print(s)
+        if s > 0:
+            pairwise_correlation_multiple(all_x[s], all_y[s], title=s)

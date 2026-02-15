@@ -88,20 +88,46 @@ void run_simulation(
     // dipole This is 2x2 and scalar because it couples only e"x" and m"z"
     // dipoles to fields
     for (int j = 0; j < N; ++j) {
-      alpha[j][0][0] = lorentz_alpha_params(freq, params_00[j]);
-      alpha[j][0][1] = lorentz_alpha_params(freq, params_05[j]);
-      alpha[j][1][0] = lorentz_alpha_params(freq, params_50[j]);
-      alpha[j][1][1] = lorentz_alpha_params(freq, params_55[j]);
+      // Add in bianisotropic radiation reaction correction
+      // described in PHYSICAL REVIEW B 83, 245102 (2011)
+
+      std::complex<double> correction =
+          std::complex<double>(0.0, 1.0) * (-k * k * k / (6 * M_PI));
+
+      std::complex<double> alpha_0[2][2];
+      alpha_0[0][0] = lorentz_alpha_params(freq, params_00[j]) / EPSILON_0;
+      alpha_0[0][1] =
+          lorentz_alpha_params(freq, params_05[j]) / (EPSILON_0 * Z_0);
+      alpha_0[1][0] = lorentz_alpha_params(freq, params_50[j]) * Z_0;
+      alpha_0[1][1] = lorentz_alpha_params(freq, params_55[j]);
+
+      // Invert 2x2 alpha matrix for dipole j using determinant method
+      std::complex<double> det =
+          alpha_0[0][0] * alpha_0[1][1] - alpha_0[0][1] * alpha_0[1][0];
+      std::complex<double> alpha_inv[2][2];
+      alpha_inv[0][0] = (alpha_0[1][1] / det) + correction;
+      alpha_inv[0][1] = (-alpha_0[0][1] / det);
+      alpha_inv[1][0] = (-alpha_0[1][0] / det);
+      alpha_inv[1][1] = (alpha_0[0][0] / det) + correction;
+
+      det =
+          alpha_inv[0][0] * alpha_inv[1][1] - alpha_inv[0][1] * alpha_inv[1][0];
+      alpha[j][0][0] = alpha_inv[1][1] / det;
+      alpha[j][0][1] = -alpha_inv[0][1] / det;
+      alpha[j][1][0] = -alpha_inv[1][0] / det;
+      alpha[j][1][1] = alpha_inv[0][0] / det;
     }
+
+    std::cout << "alpha00: " << alpha_inv[0][0];
 
     std::vector<std::complex<double>> A_host(2 * N * 2 * N,
                                              std::complex<double>(0.0, 0.0));
-    // cuDoubleComplex* A_device =
-    // get_full_interaction_matrix_scalar(A_host.data(), positions.data(),
-    // alpha.data(), angles.data(), N, k);
-    cuDoubleComplex *A_device = get_full_interaction_matrix_scalar_1Dperiodic(
-        A_host.data(), positions.data(), alpha.data(), angles.data(), N, k,
-        vec3{1365.0e-9, 0.0, 0.0}, 1000);
+    cuDoubleComplex *A_device = get_full_interaction_matrix_scalar(
+        A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
+    // cuDoubleComplex *A_device =
+    // get_full_interaction_matrix_scalar_1Dperiodic(
+    //     A_host.data(), positions.data(), alpha.data(), angles.data(), N, k,
+    //     vec3{1365.0e-9, 0.0, 0.0}, 1000);
     std::cout << "freq " << freq
               << ": Finished Computing Interaction Matrix!\n";
 
@@ -182,7 +208,7 @@ void run_simulation(
 
         // Compute extinguished power contribution: (E_j*, H_j*) * (p_j; m_j)
         std::complex<double> extinguished_power_complex =
-            std::conj(Ex_inc) * px; // + MU_0 * std::conj(Hz_inc) * mz;
+            std::conj(Ex_inc) * px + MU_0 * std::conj(Hz_inc) * mz;
         extinguished_power_sum += extinguished_power_complex;
 
         // Invert 2x2 alpha matrix for dipole j using determinant method
@@ -207,7 +233,7 @@ void run_simulation(
         std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] +
                                        std::conj(mz) * alpha_inv_dagger[1][1];
         std::complex<double> absorbed_power_complex =
-            Ex_star * px; // + MU_0 * Hz_star * mz;
+            Ex_star * px + MU_0 * Hz_star * mz - (k*k*k / (6 * M_PI) * (std::conj(px)*px/EPSILON_0 + MU_0 * std::conj(mz)*mz));
 
         absorbed_power_sum += absorbed_power_complex;
       }
