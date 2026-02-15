@@ -118,7 +118,7 @@ void run_simulation(
       alpha[j][1][1] = alpha_inv[0][0] / det;
     }
 
-    std::cout << "alpha00: " << alpha_inv[0][0];
+    std::cout << "alpha00: " << alpha[0][0][0];
 
     std::vector<std::complex<double>> A_host(2 * N * 2 * N,
                                              std::complex<double>(0.0, 0.0));
