@@ -62,6 +62,59 @@ def create_square_lattice(spacing, physical_size):
     xx, yy = np.meshgrid(x, y)
     return xx.flatten(), yy.flatten()
 
+def generate_lattice_with_min_distance(N, a, sigma, dmin, max_attempts=1000000000000):
+    """
+    Generate NxN square lattice with Gaussian perturbations,
+    rejecting samples that violate minimum distance.
+
+    Returns:
+        ideal_positions        : (N^2, 2)
+        perturbed_positions    : (N^2, 2)
+    """
+
+    ideal = np.empty((N, N, 2))
+    perturbed = np.empty((N, N, 2))
+
+    for i in range(N):
+        for j in range(N):
+
+            ideal_pos = np.array([i*a, j*a])
+            ideal[i, j] = ideal_pos
+
+            for _ in range(max_attempts):
+
+                candidate = ideal_pos + np.random.normal(scale=sigma, size=2)
+
+                ok = True
+
+                # Check neighbors within ±2 lattice sites
+                for di in (-2, -1, 0, 1, 2):
+                    for dj in (-2, -1, 0, 1, 2):
+
+                        ni = i + di
+                        nj = j + dj
+
+                        if 0 <= ni < N and 0 <= nj < N:
+
+                            # Only check already placed sites
+                            if ni < i or (ni == i and nj < j):
+
+                                dist = np.linalg.norm(candidate - perturbed[ni, nj])
+                                if dist < dmin:
+                                    ok = False
+                                    break
+                    if not ok:
+                        break
+
+                if ok:
+                    perturbed[i, j] = candidate
+                    break
+
+            else:
+                raise RuntimeError(f"Failed to place site ({i},{j}).")
+
+    return perturbed.reshape(-1, 2)
+
 def create_triangular_lattice(spacing, physical_size):
     """
     Create a triangular lattice with given spacing that fits within a physical size.
@@ -265,10 +318,12 @@ if __name__ == "__main__":
                             disorder_data['em_A'] = off_diagonals
                             disorder_data['me_A'] = off_diagonals
 
+                        points_with_min_dist = generate_lattice_with_min_distance(100, 300e-9, spatial_disorder, 100e-9)
+
                         # Create final data dictionary
                         data = {}
-                        data['x'] = x_base + disorder_data['delta_x'][:num_points]
-                        data['y'] = y_base + disorder_data['delta_y'][:num_points]
+                        data['x'] = points_with_min_dist[:,0] #x_base + disorder_data['delta_x'][:num_points]
+                        data['y'] = points_with_min_dist[:,1] #y_base + disorder_data['delta_y'][:num_points]
                         data['z'] = z_base
 
 
