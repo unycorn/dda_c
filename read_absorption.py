@@ -70,6 +70,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.isdir(args.pols_folder):
+        print(args.pols_folder)
         print("Invalid folder.")
         sys.exit(1)
 
