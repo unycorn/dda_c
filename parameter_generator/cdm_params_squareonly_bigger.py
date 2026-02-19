@@ -28,11 +28,11 @@ def pairwise_correlation_multiple(x_sets, y_sets, title=""):
     all_nn_distances = np.concatenate(all_nn_distances)
 
     plt.figure()
-    plt.hist(all_nn_distances, bins=100, density=False, range=(0, 600))
+    plt.hist(all_nn_distances, bins=100, density=True, range=(0, 600))
     plt.xlabel("Nearest-neighbor distance (nm)")
     plt.ylabel("Count")
     plt.title(f"Nearest-Neighbor Distance Distribution {title}")
-    plt.savefig(f"PCF_translational_disorder_{title}.pdf")
+    plt.savefig(f"PCF_translational_disorder_default_{title}.pdf")
     plt.show()
 
 
@@ -318,7 +318,7 @@ if __name__ == "__main__":
                             disorder_data['em_A'] = off_diagonals
                             disorder_data['me_A'] = off_diagonals
 
-                        points_with_min_dist = generate_lattice_with_min_distance(100, 300e-9, spatial_disorder, 100e-9)
+                        points_with_min_dist = generate_lattice_with_min_distance(100, 300e-9, spatial_disorder, 0e-9)
 
                         # Create final data dictionary
                         data = {}

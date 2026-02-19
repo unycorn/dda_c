@@ -251,12 +251,12 @@ if __name__ == "__main__":
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
-        'c-shape-ideal': 'c-shape-ideal-cdm-param_NoRadLoss.csv',
-        'c-shape-36': 'c-shape-36-cdm-param_NoRadLoss.csv',
-        'c-shape-28': 'c-shape-28-cdm-param_NoRadLoss.csv',
+        # 'c-shape-ideal': 'c-shape-ideal-cdm-param_NoRadLoss.csv',
+        # 'c-shape-36': 'c-shape-36-cdm-param_NoRadLoss.csv',
+        # 'c-shape-28': 'c-shape-28-cdm-param_NoRadLoss.csv',
         'u-shape-ideal': 'u-shape-ideal-cdm-param_NoRadLoss.csv',
-        'u-shape-37': 'u-shape-37-cdm-param_NoRadLoss.csv',
-        'u-shape-29': 'u-shape-29-cdm-param_NoRadLoss.csv'
+        # 'u-shape-37': 'u-shape-37-cdm-param_NoRadLoss.csv',
+        # 'u-shape-29': 'u-shape-29-cdm-param_NoRadLoss.csv'
     }
 
     # Dictionary to store all lattice types
@@ -318,7 +318,7 @@ if __name__ == "__main__":
                             disorder_data['em_A'] = off_diagonals
                             disorder_data['me_A'] = off_diagonals
 
-                        points_with_min_dist = generate_lattice_with_min_distance(100, 300e-9, spatial_disorder, 100e-9)
+                        points_with_min_dist = generate_lattice_with_min_distance(1, 300e-9, spatial_disorder, 100e-9)
 
                         # Create final data dictionary
                         data = {}
