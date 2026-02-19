@@ -352,7 +352,7 @@ if __name__ == "__main__":
                         write_output_csv(output_file, data, headers)
                         print(f"Generated CDM input parameters saved to {output_file}")
 
-    for s in range(1,5):
-        print(s)
-        if s > 0:
-            pairwise_correlation_multiple(all_x[s], all_y[s], title=s)
+    # for s in range(1,5):
+    #     print(s)
+    #     if s > 0:
+    #         pairwise_correlation_multiple(all_x[s], all_y[s], title=s)
