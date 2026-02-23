@@ -318,7 +318,7 @@ if __name__ == "__main__":
     # Define base directory and check if it exists
     base_output_dir = os.path.join(script_dir, "..", "csv_inputs")
 
-    seed_count = 1  # Number of seeds to generate
+    seed_count = 10  # Number of seeds to generate
 
     # Dictionary of available resonator types and their parameter files
     resonator_files = {
@@ -407,16 +407,16 @@ if __name__ == "__main__":
 
                             disorder_data['f0'] = Ω
                             disorder_data['hw'] = Γ
-                            disorder_data['ee_A'] = Axx
+                            disorder_data['ee_A'] = np.abs(Axx)
                             disorder_data['ee_B'] = Bxx
                             disorder_data['ee_C'] = Cxx
-                            disorder_data['em_A'] = kappa * np.sqrt(Axx * Azz)
+                            disorder_data['em_A'] = kappa * np.sqrt(np.abs(Axx * Azz))
                             disorder_data['em_B'] = np.zeros(num_points)
                             disorder_data['em_C'] = np.zeros(num_points)
-                            disorder_data['me_A'] = kappa * np.sqrt(Axx * Azz)
+                            disorder_data['me_A'] = kappa * np.sqrt(np.abs(Axx * Azz))
                             disorder_data['me_B'] = np.zeros(num_points)
                             disorder_data['me_C'] = np.zeros(num_points)
-                            disorder_data['mm_A'] = Azz
+                            disorder_data['mm_A'] = np.abs(Azz)
                             disorder_data['mm_B'] = Bzz
                             disorder_data['mm_C'] = Czz
 
