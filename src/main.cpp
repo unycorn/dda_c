@@ -236,7 +236,7 @@ void run_simulation(
         std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] +
                                        std::conj(mz) * alpha_inv_dagger[1][1];
         std::complex<double> absorbed_power_complex =
-            Ex_star * px + MU_0 * Hz_star * mz - (k*k*k / (6 * M_PI) * (std::conj(px)*px/EPSILON_0 + MU_0 * std::conj(mz)*mz));
+            Ex_star * px + MU_0 * Hz_star * mz - I*(k*k*k / (6 * M_PI) * (std::conj(px)*px/EPSILON_0 + MU_0 * std::conj(mz)*mz));
 
         absorbed_power_sum += absorbed_power_complex;
       }
