@@ -56,6 +56,8 @@ def extract_absorption(folder_path, output_csv):
         "Absorption_W": absorptions
     }).sort_values("Frequency_Hz")
 
+    print(np.array(absorptions)/((300e-9*100)**2 / (2*376.7)))
+
     df.to_csv(output_csv, index=False)
     print(f"\nSaved to {output_csv}")
 

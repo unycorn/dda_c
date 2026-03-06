@@ -72,10 +72,11 @@ void run_simulation(
     csvfilename << output_dir << "/output_freq_" << std::scientific
                 << std::setprecision(5) << freq << ".csv";
 
+    bool already_solved = false;
     if (std::ifstream(filename.str()).good()) {
-      std::cout << "Skipping frequency " << freq
-                << " Hz - output file already exists\n";
-      continue;
+      std::cout << "Loading already solved frequency " << freq << " Hz from "
+                << filename.str() << "\n";
+      already_solved = true;
     }
 
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -110,7 +111,8 @@ void run_simulation(
       alpha_inv[1][0] = (-alpha_0[1][0] / det);
       alpha_inv[1][1] = (alpha_0[0][0] / det) + correction;
 
-      det = alpha_inv[0][0] * alpha_inv[1][1] - alpha_inv[0][1] * alpha_inv[1][0];
+      det =
+          alpha_inv[0][0] * alpha_inv[1][1] - alpha_inv[0][1] * alpha_inv[1][0];
 
       alpha[j][0][0] = alpha_inv[1][1] / det * EPSILON_0;
       alpha[j][0][1] = -alpha_inv[0][1] / det * (EPSILON_0 * Z_0);
@@ -123,16 +125,22 @@ void run_simulation(
     std::cout << "alpha10: " << alpha[0][1][0] << "\n";
     std::cout << "alpha11: " << alpha[0][1][1] << "\n";
 
-    std::vector<std::complex<double>> A_host(2 * N * 2 * N,
-                                             std::complex<double>(0.0, 0.0));
-    cuDoubleComplex *A_device = get_full_interaction_matrix_scalar(
-        A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
-    // cuDoubleComplex *A_device =
-    // get_full_interaction_matrix_scalar_1Dperiodic(
-    //     A_host.data(), positions.data(), alpha.data(), angles.data(), N, k,
-    //     vec3{1365.0e-9, 0.0, 0.0}, 1000);
-    std::cout << "freq " << freq
-              << ": Finished Computing Interaction Matrix!\n";
+    cuDoubleComplex *A_device = nullptr;
+    std::vector<std::complex<double>> A_host;
+
+    if (!already_solved) {
+      A_host.assign(2 * N * 2 * N, std::complex<double>(0.0, 0.0));
+      A_device = get_full_interaction_matrix_scalar(
+          A_host.data(), positions.data(), alpha.data(), angles.data(), N, k);
+
+      // cuDoubleComplex *A_device =
+      // get_full_interaction_matrix_scalar_1Dperiodic(
+      //     A_host.data(), positions.data(), alpha.data(), angles.data(), N, k,
+      //     vec3{1365.0e-9, 0.0, 0.0}, 1000);
+
+      std::cout << "freq " << freq
+                << ": Finished Computing Interaction Matrix!\n";
+    }
 
     try {
       // Initialize incident field (2N components - one electric and one
@@ -160,35 +168,47 @@ void run_simulation(
         }
       }
 
-      // Convert incident field to cuDoubleComplex for GPU
-      std::vector<cuDoubleComplex> b_cuda(2 * N);
-      for (int i = 0; i < 2 * N; ++i) {
-        b_cuda[i] = make_cuDoubleComplex(std::real(inc_field[i]),
-                                         std::imag(inc_field[i]));
-      }
-
-      // Transpose matrix for GPU solver (expects column-major format)
-      std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
-      for (int i = 0; i < 2 * N; ++i) {
-        for (int j = 0; j < 2 * N; ++j) {
-          A_transposed[i * 2 * N + j] =
-              make_cuDoubleComplex(std::real(A_host[j * 2 * N + i]),
-                                   std::imag(A_host[j * 2 * N + i]));
-        }
-      }
-
-      // print_complex_matrix("Transposed Interaction Matrix",
-      // A_transposed.data(), 2 * N);
-
-      cudaMemcpy(A_device, A_transposed.data(),
-                 sizeof(cuDoubleComplex) * 2 * N * 2 * N,
-                 cudaMemcpyHostToDevice);
-
-      solve_gpu(A_device, b_cuda.data(), 2 * N);
-
       std::vector<std::complex<double>> b(2 * N);
-      for (int i = 0; i < 2 * N; ++i) {
-        b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
+
+      if (!already_solved) {
+        // Convert incident field to cuDoubleComplex for GPU
+        std::vector<cuDoubleComplex> b_cuda(2 * N);
+        for (int i = 0; i < 2 * N; ++i) {
+          b_cuda[i] = make_cuDoubleComplex(std::real(inc_field[i]),
+                                           std::imag(inc_field[i]));
+        }
+
+        // Transpose matrix for GPU solver (expects column-major format)
+        std::vector<cuDoubleComplex> A_transposed(2 * N * 2 * N);
+        for (int i = 0; i < 2 * N; ++i) {
+          for (int j = 0; j < 2 * N; ++j) {
+            A_transposed[i * 2 * N + j] =
+                make_cuDoubleComplex(std::real(A_host[j * 2 * N + i]),
+                                     std::imag(A_host[j * 2 * N + i]));
+          }
+        }
+
+        // print_complex_matrix("Transposed Interaction Matrix",
+        // A_transposed.data(), 2 * N);
+
+        cudaMemcpy(A_device, A_transposed.data(),
+                   sizeof(cuDoubleComplex) * 2 * N * 2 * N,
+                   cudaMemcpyHostToDevice);
+
+        solve_gpu(A_device, b_cuda.data(), 2 * N);
+
+        for (int i = 0; i < 2 * N; ++i) {
+          b[i] = std::complex<double>(cuCreal(b_cuda[i]), cuCimag(b_cuda[i]));
+        }
+      } else {
+        int loaded_N = 0;
+        double loaded_freq = 0.0;
+        b = read_polarizations_binary(filename.str().c_str(), loaded_N,
+                                      loaded_freq);
+        if (loaded_N != N) {
+          throw std::runtime_error("Particle count mismatch in existing file " +
+                                   filename.str());
+        }
       }
 
       // Compute absorbed power: omega/2 * imag(sum over all dipoles of (p_j*,
@@ -236,7 +256,9 @@ void run_simulation(
         std::complex<double> Hz_star = std::conj(px) * alpha_inv_dagger[0][1] +
                                        std::conj(mz) * alpha_inv_dagger[1][1];
         std::complex<double> absorbed_power_complex =
-            Ex_star * px + MU_0 * Hz_star * mz - I*(k*k*k / (6 * M_PI) * (std::conj(px)*px/EPSILON_0 + MU_0 * std::conj(mz)*mz));
+            Ex_star * px + MU_0 * Hz_star * mz -
+            I * (k * k * k / (6 * M_PI) *
+                 (std::conj(px) * px / EPSILON_0 + MU_0 * std::conj(mz) * mz));
 
         absorbed_power_sum += absorbed_power_complex;
       }
