@@ -126,16 +126,17 @@ def load_resonator_parameters(csv_file):
 if __name__ == "__main__":
     # First load Ammann-Beenker data to determine physical dimensions
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    ab_file_path = os.path.join(script_dir, "Iteration4_300nm_density.npy")
-    ab_xy_data = np.load(ab_file_path)
-    ab_x = np.array([xyi.real for xyi in ab_xy_data])
-    ab_y = np.array([xyi.imag for xyi in ab_xy_data])
+    # ab_file_path = os.path.join(script_dir, "Iteration4_300nm_density.npy")
+    # ab_xy_data = np.load(ab_file_path)
+    # ab_x = np.array([xyi.real for xyi in ab_xy_data])
+    # ab_y = np.array([xyi.imag for xyi in ab_xy_data])
     
-    # Calculate physical size from Ammann-Beenker data
-    physical_size = max(
-        ab_x.max() - ab_x.min(),
-        ab_y.max() - ab_y.min()
-    )
+    # # Calculate physical size from Ammann-Beenker data
+    # physical_size = max(
+    #     ab_x.max() - ab_x.min(),
+    #     ab_y.max() - ab_y.min()
+    # )
+    physical_size = 15.1e-6
     lattice_spacing = 300e-9  # 300 nm spacing
     
     print("area m^2", physical_size**2)
@@ -161,7 +162,7 @@ if __name__ == "__main__":
 
     # Disorder parameters
     spatial_disorder_degrees = [0]  # meters
-    orientational_disorder_degrees = [*np.deg2rad(np.arange(0, 100, 2)), 1e6]
+    orientational_disorder_degrees = [*np.deg2rad(np.arange(0, 100, 2))]
 
     # Iterate through resonator types, spatial and orientational disorder, and lattice types
     for m, (resonator_type, resonator_filename) in enumerate(resonator_files.items()):
