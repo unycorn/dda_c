@@ -102,7 +102,7 @@ def main():
         output_file = os.path.join(folder_path, 'power_data_supercell.csv')
         with open(output_file, 'w') as f:
             f.write("frequency_Hz,R,T\n")
-            for (freq, r_x, t_x) in zip(results_x):
+            for (freq, r_x, t_x) in results_x:
                 f.write(f"{freq:.6e},{np.abs(r_x)**2:.6e},{np.abs(t_x)**2:.6e}\n")
                 print(f"[{freq:.6e},{np.abs(r_x)**2:.6e},{np.abs(t_x)**2:.6e}],")
 
