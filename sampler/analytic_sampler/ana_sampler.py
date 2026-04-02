@@ -98,6 +98,13 @@ def main():
             for (freq, r_x, t_x), (_, r_y, t_y) in zip(results_x, results_y):
                 f.write(f"{freq:.6e},{r_x:.6e},{t_x:.6e},{r_y:.6e},{t_y:.6e}\n")
                 print(f"[{freq:.6e},{r_x:.6e},{t_x:.6e},{r_y:.6e},{t_y:.6e}],")
+        
+        output_file = os.path.join(folder_path, 'power_data_supercell.csv')
+        with open(output_file, 'w') as f:
+            f.write("frequency_Hz,R,T\n")
+            for (freq, r_x, t_x) in zip(results_x):
+                f.write(f"{freq:.6e},{np.abs(r_x)**2:.6e},{np.abs(t_x)**2:.6e}\n")
+                print(f"[{freq:.6e},{np.abs(r_x)**2:.6e},{np.abs(t_x)**2:.6e}],")
 
         print(f"Results written to {output_file}")
         
