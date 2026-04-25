@@ -327,7 +327,12 @@ if __name__ == "__main__":
 
     # Dictionary to store all lattice types
     lattices = {
-        0: ('square', create_square_lattice(lattice_spacing, physical_size)),
+        0: ('square', create_square_lattice(lattice_spacing, 1e-6)),
+        1: ('square', create_square_lattice(lattice_spacing, 2e-6)),
+        2: ('square', create_square_lattice(lattice_spacing, 5e-6)),
+        3: ('square', create_square_lattice(lattice_spacing, 10e-6)),
+        4: ('square', create_square_lattice(lattice_spacing, 20e-6)),
+        5: ('square', create_square_lattice(lattice_spacing, 30e-6))
     }
 
     M_OFFSET = 0
